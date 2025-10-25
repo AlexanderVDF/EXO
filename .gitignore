@@ -1,0 +1,68 @@
+# Build directories
+build/
+debug/
+release/
+*.exe
+*.dll
+*.pdb
+
+# Qt generated files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+*.o
+*.obj
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.sln
+
+# Configuration files with API keys
+config/assistant.conf
+config/*.conf
+!config/*.conf.example
+!config/*.conf.template
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Temporary files
+*.tmp
+*.log
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Node.js (if needed)
+node_modules/
+npm-debug.log*

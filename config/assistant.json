@@ -1,0 +1,91 @@
+{
+  "claude": {
+    "model": "claude-3-haiku-20240307",
+    "max_tokens": 1024,
+    "timeout": 30,
+    "api_key": "${ANTHROPIC_API_KEY}",
+    "base_url": "https://api.anthropic.com/v1/messages",
+    "rate_limit": {
+      "requests_per_minute": 50,
+      "min_request_interval": 0.5
+    }
+  },
+  "speech": {
+    "recognition": {
+      "language": "fr-FR",
+      "energy_threshold": 300,
+      "dynamic_energy_threshold": true,
+      "pause_threshold": 0.8,
+      "phrase_time_limit": 5,
+      "timeout": 1
+    },
+    "synthesis": {
+      "engine": "espeak-ng",
+      "voice": "fr+f3", 
+      "speed": 150,
+      "amplitude": 100,
+      "gap": 10
+    },
+    "audio": {
+      "sample_rate": 16000,
+      "chunk_size": 1024,
+      "channels": 1,
+      "microphone_index": null
+    }
+  },
+  "monitoring": {
+    "update_interval": 2,
+    "max_history": 100,
+    "thresholds": {
+      "temperature": 75.0,
+      "cpu_usage": 85.0,
+      "memory_usage": 90.0,
+      "battery_low": 15
+    },
+    "alerts": {
+      "enabled": true,
+      "voice_alerts": true,
+      "log_alerts": true
+    }
+  },
+  "assistant": {
+    "auto_listen": true,
+    "voice_responses": true,
+    "log_conversations": false,
+    "wake_word": "assistant",
+    "response_timeout": 30,
+    "max_conversation_length": 10
+  },
+  "ui": {
+    "theme": "dark",
+    "fullscreen": true,
+    "touch_optimized": true,
+    "screen": {
+      "width": 1920,
+      "height": 1080,
+      "dpi": 96
+    },
+    "colors": {
+      "primary": "#2196F3",
+      "secondary": "#1976D2", 
+      "accent": "#64B5F6",
+      "success": "#4CAF50",
+      "warning": "#FF9800",
+      "error": "#F44336"
+    }
+  },
+  "system": {
+    "log_level": "INFO",
+    "log_file": "/tmp/assistant_service.log",
+    "pid_file": "/var/run/raspberry-assistant.pid",
+    "working_directory": "/opt/raspberry-assistant",
+    "user": "pi",
+    "group": "pi"
+  },
+  "network": {
+    "timeout": 10,
+    "retry_attempts": 3,
+    "retry_delay": 1.0,
+    "health_check_interval": 60
+  }
+}

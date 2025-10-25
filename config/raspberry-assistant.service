@@ -1,0 +1,76 @@
+[Unit]
+Description=Assistant Personnel Raspberry Pi avec Claude Haiku
+Documentation=file:///opt/raspberry-assistant/README.md
+After=network-online.target sound.target
+Wants=network-online.target
+Requires=sound.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/raspberry-assistant
+
+# Commande principale
+ExecStart=/opt/raspberry-assistant/bin/RaspberryAssistant
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Variables d'environnement Qt/EGLFS
+Environment=QT_QPA_PLATFORM=eglfs
+Environment=QT_QPA_EGLFS_KMS_CONFIG=/opt/raspberry-assistant/config/eglfs_config.json
+Environment=QT_QPA_EGLFS_ALWAYS_SET_MODE=1
+Environment=QT_QUICK_CONTROLS_STYLE=Material
+Environment=QT_QUICK_CONTROLS_MATERIAL_THEME=Dark
+Environment=QT_QUICK_CONTROLS_MATERIAL_ACCENT=#2196F3
+
+# Variables d'environnement système
+Environment=HOME=/home/pi
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=PULSE_RUNTIME_PATH=/run/user/1000/pulse
+
+# Configuration audio
+Environment=ALSA_CARD=0
+Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
+
+# API Claude (à configurer)
+Environment=ANTHROPIC_API_KEY=
+EnvironmentFile=-/opt/raspberry-assistant/config/environment
+
+# Gestion des erreurs et redémarrage
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Timeouts
+TimeoutStartSec=30
+TimeoutStopSec=15
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Journalisation
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=raspberry-assistant
+
+# Sécurité
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/opt/raspberry-assistant /tmp /home/pi/.config
+RestrictNamespaces=true
+
+# Ressources (adaptation pour RPi 5)
+MemoryHigh=1G
+MemoryMax=1.5G
+CPUQuota=200%
+IOWeight=100
+
+# Capabilities nécessaires pour l'audio et GPIO
+AmbientCapabilities=CAP_SYS_NICE
+CapabilityBoundingSet=CAP_SYS_NICE
+
+[Install]
+WantedBy=multi-user.target
+Alias=assistant.service
