@@ -71,8 +71,8 @@ int main(int argc, char *argv[])
     engine.addImportPath("qrc:/qml");
     engine.addImportPath(":/");
 
-    // Chargement de l'interface principale
-    const QUrl mainQml(QStringLiteral("qrc:/qml/main.qml"));
+    // Chargement de l'interface principale (nouvelle interface radiale)
+    const QUrl mainQml(QStringLiteral("qrc:/qml/main_radial.qml"));
     
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [mainQml](QObject *obj, const QUrl &objUrl) {

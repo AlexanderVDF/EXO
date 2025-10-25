@@ -52,6 +52,12 @@ qt_add_qml_module(RaspberryAssistant
     VERSION 2.0
     QML_FILES
         qml/main.qml
+        qml/main_radial.qml
+        qml/components/ConfigurationSection.qml
+        qml/components/ChatSection.qml
+        qml/components/MaisonSection.qml
+        qml/components/MediasSection.qml
+        qml/components/AgendaSection.qml
 )
 
 # Liaison des bibliothèques (syntaxe PRIVATE pour éviter les conflits)
