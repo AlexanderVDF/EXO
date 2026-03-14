@@ -1,0 +1,216 @@
+Tu es un architecte logiciel senior spécialisé en C++17, Qt 6.9.3, audio temps réel, DSP, IA vocale, Whisper, TTS, ONNX, pipelines multimodaux et assistants vocaux. Ta mission est de refondre entièrement le pipeline STT→TTS d’EXO (v3.0 → v4.0) en supprimant totalement Porcupine et en basant l’assistant sur un pipeline moderne : Silero VAD + Whisper large‑v3 (GPU) + Piper (GPU).
+
+────────────────────────────────────────
+🎯 Objectif global
+────────────────────────────────────────
+Créer un pipeline moderne, robuste, modulaire, GPU‑optimisé, basé sur :
+
+1) Capture audio + DSP (C++/Qt)
+2) VAD neuronal Silero (ONNX)
+3) Whisper large‑v3 (streaming, GPU)
+4) Détection du mot‑clé “EXO” dans le transcript (wake‑word logiciel)
+5) NLU via ClaudeAPI (existant)
+6) TTS Piper (streaming, GPU si dispo)
+7) DSP de sortie (C++/Qt)
+8) Intégration AssistantManager + GUI React + QML
+
+Pipeline final :
+
+Audio brut → DSP → Silero VAD → Whisper (GPU) → détection “EXO” → Claude → Piper (GPU) → DSP → QAudioSink
+
+────────────────────────────────────────
+🎤 1) Capture + DSP (C++/Qt)
+────────────────────────────────────────
+Créer une classe VoicePipeline (ou refondre VoiceManager) :
+
+- QAudioSource 16 kHz mono Int16
+- DSP prétraitement :
+  - High‑pass 150–200 Hz
+  - Normalisation RMS
+  - Noise gate léger
+  - Anti‑clipping
+  - AGC optionnel
+- Buffer circulaire
+- Signaux Qt :
+  - audioLevelChanged
+  - speechStarted
+  - speechEnded
+  - partialTranscript
+  - finalTranscript
+
+Paramètres configurables via ConfigManager.
+
+────────────────────────────────────────
+🧠 2) VAD neuronal Silero (ONNX)
+────────────────────────────────────────
+Intégrer Silero VAD via ONNX Runtime (CPU).
+
+- Fenêtres 20–30 ms
+- Score voix ∈ [0,1]
+- Début parole : score > seuil_start
+- Fin parole : score < seuil_stop
+- Durée min/max utterance
+- Adaptation bruit ambiant
+
+Signaux Qt :
+- speechStarted()
+- speechEnded()
+
+────────────────────────────────────────
+🎧 3) Whisper large‑v3 (streaming, GPU)
+────────────────────────────────────────
+Créer un service Python `stt_server.py` utilisant faster‑whisper.
+
+IMPORTANT — ACCÉLÉRATION GPU OBLIGATOIRE :
+
+from faster_whisper import WhisperModel
+model = WhisperModel(
+    "large-v3",
+    device="cuda",          # GPU obligatoire si disponible
+    compute_type="float16"  # FP16 pour vitesse maximale
+)
+
+Fallback automatique :
+device="cpu", compute_type="int8"
+
+Fonctionnement :
+- réception chunks PCM16
+- transcription streaming
+- envoi :
+  - { "type": "partial", "text": "..." }
+  - { "type": "final", "text": "...", "segments": [...] }
+
+Côté C++ :
+- partialTranscript(QString)
+- finalTranscript(QString)
+
+────────────────────────────────────────
+🗣️ 4) Wake‑word logiciel (“EXO”)
+────────────────────────────────────────
+Supprimer totalement Porcupine.
+
+Le wake‑word est détecté dans le transcript Whisper :
+
+- partialTranscript → recherche du mot “exo”
+- finalTranscript → confirmation
+- si détecté → AssistantManager passe en mode Listening/Thinking
+
+Paramètres configurables :
+- mot‑clé
+- sensibilité (matching flou)
+- délai d’activation
+
+────────────────────────────────────────
+🤖 5) NLU / LLM (ClaudeAPI existant)
+────────────────────────────────────────
+AssistantManager :
+- récupère contexte via AIMemoryManager
+- appelle ClaudeAPI (streaming si disponible)
+- reçoit réponse texte
+- enregistre conversation
+
+────────────────────────────────────────
+🔊 6) TTS Piper (streaming, GPU si dispo)
+────────────────────────────────────────
+Créer un service Python `tts_server.py`.
+
+IMPORTANT — GPU SI DISPONIBLE :
+
+import piper
+model = piper.load_model("fr-xxx.onnx", use_cuda=True)
+
+Fallback automatique :
+use_cuda=False
+
+Fonctionnement :
+- entrée : texte + paramètres
+- sortie : chunks PCM16 16 kHz
+
+Côté C++ :
+Créer TTSManager :
+- reçoit chunks
+- applique DSP :
+  - EQ présence (2–4 kHz)
+  - compresseur (ratio 2:1)
+  - normalisation –14 dBFS
+  - fade‑in/out
+  - anti‑clipping
+- envoie à QAudioSink
+
+────────────────────────────────────────
+🧩 7) AssistantManager (orchestrateur)
+────────────────────────────────────────
+États internes :
+- Idle
+- DetectingSpeech
+- Listening
+- Transcribing
+- Thinking
+- Speaking
+
+Transitions :
+Idle → DetectingSpeech → Listening → Transcribing → Thinking → Speaking → Idle
+
+AssistantManager doit connecter :
+- VoicePipeline
+- TTSManager
+- ClaudeAPI
+- AIMemoryManager
+- ConfigManager
+
+Expose à QML/React :
+- état courant
+- transcript partiel/final
+- dernière réponse
+- waveform
+
+────────────────────────────────────────
+🌐 8) GUI React & QML
+────────────────────────────────────────
+GUI React (ws://localhost:8765) :
+- état assistant
+- transcripts
+- waveform
+- logs
+
+QML :
+- VoiceVisualizer animé
+- affichage état
+- transcript
+
+────────────────────────────────────────
+⚙️ 9) Configuration
+────────────────────────────────────────
+ConfigManager doit rendre configurables :
+- seuils VAD
+- modèle Whisper
+- paramètres Whisper (beam, temp)
+- mot‑clé wake‑word logiciel
+- voix Piper
+- vitesse/pitch TTS
+- niveaux DSP
+- activation AGC
+
+Priorité :
+.env → assistant.conf → user_config.ini
+
+────────────────────────────────────────
+🧪 10) Robustesse
+────────────────────────────────────────
+- fallback CPU si GPU indisponible
+- reconnexion services Python
+- timeouts STT/TTS
+- logs détaillés : [VOICE], [VAD], [STT], [TTS], [PIPELINE]
+
+────────────────────────────────────────
+📌 Ce que j’attends de toi
+────────────────────────────────────────
+1) Générer les classes C++ : VoicePipeline, TTSManager, intégration AssistantManager.
+2) Générer les services Python : stt_server.py, tts_server.py.
+3) Intégrer GPU Whisper + GPU Piper.
+4) Intégrer Silero VAD + Whisper streaming + wake‑word logiciel.
+5) Exposer états et transcripts à QML/React.
+6) Rendre tout configurable via ConfigManager.
+7) Produire un code propre, modulaire, documenté.
+
+Commence immédiatement par définir les interfaces publiques des classes C++.

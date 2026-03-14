@@ -40,6 +40,7 @@ config/*.conf
 
 # Python virtual environment
 .venv/
+.venv_stt_tts/
 __pycache__/
 *.pyc
 
@@ -66,3 +67,8 @@ Thumbs.db
 # Node.js (if needed)
 node_modules/
 npm-debug.log*
+
+# Documentation temporaire (utiliser EXO_DOCUMENTATION.md unifié)
+*_GUIDE.md
+*_REPORT.md
+TEST_*.md

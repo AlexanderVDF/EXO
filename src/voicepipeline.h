@@ -1,0 +1,350 @@
+#ifndef VOICEPIPELINE_H
+#define VOICEPIPELINE_H
+
+#include <QObject>
+#include <QAudioSource>
+#include <QAudioSink>
+#include <QAudioFormat>
+#include <QAudioDevice>
+#include <QMediaDevices>
+#include "ttsmanager.h"
+#include <QThread>
+#include <QMutex>
+#include <QElapsedTimer>
+#include <QTimer>
+#include <QWebSocket>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <memory>
+#include <vector>
+#include <atomic>
+#include <cstdint>
+#include <cmath>
+
+// ─────────────────────────────────────────────────────
+//  CircularAudioBuffer — lock-free-ish ring buffer
+// ─────────────────────────────────────────────────────
+class CircularAudioBuffer
+{
+public:
+    explicit CircularAudioBuffer(size_t capacitySamples = 16000 * 30);
+
+    void     write(const int16_t *data, size_t count);
+    size_t   read(int16_t *dest, size_t count);
+    size_t   peek(int16_t *dest, size_t count) const;
+    size_t   available() const;
+    void     clear();
+    size_t   capacity() const { return m_buf.size(); }
+
+private:
+    std::vector<int16_t> m_buf;
+    size_t m_head = 0;
+    size_t m_tail = 0;
+    size_t m_count = 0;
+    mutable QMutex m_mutex;
+};
+
+// ─────────────────────────────────────────────────────
+//  AudioPreprocessor — DSP chain on int16 chunks
+// ─────────────────────────────────────────────────────
+class AudioPreprocessor
+{
+public:
+    AudioPreprocessor();
+
+    void process(int16_t *samples, int count);
+
+    // Butterworth high-pass (2nd order) cutoff Hz
+    void setHighPassCutoff(float hz);
+    void setNoiseGateThreshold(float rms);
+    void setAGCEnabled(bool on);
+    void setNormalizationTarget(float rms);
+    void setSampleRate(int sr);
+
+private:
+    // High-pass Butterworth 2nd-order state
+    void recomputeHP();
+    float m_hpCutoff   = 150.0f;
+    int   m_sampleRate = 16000;
+    // biquad coefficients  a0 is normalized to 1
+    double m_b0=1, m_b1=0, m_b2=0, m_a1=0, m_a2=0;
+    double m_x1=0, m_x2=0, m_y1=0, m_y2=0;
+
+    // Noise gate
+    float m_gateThreshold = 0.005f;   // RMS below this → zero
+    bool  m_gateOpen = false;
+
+    // AGC
+    bool  m_agcEnabled = false;
+    float m_agcGain    = 1.0f;
+
+    // RMS normalization target (0 = disabled)
+    float m_normTarget = 0.0f;
+};
+
+// ─────────────────────────────────────────────────────
+//  VADEngine — Voice Activity Detection
+//  Built-in : energy + ZCR heuristic (always available)
+//  Optional : Silero ONNX (loaded at runtime)
+// ─────────────────────────────────────────────────────
+class VADEngine : public QObject
+{
+    Q_OBJECT
+public:
+    enum class Backend { Builtin, SileroONNX };
+    Q_ENUM(Backend)
+
+    explicit VADEngine(QObject *parent = nullptr);
+    ~VADEngine();
+
+    bool     initialize(Backend preferred = Backend::Builtin);
+    float    processChunk(const int16_t *samples, int count);
+    bool     isSpeech() const { return m_isSpeech; }
+    Backend  activeBackend() const { return m_backend; }
+
+    void setThreshold(float t) { m_threshold = t; }
+    float threshold() const { return m_threshold; }
+
+    // Adaptive noise floor
+    void resetNoiseEstimate();
+
+signals:
+    void speechStarted();
+    void speechEnded();
+
+private:
+    float builtinScore(const int16_t *s, int n);
+    void  updateSpeechState(float score);
+
+    Backend m_backend = Backend::Builtin;
+    float  m_threshold = 0.45f;
+    bool   m_isSpeech  = false;
+    int    m_speechFrames  = 0;
+    int    m_silenceFrames = 0;
+
+    // Adaptive noise estimation (exponential moving average)
+    float  m_noiseFloor = 0.0f;
+    bool   m_noiseCalibrated = false;
+    int    m_calibrationFrames = 0;
+    static constexpr int CALIBRATION_WINDOW = 30;   // ~600 ms @ 20 ms chunks
+    static constexpr int SPEECH_HANG_FRAMES = 15;   // keep speech state for N silent frames
+    static constexpr int SPEECH_START_FRAMES = 2;    // require N consecutive speech frames
+};
+
+// ─────────────────────────────────────────────────────
+//  StreamingSTT — STT via WebSocket → stt_server.py
+//
+//  Protocol:
+//   → JSON {"type":"start"}   begin utterance
+//   → Binary PCM16 audio chunks (real-time streaming)
+//   → JSON {"type":"end"}     finalize utterance
+//   ← JSON {"type":"partial","text":"..."}
+//   ← JSON {"type":"final","text":"...","segments":[...]}
+// ─────────────────────────────────────────────────────
+class StreamingSTT : public QObject
+{
+    Q_OBJECT
+public:
+    explicit StreamingSTT(QObject *parent = nullptr);
+    ~StreamingSTT();
+
+    bool initialize(const QString &serverUrl = "ws://localhost:8766");
+    bool isAvailable() const { return m_connected; }
+    bool isConnected() const { return m_connected; }
+
+    // Start a new utterance (tells server to expect audio)
+    void startUtterance();
+    // Stream audio chunk in real-time
+    void feedAudio(const int16_t *samples, int count);
+    // End utterance and request final transcript
+    void endUtterance();
+    // Cancel current utterance
+    void cancelUtterance();
+
+    // Submit full buffer (non-streaming fallback)
+    void transcribeBuffer(const std::vector<int16_t> &pcm);
+
+    void setLanguage(const QString &lang);
+    void setBeamSize(int beam);
+
+signals:
+    void partialTranscript(const QString &text);
+    void finalTranscript(const QString &text);
+    void error(const QString &msg);
+    void connected();
+    void disconnected();
+
+private slots:
+    void onWsConnected();
+    void onWsDisconnected();
+    void onWsTextMessage(const QString &msg);
+    void onWsError(QAbstractSocket::SocketError err);
+
+private:
+    void reconnect();
+
+    QWebSocket *m_ws = nullptr;
+    QString m_serverUrl;
+    bool m_connected = false;
+    bool m_recording = false;
+    QString m_language = "fr";
+    int m_beamSize = 5;
+    int m_reconnectAttempts = 0;
+    static constexpr int MAX_RECONNECT_ATTEMPTS = 10;
+    static constexpr int RECONNECT_BASE_MS = 1000;
+};
+
+// ─────────────────────────────────────────────────────
+//  PipelineState — finite state machine (v4.1)
+// ─────────────────────────────────────────────────────
+enum class PipelineState {
+    Idle,             // attente — VAD + STT passif
+    DetectingSpeech,  // parole détectée par VAD, streaming STT actif
+    Listening,        // capture utterance en cours
+    Transcribing,     // STT en cours (streaming vers stt_server)
+    Thinking,         // Claude / NLU processing
+    Speaking          // TTS playing
+};
+
+// ─────────────────────────────────────────────────────
+//  VoicePipeline — central orchestrator
+//
+//  Audio → Preprocess → VAD → STT → detect "EXO" → Claude
+//                                                    → TTS
+// ─────────────────────────────────────────────────────
+class VoicePipeline : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool isListening    READ isListening    NOTIFY listeningChanged)
+    Q_PROPERTY(bool isSpeaking     READ isSpeaking     NOTIFY speakingChanged)
+    Q_PROPERTY(QString lastCommand READ lastCommand     NOTIFY commandDetected)
+    Q_PROPERTY(int    pipelineState READ pipelineStateInt NOTIFY stateChanged)
+
+public:
+    explicit VoicePipeline(QObject *parent = nullptr);
+    ~VoicePipeline();
+
+    // ── lifecycle ──
+    bool initAudio();
+    bool initVAD(VADEngine::Backend preferred = VADEngine::Backend::Builtin);
+    bool initSTT(const QString &serverUrl = "ws://localhost:8766");
+    void initTTS(const QString &ttsServerUrl = "ws://localhost:8767");
+
+    Q_INVOKABLE void startListening();
+    Q_INVOKABLE void stopListening();
+    Q_INVOKABLE void speak(const QString &text);
+    Q_INVOKABLE void resetBuffers();
+
+    // ── state queries ──
+    bool isListening() const { return m_audioRunning; }
+    bool isSpeaking()  const { return m_isSpeaking; }
+    QString lastCommand() const { return m_lastCommand; }
+    PipelineState state() const { return m_state; }
+    int pipelineStateInt() const { return static_cast<int>(m_state); }
+
+    // ── tuning API ──
+    Q_INVOKABLE void setWakeWordSensitivity(float s);
+    Q_INVOKABLE void setVADThreshold(float t);
+    Q_INVOKABLE void setNoiseGate(float rms);
+    Q_INVOKABLE void setAGC(bool on);
+    Q_INVOKABLE void setWakeWord(const QString &word) { m_wakeKeyword = word; }
+    Q_INVOKABLE void setSTTServerUrl(const QString &url);
+    Q_INVOKABLE void setSTTLanguage(const QString &lang);
+
+    // ── WebSocket bridge (for React GUI) ──
+    void connectToServer(const QString &url);
+    void sendWebSocketMessage(const QString &message);
+
+signals:
+    // ── Events exposed to QML / AssistantManager ──
+    void listeningChanged();
+    void speakingChanged();
+    void stateChanged(int newState);
+    void commandDetected(const QString &command);
+    void wakeWordDetected();
+    void speechStarted();
+    void speechEnded();
+    void partialTranscript(const QString &text);
+    void finalTranscript(const QString &text);
+    void speechTranscribed(const QString &transcription);
+    void statusChanged(const QString &status);
+    void voiceError(const QString &error);
+    void audioLevel(float rms, float vadScore);
+
+private slots:
+    void onAudioDataReady();
+    void onVADSpeechStarted();
+    void onVADSpeechEnded();
+    void onSTTPartial(const QString &text);
+    void onSTTFinal(const QString &text);
+    void onSTTError(const QString &msg);
+    void onTtsStarted();
+    void onTtsFinished();
+    void onTtsError(const QString &msg);
+    void onUtteranceTimeout();
+    void onWsBinaryMessage(const QByteArray &msg);
+    void onWsTextMessage(const QString &msg);
+
+private:
+    // ── internal pipeline stages ──
+    void processAudioChunk(const int16_t *samples, int count);
+    void handleVAD(const int16_t *samples, int count, float vadScore);
+    void handleRecording(const int16_t *samples, int count);
+    bool checkWakeWord(const QString &text);
+    void finishUtterance();
+    void dispatchTranscript(const QString &text);
+    void setState(PipelineState s);
+    void broadcastState();
+    void broadcastAudioLevel(float rms, float vadScore);
+    QString analyzeAudioFallback(const std::vector<int16_t> &pcm);
+
+    // ── state ──
+    PipelineState m_state = PipelineState::Idle;
+    std::atomic<bool> m_audioRunning{false};
+    bool m_isSpeaking = false;
+    QString m_lastCommand;
+    QString m_wakeKeyword = "exo";
+    bool m_wakeWordTriggered = false;  // wake-word détecté dans transcript courant
+
+    // ── audio capture ──
+    QAudioFormat m_format;
+    std::unique_ptr<QAudioSource> m_audioSource;
+    QIODevice *m_audioIO = nullptr;
+
+    // ── preprocessing ──
+    AudioPreprocessor m_preproc;
+
+    // ── VAD ──
+    std::unique_ptr<VADEngine> m_vad;
+
+    // ── STT (streaming via WebSocket → stt_server.py) ──
+    std::unique_ptr<StreamingSTT> m_stt;
+    bool m_sttStreaming = false;  // are we streaming audio to STT?
+
+    // ── Recording buffer (utterance being captured) ──
+    std::vector<int16_t> m_utteranceBuf;
+    CircularAudioBuffer m_ringBuf;
+    static constexpr size_t MAX_UTTERANCE_SAMPLES = 16000 * 30; // 30 s
+
+    // ── TTS ──
+    TTSManager *m_ttsManager = nullptr;
+
+    // ── Timers ──
+    QTimer *m_utteranceTimer = nullptr;
+    QElapsedTimer m_ttsEndClock;
+    QElapsedTimer m_lastWakeWordClock;
+    static constexpr int TTS_GUARD_MS         = 1500;
+    static constexpr int WAKE_COOLDOWN_MS     = 3000;
+    static constexpr int UTTERANCE_TIMEOUT_MS = 15000;
+    static constexpr int POST_WAKE_GRACE_MS   = 500;
+
+    // ── WebSocket (to exo_server.py / React GUI) ──
+    QWebSocket *m_ws = nullptr;
+
+    // ── Audio format constants ──
+    static constexpr int SAMPLE_RATE = 16000;
+    static constexpr int CHUNK_MS    = 20;
+    static constexpr int CHUNK_SAMPLES = SAMPLE_RATE * CHUNK_MS / 1000; // 320
+};
+
+#endif // VOICEPIPELINE_H

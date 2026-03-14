@@ -1,78 +1,154 @@
 #include "configmanager.h"
-#include <QDebug>
-#include <QDir>
-#include <QCoreApplication>
-#include <QStandardPaths>
+#include "logmanager.h"
 
-// Constantes par défaut
-const QString ConfigManager::DEFAULT_WAKE_WORD = "Exo";
-const QString ConfigManager::DEFAULT_WEATHER_CITY = "Paris";
-const QString ConfigManager::DEFAULT_CLAUDE_MODEL = "claude-3-haiku-20240307";
-const QString ConfigManager::DEFAULT_VOICE_LANGUAGE = "fr-FR";
-const QString ConfigManager::DEFAULT_LOG_LEVEL = "Info";
-const double ConfigManager::DEFAULT_VOICE_RATE = -0.3;
-const double ConfigManager::DEFAULT_VOICE_PITCH = -0.1;
-const double ConfigManager::DEFAULT_VOICE_VOLUME = 0.9;
-const int ConfigManager::DEFAULT_WEATHER_UPDATE_INTERVAL = 600000; // 10 minutes
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QStandardPaths>
+#include <QTextStream>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QUrl>
+#include <QTimer>
+#include <QRegularExpression>
+
+// ═══════════════════════════════════════════════════════
+//  Construction / Destruction
+// ═══════════════════════════════════════════════════════
 
 ConfigManager::ConfigManager(QObject *parent)
     : QObject(parent)
-    , m_settings(nullptr)
-    , m_isLoaded(false)
 {
-    qDebug() << "ConfigManager créé";
+    initializeDefaultThemes();
+
+    m_userSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope,
+                                   "EXOAssistant", "user_config", this);
+    m_networkManager = new QNetworkAccessManager(this);
+
+    hConfig() << "ConfigManager v4 créé — user settings:"
+              << m_userSettings->fileName();
 }
 
-ConfigManager::~ConfigManager()
+ConfigManager::~ConfigManager() = default;
+
+// ═══════════════════════════════════════════════════════
+//  Chargement .env
+// ═══════════════════════════════════════════════════════
+
+void ConfigManager::loadDotEnv(const QString &path)
 {
-    if (m_settings) {
-        delete m_settings;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+
+    hConfig() << "Chargement .env:" << path;
+
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (line.isEmpty() || line.startsWith('#')) continue;
+
+        int eq = line.indexOf('=');
+        if (eq <= 0) continue;
+
+        QString key   = line.left(eq).trimmed();
+        QString value = line.mid(eq + 1).trimmed();
+
+        // Supprimer les guillemets englobants
+        if ((value.startsWith('"') && value.endsWith('"'))
+            || (value.startsWith('\'') && value.endsWith('\''))) {
+            value = value.mid(1, value.length() - 2);
+        }
+
+        m_envVars.insert(key, value);
     }
+    file.close();
+
+    hConfig() << m_envVars.size() << "variables .env chargées";
 }
+
+QString ConfigManager::envLookup(const QString &section, const QString &key) const
+{
+    // Mapping section/key → variable d'environnement
+    static const QHash<QString, QString> envMap = {
+        {"Claude/api_key",           "CLAUDE_API_KEY"},
+        {"Claude/model",             "CLAUDE_MODEL"},
+        {"OpenWeatherMap/api_key",   "OWM_API_KEY"},
+        {"OpenWeatherMap/city",      "OWM_CITY"},
+        {"Voice/wake_word",          "EXO_WAKE_WORD"},
+        {"Logging/level",            "EXO_LOG_LEVEL"},
+    };
+
+    QString compound = section + "/" + key;
+    QString envName = envMap.value(compound);
+
+    if (envName.isEmpty()) return {};
+
+    // 1. .env chargé
+    QString val = m_envVars.value(envName);
+    if (!val.isEmpty()) return val;
+
+    // 2. Variable d'environnement système
+    val = qEnvironmentVariable(envName.toUtf8().constData());
+    return val;
+}
+
+// ═══════════════════════════════════════════════════════
+//  Initialisation
+// ═══════════════════════════════════════════════════════
 
 bool ConfigManager::loadConfiguration(const QString &configPath)
 {
     m_configPath = configPath;
-    
-    // Vérifier si le fichier existe
+
+    // Charger .env depuis la racine du projet
     QDir appDir(QCoreApplication::applicationDirPath());
+    loadDotEnv(appDir.absoluteFilePath(".env"));
+    // Chercher aussi 2 niveaux au-dessus (build/Debug → racine)
+    loadDotEnv(appDir.absoluteFilePath("../../.env"));
+
+    // Charger assistant.conf
     QString fullPath = appDir.absoluteFilePath(configPath);
-    
+
     if (!QFile::exists(fullPath)) {
-        qWarning() << "Fichier de configuration non trouvé:" << fullPath;
-        qDebug() << "Utilisation des valeurs par défaut";
+        hWarning(henriConfig) << "Config introuvable:" << fullPath
+                              << "— valeurs par défaut";
         setDefaultValues();
-        return false;
+        // Ne pas return false — on peut fonctionner avec les defaults
+    } else {
+        if (m_settings) {
+            m_settings->deleteLater();
+            m_settings = nullptr;
+        }
+
+        m_settings = new QSettings(fullPath, QSettings::IniFormat, this);
+
+        if (m_settings->status() != QSettings::NoError) {
+            hWarning(henriConfig) << "Erreur lecture config:" << fullPath;
+            emit configurationError("Impossible de charger le fichier de configuration");
+            return false;
+        }
     }
-    
-    // Charger les paramètres
-    if (m_settings) {
-        delete m_settings;
-    }
-    
-    m_settings = new QSettings(fullPath, QSettings::IniFormat, this);
-    
-    if (m_settings->status() != QSettings::NoError) {
-        qCritical() << "Erreur lors du chargement de la configuration:" << fullPath;
-        emit configurationError("Impossible de charger le fichier de configuration");
-        return false;
-    }
-    
+
     m_isLoaded = true;
-    qDebug() << "Configuration chargée depuis:" << fullPath;
-    
-    // Vérifier les clés essentielles
-    QString claudeKey = getClaudeApiKey();
-    QString weatherKey = getWeatherApiKey();
-    
-    if (claudeKey.isEmpty()) {
-        qWarning() << "Clé API Claude manquante dans la configuration";
+
+    // Diagnostic clés essentielles
+    if (getClaudeApiKey().isEmpty())
+        hWarning(henriConfig) << "Clé API Claude manquante";
+    if (getWeatherApiKey().isEmpty())
+        hWarning(henriConfig) << "Clé API météo manquante";
+
+    hConfig() << "Configuration chargée — modèle Claude:" << getClaudeModel()
+              << "— ville:" << getWeatherCity();
+
+    // Géolocalisation automatique
+    if (isLocationDetectionEnabled()) {
+        hConfig() << "Géolocalisation automatique activée";
+        QTimer::singleShot(1500, this, &ConfigManager::detectLocation);
     }
-    
-    if (weatherKey.isEmpty()) {
-        qWarning() << "Clé API météo manquante dans la configuration";
-    }
-    
+
     emit configurationLoaded();
     return true;
 }
@@ -80,131 +156,478 @@ bool ConfigManager::loadConfiguration(const QString &configPath)
 void ConfigManager::setDefaultValues()
 {
     if (m_settings) {
-        delete m_settings;
+        m_settings->deleteLater();
+        m_settings = nullptr;
     }
-    
-    // Créer une configuration temporaire en mémoire
-    m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, 
-                              "HenriAssistant", "default", this);
-    
+    m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope,
+                               "EXOAssistant", "default", this);
     m_isLoaded = true;
 }
 
+// ═══════════════════════════════════════════════════════
+//  API générique — priorité .env > user > conf
+// ═══════════════════════════════════════════════════════
+
+QString ConfigManager::getString(const QString &section,
+                                  const QString &key,
+                                  const QString &defaultValue) const
+{
+    // 1. .env / variables d'environnement
+    QString env = envLookup(section, key);
+    if (!env.isEmpty()) return env;
+
+    // 2. Préférences utilisateur
+    QString compound = section + "/" + key;
+    if (m_userSettings && m_userSettings->contains(compound))
+        return m_userSettings->value(compound).toString();
+
+    // 3. Config par défaut (assistant.conf)
+    if (m_settings)
+        return m_settings->value(compound, defaultValue).toString();
+
+    return defaultValue;
+}
+
+int ConfigManager::getInt(const QString &section, const QString &key,
+                           int defaultValue) const
+{
+    QString val = getString(section, key);
+    if (val.isEmpty()) return defaultValue;
+    bool ok;
+    int result = val.toInt(&ok);
+    return ok ? result : defaultValue;
+}
+
+double ConfigManager::getDouble(const QString &section, const QString &key,
+                                 double defaultValue) const
+{
+    QString val = getString(section, key);
+    if (val.isEmpty()) return defaultValue;
+    bool ok;
+    double result = val.toDouble(&ok);
+    return ok ? result : defaultValue;
+}
+
+bool ConfigManager::getBool(const QString &section, const QString &key,
+                             bool defaultValue) const
+{
+    QString val = getString(section, key).toLower();
+    if (val.isEmpty()) return defaultValue;
+    if (val == "true" || val == "1" || val == "yes" || val == "on") return true;
+    if (val == "false" || val == "0" || val == "no" || val == "off") return false;
+    return defaultValue;
+}
+
+void ConfigManager::setUserValue(const QString &section,
+                                  const QString &key,
+                                  const QVariant &value)
+{
+    if (!m_userSettings) return;
+    m_userSettings->setValue(section + "/" + key, value);
+    m_userSettings->sync();
+    hConfig() << "User value:" << section << "/" << key << "=" << value.toString();
+}
+
+// ═══════════════════════════════════════════════════════
+//  Raccourcis API Keys
+// ═══════════════════════════════════════════════════════
+
 QString ConfigManager::getClaudeApiKey() const
 {
-    return getConfigValue("Claude", "api_key");
+    QString key = getString("Claude", "api_key");
+    if (key.startsWith("${")) return {};
+    return key;
 }
 
 QString ConfigManager::getClaudeModel() const
 {
-    return getConfigValue("Claude", "model", DEFAULT_CLAUDE_MODEL);
+    return getString("Claude", "model", DEFAULT_CLAUDE_MODEL);
 }
 
 QString ConfigManager::getWeatherApiKey() const
 {
-    return getConfigValue("OpenWeatherMap", "api_key");
+    QString key = getString("OpenWeatherMap", "api_key");
+    if (key.startsWith("${")) return {};
+    return key;
 }
+
+// ═══════════════════════════════════════════════════════
+//  Raccourcis paramètres courants
+// ═══════════════════════════════════════════════════════
 
 QString ConfigManager::getWeatherCity() const
 {
-    return getConfigValue("OpenWeatherMap", "city", DEFAULT_WEATHER_CITY);
+    return getString("OpenWeatherMap", "city", DEFAULT_WEATHER_CITY);
 }
 
 int ConfigManager::getWeatherUpdateInterval() const
 {
-    return getConfigValueInt("OpenWeatherMap", "update_interval", DEFAULT_WEATHER_UPDATE_INTERVAL);
+    return getInt("OpenWeatherMap", "update_interval", DEFAULT_WEATHER_INTERVAL);
 }
 
 QString ConfigManager::getWakeWord() const
 {
-    return getConfigValue("Voice", "wake_word", DEFAULT_WAKE_WORD);
+    return getString("Voice", "wake_word", DEFAULT_WAKE_WORD);
 }
 
 double ConfigManager::getVoiceRate() const
 {
-    return getConfigValueDouble("Voice", "voice_rate", DEFAULT_VOICE_RATE);
+    return getDouble("Voice", "voice_rate", DEFAULT_VOICE_RATE);
 }
 
 double ConfigManager::getVoicePitch() const
 {
-    return getConfigValueDouble("Voice", "voice_pitch", DEFAULT_VOICE_PITCH);
+    return getDouble("Voice", "voice_pitch", DEFAULT_VOICE_PITCH);
 }
 
 double ConfigManager::getVoiceVolume() const
 {
-    return getConfigValueDouble("Voice", "voice_volume", DEFAULT_VOICE_VOLUME);
+    return getDouble("Voice", "voice_volume", DEFAULT_VOICE_VOLUME);
 }
 
 QString ConfigManager::getVoiceLanguage() const
 {
-    return getConfigValue("Voice", "language", DEFAULT_VOICE_LANGUAGE);
+    return getString("Voice", "language", DEFAULT_VOICE_LANGUAGE);
 }
 
 QString ConfigManager::getLogLevel() const
 {
-    return getConfigValue("Logging", "level", DEFAULT_LOG_LEVEL);
+    return getString("Logging", "level", DEFAULT_LOG_LEVEL);
 }
 
 bool ConfigManager::isDebugEnabled() const
 {
-    return getConfigValueBool("Logging", "debug_enabled", true);
+    return getBool("Logging", "debug_enabled", true);
 }
+
+// ═══════════════════════════════════════════════════════
+//  Setters (délèguent à setUserValue)
+// ═══════════════════════════════════════════════════════
+
+void ConfigManager::setClaudeApiKey(const QString &key)
+{
+    setUserValue("Claude", "api_key", key);
+}
+
+void ConfigManager::setClaudeModel(const QString &model)
+{
+    setUserValue("Claude", "model", model);
+}
+
+void ConfigManager::setWeatherApiKey(const QString &key)
+{
+    setUserValue("OpenWeatherMap", "api_key", key);
+    emit weatherConfigChanged(getWeatherCity(), key);
+}
+
+void ConfigManager::setWeatherCity(const QString &city)
+{
+    setUserValue("OpenWeatherMap", "city", city);
+    emit weatherConfigChanged(city, getWeatherApiKey());
+}
+
+void ConfigManager::setWakeWord(const QString &word)
+{
+    setUserValue("Voice", "wake_word", word);
+}
+
+void ConfigManager::setWeatherUpdateInterval(int minutes)
+{
+    setUserValue("OpenWeatherMap", "update_interval",
+                 QString::number(minutes * 60000));
+}
+
+// ═══════════════════════════════════════════════════════
+//  STT / TTS / VAD params
+// ═══════════════════════════════════════════════════════
+
+QString ConfigManager::getSTTServerUrl() const
+{
+    return getString("STT", "server_url", DEFAULT_STT_SERVER_URL);
+}
+
+QString ConfigManager::getTTSServerUrl() const
+{
+    return getString("TTS", "server_url", DEFAULT_TTS_SERVER_URL);
+}
+
+QString ConfigManager::getGUIServerUrl() const
+{
+    return getString("Server", "websocket_url", DEFAULT_GUI_SERVER_URL);
+}
+
+QString ConfigManager::getSTTModel() const
+{
+    return getString("STT", "model", DEFAULT_STT_MODEL);
+}
+
+QString ConfigManager::getSTTLanguage() const
+{
+    return getString("STT", "language", DEFAULT_STT_LANGUAGE);
+}
+
+int ConfigManager::getSTTBeamSize() const
+{
+    return getInt("STT", "beam_size", DEFAULT_STT_BEAM_SIZE);
+}
+
+QString ConfigManager::getPiperVoice() const
+{
+    return getString("TTS", "piper_voice", DEFAULT_PIPER_VOICE);
+}
+
+QString ConfigManager::getVADBackend() const
+{
+    return getString("VAD", "backend", DEFAULT_VAD_BACKEND);
+}
+
+double ConfigManager::getVADThreshold() const
+{
+    return getDouble("VAD", "threshold", DEFAULT_VAD_THRESHOLD);
+}
+
+void ConfigManager::setSTTServerUrl(const QString &url)
+{
+    setUserValue("STT", "server_url", url);
+}
+
+void ConfigManager::setTTSServerUrl(const QString &url)
+{
+    setUserValue("TTS", "server_url", url);
+}
+
+void ConfigManager::setPiperVoice(const QString &voice)
+{
+    setUserValue("TTS", "piper_voice", voice);
+}
+
+// ═══════════════════════════════════════════════════════
+//  Sauvegarde
+// ═══════════════════════════════════════════════════════
 
 bool ConfigManager::saveConfiguration()
 {
-    if (!m_settings) {
-        qCritical() << "Aucune configuration à sauvegarder";
+    if (!m_userSettings) {
+        hWarning(henriConfig) << "Aucune configuration utilisateur à sauvegarder";
         return false;
     }
-    
-    m_settings->sync();
-    
-    if (m_settings->status() != QSettings::NoError) {
-        qCritical() << "Erreur lors de la sauvegarde de la configuration";
+
+    m_userSettings->sync();
+
+    if (m_userSettings->status() != QSettings::NoError) {
+        hWarning(henriConfig) << "Erreur sauvegarde préférences utilisateur";
         return false;
     }
-    
-    qDebug() << "Configuration sauvegardée avec succès";
+
+    hConfig() << "Préférences utilisateur sauvegardées:"
+              << m_userSettings->fileName();
     return true;
 }
 
-// Méthodes utilitaires privées
-QString ConfigManager::getConfigValue(const QString &section, const QString &key, const QString &defaultValue) const
+// ═══════════════════════════════════════════════════════
+//  Géolocalisation
+// ═══════════════════════════════════════════════════════
+
+void ConfigManager::detectLocation()
 {
-    if (!m_settings) {
-        return defaultValue;
+    if (!m_networkManager) {
+        emit locationDetectionError("Service de géolocalisation non disponible");
+        return;
     }
-    
-    return m_settings->value(section + "/" + key, defaultValue).toString();
+
+    hConfig() << "Détection de localisation en cours...";
+
+    QUrl url("https://ipapi.co/json/");
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, "EXO-Assistant/4.0");
+
+    QNetworkReply *reply = m_networkManager->get(request);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            hWarning(henriConfig) << "Erreur géolocalisation:"
+                                  << reply->errorString();
+            emit locationDetectionError(reply->errorString());
+            return;
+        }
+
+        QJsonParseError parseErr;
+        QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseErr);
+
+        if (parseErr.error != QJsonParseError::NoError) {
+            emit locationDetectionError(parseErr.errorString());
+            return;
+        }
+
+        QJsonObject obj = doc.object();
+
+        if (obj.contains("error")) {
+            emit locationDetectionError(obj["reason"].toString());
+            return;
+        }
+
+        QString city    = obj["city"].toString();
+        QString region  = obj["region"].toString();
+        QString country = obj["country_name"].toString();
+
+        m_detectedLocation = city;
+        if (!region.isEmpty() && region != city)
+            m_detectedLocation += ", " + region;
+
+        hConfig() << "Localisation détectée:" << m_detectedLocation
+                  << "— pays:" << country;
+
+        if (isLocationDetectionEnabled()) {
+            setWeatherCity(city);
+        }
+
+        emit locationDetected(city, country);
+    });
 }
 
-double ConfigManager::getConfigValueDouble(const QString &section, const QString &key, double defaultValue) const
+bool ConfigManager::isLocationDetectionEnabled() const
 {
-    if (!m_settings) {
-        return defaultValue;
-    }
-    
-    bool ok;
-    double value = m_settings->value(section + "/" + key, defaultValue).toDouble(&ok);
-    return ok ? value : defaultValue;
+    if (m_userSettings)
+        return m_userSettings->value("Location/auto_detection", true).toBool();
+    return false;
 }
 
-int ConfigManager::getConfigValueInt(const QString &section, const QString &key, int defaultValue) const
+void ConfigManager::setLocationDetectionEnabled(bool enabled)
 {
-    if (!m_settings) {
-        return defaultValue;
-    }
-    
-    bool ok;
-    int value = m_settings->value(section + "/" + key, defaultValue).toInt(&ok);
-    return ok ? value : defaultValue;
+    setUserValue("Location", "auto_detection", enabled);
+    if (enabled) detectLocation();
 }
 
-bool ConfigManager::getConfigValueBool(const QString &section, const QString &key, bool defaultValue) const
+QString ConfigManager::getCurrentLocation() const
 {
-    if (!m_settings) {
-        return defaultValue;
+    return m_detectedLocation;
+}
+
+// ═══════════════════════════════════════════════════════
+//  Thèmes
+// ═══════════════════════════════════════════════════════
+
+void ConfigManager::initializeDefaultThemes()
+{
+    m_defaultThemes["EXO Original"] = createTheme(
+        "#00BCD4", "#0097A7", "#FF9800", "#121212", "#1E1E1E", "#FFFFFF");
+    m_defaultThemes["Neon Gaming"] = createTheme(
+        "#E91E63", "#9C27B0", "#00E676", "#0D0D0D", "#1A1A1A", "#00E676");
+    m_defaultThemes["Ocean Blue"] = createTheme(
+        "#2196F3", "#1976D2", "#FFC107", "#0F1419", "#1A2332", "#E3F2FD");
+    m_defaultThemes["Sunset Orange"] = createTheme(
+        "#FF5722", "#D84315", "#FFEB3B", "#1C0A00", "#2D1B0E", "#FFF3E0");
+    m_defaultThemes["Forest Green"] = createTheme(
+        "#4CAF50", "#388E3C", "#FF9800", "#0D1B0F", "#1B2F1D", "#E8F5E8");
+    m_defaultThemes["Purple Night"] = createTheme(
+        "#9C27B0", "#7B1FA2", "#E91E63", "#190A1F", "#2D1B3D", "#F3E5F5");
+}
+
+QVariantMap ConfigManager::createTheme(const QString &primary,
+                                       const QString &secondary,
+                                       const QString &accent,
+                                       const QString &background,
+                                       const QString &surface,
+                                       const QString &text) const
+{
+    return {
+        {"primary", primary}, {"secondary", secondary},
+        {"accent", accent},   {"background", background},
+        {"surface", surface}, {"text", text}
+    };
+}
+
+QStringList ConfigManager::getAvailableThemes() const
+{
+    QStringList themes = m_defaultThemes.keys();
+
+    if (m_userSettings) {
+        m_userSettings->beginGroup("CustomThemes");
+        const QStringList custom = m_userSettings->childGroups();
+        m_userSettings->endGroup();
+        for (const QString &t : custom)
+            themes.append(t + " (Personnalisé)");
     }
-    
-    return m_settings->value(section + "/" + key, defaultValue).toBool();
+
+    return themes;
+}
+
+QString ConfigManager::getCurrentTheme() const
+{
+    if (m_userSettings)
+        return m_userSettings->value("Appearance/current_theme", "EXO Original").toString();
+    return QStringLiteral("EXO Original");
+}
+
+void ConfigManager::setCurrentTheme(const QString &themeName)
+{
+    if (!m_userSettings) return;
+    m_userSettings->setValue("Appearance/current_theme", themeName);
+    m_userSettings->sync();
+
+    QVariantMap colors = getThemeColors(themeName);
+    emit themeChanged(themeName, colors);
+
+    hConfig() << "Thème changé:" << themeName;
+}
+
+QVariantMap ConfigManager::getThemeColors(const QString &themeName) const
+{
+    QString clean = themeName;
+    clean.remove(" (Personnalisé)");
+
+    if (m_defaultThemes.contains(clean))
+        return m_defaultThemes[clean].toMap();
+
+    if (m_userSettings) {
+        m_userSettings->beginGroup("CustomThemes/" + clean);
+        QVariantMap c;
+        c["primary"]    = m_userSettings->value("primary",    "#00BCD4").toString();
+        c["secondary"]  = m_userSettings->value("secondary",  "#0097A7").toString();
+        c["accent"]     = m_userSettings->value("accent",     "#FF9800").toString();
+        c["background"] = m_userSettings->value("background", "#121212").toString();
+        c["surface"]    = m_userSettings->value("surface",    "#1E1E1E").toString();
+        c["text"]       = m_userSettings->value("text",       "#FFFFFF").toString();
+        m_userSettings->endGroup();
+        return c;
+    }
+
+    return m_defaultThemes.value("EXO Original").toMap();
+}
+
+void ConfigManager::saveCustomTheme(const QString &themeName,
+                                     const QVariantMap &colors)
+{
+    if (!m_userSettings || themeName.isEmpty()) return;
+
+    m_userSettings->beginGroup("CustomThemes/" + themeName);
+    for (const QString &k : {"primary","secondary","accent","background","surface","text"})
+        m_userSettings->setValue(k, colors.value(k, "#000000").toString());
+    m_userSettings->endGroup();
+    m_userSettings->sync();
+
+    hConfig() << "Thème personnalisé sauvegardé:" << themeName;
+}
+
+void ConfigManager::deleteCustomTheme(const QString &themeName)
+{
+    if (!m_userSettings || themeName.isEmpty()) return;
+
+    QString clean = themeName;
+    clean.remove(" (Personnalisé)");
+
+    m_userSettings->beginGroup("CustomThemes");
+    m_userSettings->remove(clean);
+    m_userSettings->endGroup();
+    m_userSettings->sync();
+
+    hConfig() << "Thème supprimé:" << clean;
+}
+
+bool ConfigManager::isCustomTheme(const QString &themeName) const
+{
+    return themeName.contains("(Personnalisé)")
+        || (!m_defaultThemes.contains(themeName) && !themeName.isEmpty());
 }

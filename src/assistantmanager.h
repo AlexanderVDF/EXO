@@ -5,14 +5,17 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QQmlApplicationEngine>
+#include "configmanager.h"
 
 class ClaudeAPI;
 class WeatherManager;
-class VoiceManager;
-class ConfigManager;
+class VoicePipeline;
+class AIMemoryManager;
+
+Q_DECLARE_METATYPE(ConfigManager*)
 
 /**
- * @brief Gestionnaire principal de l'assistant Henri (version simplifiée)
+ * @brief Gestionnaire principal de l'assistant EXO (version simplifiée)
  * 
  * Coordonne les interactions entre Claude API, Weather Manager et l'interface QML
  */
@@ -21,6 +24,7 @@ class AssistantManager : public QObject
     Q_OBJECT
     Q_PROPERTY(bool isListening READ isListening NOTIFY listeningStateChanged)
     Q_PROPERTY(bool isInitialized READ isInitialized NOTIFY initializationComplete)
+    Q_PROPERTY(ConfigManager* configManager READ configManager CONSTANT)
 
 public:
     explicit AssistantManager(QObject *parent = nullptr);
@@ -40,20 +44,27 @@ public:
     Q_INVOKABLE void stopListening();
     Q_INVOKABLE QString getWeatherSummary() const;
     
-    // Accès aux composants pour l'exposition QML
+    // Accès aux composants pour l'exposition QML  
     ClaudeAPI* claudeApi() const { return m_claudeApi; }
-    VoiceManager* voiceManager() const { return m_voiceManager; }
+    VoicePipeline* voicePipeline() const { return m_voicePipeline; }
     WeatherManager* weatherManager() const { return m_weatherManager; }
     ConfigManager* configManager() const { return m_configManager; }
+    AIMemoryManager* memoryManager() const { return m_memoryManager; }
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
+    void claudeResponseReceived(const QString &response);
+    void claudePartialResponse(const QString &partialText);
     void listeningStateChanged(bool isListening);
     void initializationComplete();
     void errorOccurred(const QString &error);
 
 private slots:
     void onClaudeResponse(const QString &response);
+    void onClaudePartial(const QString &text);
+    void onToolCall(const QString &toolUseId,
+                    const QString &toolName,
+                    const QJsonObject &arguments);
     void onWeatherUpdate();
     void onError(const QString &error);
     void onConfigurationLoaded();
@@ -62,15 +73,19 @@ private:
     void initializeComponents();
     void setupConnections();
     void exposeToQml();
+    void sendWelcomeMessage();
+    void onSpeechTranscribed(const QString &transcription);
 
     // Membres privés
     bool m_isListening;
     bool m_isInitialized;
+    QString m_lastUserMessage;
     
     // Composants
     ConfigManager *m_configManager;
     ClaudeAPI *m_claudeApi;
-    VoiceManager *m_voiceManager;
+    VoicePipeline *m_voicePipeline;
     WeatherManager *m_weatherManager;
+    AIMemoryManager *m_memoryManager;
     QQmlApplicationEngine *m_qmlEngine;
 };

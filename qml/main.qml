@@ -31,14 +31,24 @@ ApplicationWindow {
         }
     }
     
-    // Connexions aux signaux Claude
+    // Connexions aux signaux Claude (v3 streaming)
     Connections {
         target: typeof claudeAPI !== 'undefined' ? claudeAPI : null
+        function onPartialResponse(text) {
+            // Streaming token par token
+            if (responseArea.text === "🤔 Claude réfléchit...") {
+                responseArea.text = "🤖 EXO: " + text
+            } else {
+                responseArea.text += text
+            }
+        }
+        function onFinalResponse(fullText) {
+            responseArea.text = "🤖 EXO: " + fullText
+        }
         function onResponseReceived(response) {
-            responseArea.text = "🤖 Claude: " + response
-            // Si le VoiceManager est disponible, faire parler Henri
-            if (typeof voiceManager !== 'undefined') {
-                voiceManager.speak(response)
+            // Compat fallback
+            if (responseArea.text === "🤔 Claude réfléchit...") {
+                responseArea.text = "🤖 EXO: " + response
             }
         }
         function onErrorOccurred(error) {

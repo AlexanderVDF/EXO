@@ -259,8 +259,9 @@ Item {
                     text: "➕ Ajouter un événement"
                     Material.background: "#2196F3"
                     onClicked: {
-                        // TODO: Ouvrir dialogue ajout événement
-                        console.log("Ajouter événement")
+                        // Dialogue d'ajout d'événement - implémentation future avec calendrier intégré
+                        console.log("Dialogue d'ajout d'événement - fonctionnalité prévue pour v2.1")
+                        // Note: Nécessitera intégration Google Calendar API
                     }
                 }
             }

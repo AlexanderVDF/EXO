@@ -1,7 +1,7 @@
 # Version simplifiée pour compilation initiale
 cmake_minimum_required(VERSION 3.21)
 
-project(RaspberryAssistant VERSION 2.0.0 LANGUAGES CXX)
+project(RaspberryAssistant VERSION 4.0.0 LANGUAGES CXX)
 
 # Configuration C++
 set(CMAKE_CXX_STANDARD 17)
@@ -21,6 +21,8 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
     Multimedia
     MultimediaWidgets
     TextToSpeech
+    WebSockets
+    Sql
 )
 
 # Sources principales Henri
@@ -30,8 +32,10 @@ set(SOURCES
     src/configmanager.cpp
     src/logmanager.cpp
     src/claudeapi.cpp
-    src/voicemanager.cpp
+    src/voicepipeline.cpp
+    src/ttsmanager.cpp
     src/weathermanager.cpp
+    src/aimemorymanager.cpp
 )
 
 set(HEADERS
@@ -39,25 +43,38 @@ set(HEADERS
     src/configmanager.h
     src/logmanager.h
     src/claudeapi.h
-    src/voicemanager.h
+    src/voicepipeline.h
+    src/ttsmanager.h
     src/weathermanager.h
+    src/aimemorymanager.h
 )
 
-# Exécutable
+# Exécutable avec console pour debug
 qt_add_executable(RaspberryAssistant ${SOURCES} ${HEADERS})
+set_target_properties(RaspberryAssistant PROPERTIES
+    WIN32_EXECUTABLE FALSE  # Console app sur Windows pour voir les erreurs
+)
 
 # Module QML
 qt_add_qml_module(RaspberryAssistant
     URI RaspberryAssistant
-    VERSION 2.0
+    VERSION 4.0
     QML_FILES
         qml/main.qml
         qml/main_radial.qml
+        qml/test_simple.qml
         qml/components/ConfigurationSection.qml
         qml/components/ChatSection.qml
         qml/components/MaisonSection.qml
         qml/components/MediasSection.qml
         qml/components/AgendaSection.qml
+        qml/components/ColorWheel.qml
+        qml/components/ThemeEditor.qml
+)
+
+# Chemins d'inclusion
+target_include_directories(RaspberryAssistant PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # Liaison des bibliothèques (syntaxe PRIVATE pour éviter les conflits)
@@ -70,7 +87,11 @@ target_link_libraries(RaspberryAssistant PRIVATE
     Qt6::Multimedia
     Qt6::MultimediaWidgets
     Qt6::TextToSpeech
+    Qt6::WebSockets
+    Qt6::Sql
 )
+
+
 
 # Informations de configuration
 message(STATUS "=== Configuration du projet ===")

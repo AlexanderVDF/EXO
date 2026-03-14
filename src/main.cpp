@@ -6,6 +6,13 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <cstdio>
+#endif
+
 #ifdef RASPBERRY_PI
 #include <QGuiApplication>
 #endif
@@ -17,6 +24,16 @@
 
 int main(int argc, char *argv[])
 {
+    // Configuration console Windows uniquement en mode debug
+#ifdef _WIN32
+#ifdef QT_DEBUG
+    AllocConsole();
+    freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
+    printf("=== EXO DEBUG CONSOLE ===\n");
+#endif
+#endif
+
     // Configuration de l'application selon la plateforme
 #ifdef RASPBERRY_PI
     // Mode EGLFS pour Raspberry Pi (sans serveur X)
@@ -32,16 +49,16 @@ int main(int argc, char *argv[])
 #endif
 
     // === Configuration de base de l'application ===
-    app.setApplicationName("Henri Assistant");
-    app.setApplicationVersion("2.1");
-    app.setOrganizationName("HenriAssistant");
-    app.setOrganizationDomain("henri-assistant.local");
+    app.setApplicationName("EXO Assistant");
+    app.setApplicationVersion("2.2");
+    app.setOrganizationName("EXOAssistant");
+    app.setOrganizationDomain("exo-assistant.local");
 
     // Style Material Design
     QQuickStyle::setStyle("Material");
     qputenv("QT_QUICK_CONTROLS_MATERIAL_THEME", "Dark");
 
-    qInfo() << "=== Démarrage d'Henri Assistant v2.1 ===";
+    qInfo() << "=== Démarrage d'EXO Assistant v2.2 ===";
     qInfo() << "Plateforme:" 
 #ifdef RASPBERRY_PI
                  << "Raspberry Pi 5 (EGLFS)"
@@ -50,38 +67,50 @@ int main(int argc, char *argv[])
 #endif
                  ;
 
-    // === Initialisation simplifiée avec AssistantManager ===
+    // === Initialisation avec AssistantManager réel ===
     
-    // Créer le gestionnaire principal
-    AssistantManager* assistant = new AssistantManager(&app);
+    qInfo() << "Démarrage EXO...";
+    
+    // Créer l'AssistantManager réel
+    AssistantManager assistantManager;
     
     // Créer le moteur QML
     QQmlApplicationEngine engine;
-    assistant->setQmlEngine(&engine);
-
-    // Initialiser Henri avec la configuration
-    if (!assistant->initializeWithConfig()) {
-        qCritical() << "Échec de l'initialisation d'Henri";
-        return -1;
-    }
+    
+    // Associer l'AssistantManager au moteur QML
+    assistantManager.setQmlEngine(&engine);
 
     // === Chargement de l'interface QML ===
     
     // Configuration des chemins de ressources
     engine.addImportPath("qrc:/qml");
     engine.addImportPath(":/");
+    
+    // Exposer l'AssistantManager à QML
+    engine.rootContext()->setContextProperty("assistantManager", &assistantManager);
+    
+    // Initialiser l'assistant avec la configuration
+    assistantManager.initializeWithConfig();
 
-    // Chargement de l'interface principale (nouvelle interface radiale)
-    const QUrl mainQml(QStringLiteral("qrc:/qml/main_radial.qml"));
+    // Interface radiale EXO - chemin relatif au répertoire de l'application
+    QString appDir = QCoreApplication::applicationDirPath();
+    // Remonter de build/Debug vers la racine du projet
+    QDir projectDir(appDir);
+    projectDir.cdUp(); // Debug -> build
+    projectDir.cdUp(); // build -> racine
+    const QUrl mainQml(QUrl::fromLocalFile(projectDir.absoluteFilePath("qml/main_radial.qml")));
     
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [mainQml](QObject *obj, const QUrl &objUrl) {
         if (!obj && objUrl == mainQml) {
-            qCritical() << "Échec du chargement de l'interface QML";
+            qCritical() << "Échec du chargement de l'interface QML:" << objUrl;
             QCoreApplication::exit(-1);
+        } else {
+            qInfo() << "Interface QML chargée avec succès:" << objUrl;
         }
     });
 
+    qInfo() << "Chargement de l'interface QML:" << mainQml;
     engine.load(mainQml);
 
     if (engine.rootObjects().isEmpty()) {
@@ -91,14 +120,7 @@ int main(int argc, char *argv[])
 
     qInfo() << "Interface QML chargée avec succès";
 
-    // === Gestion propre de l'arrêt ===
-    
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, [assistant]() {
-        qInfo() << "Arrêt d'Henri...";
-        assistant->deleteLater();
-    });
-
-    qInfo() << "Henri Assistant démarré - En attente d'interactions";
+    qInfo() << "EXO Assistant démarré - Interface radiale";
 
     // Lancement de la boucle d'événements
     int result = app.exec();

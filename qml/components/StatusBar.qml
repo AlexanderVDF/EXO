@@ -405,10 +405,11 @@ Rectangle {
                 color: "#cccccc"
             }
             
-            Button {
-                text: "Fermer"
+            CloseButton {
                 Layout.alignment: Qt.AlignHCenter
-                onClicked: detailsPopup.close()
+                buttonSize: 40
+                useThemeColors: true
+                onCloseRequested: detailsPopup.close()
             }
         }
     }
