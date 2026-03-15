@@ -93,6 +93,9 @@ signals:
     void partialResponse(const QString &text);
     void finalResponse(const QString &fullText);
 
+    // Sentence-level streaming (for TTS pipelining)
+    void sentenceReady(const QString &sentence);
+
     // Compatibilité QML (alias de finalResponse)
     void responseReceived(const QString &response);
 
@@ -138,6 +141,10 @@ private:
     void handleMessageStop();
     void finalizeToolCalls();
 
+    // ── Sentence splitting ───────────────────────────
+    void trySplitSentences();
+    void flushSentenceBuffer();
+
     // ── Réponse non-streaming ────────────────────────
     void processFullResponse(const QByteArray &data);
     void handleHttpError(int httpStatus, const QByteArray &data);
@@ -178,6 +185,7 @@ private:
     QByteArray          m_sseBuffer;       // buffer brut SSE
     QString             m_currentEventType;
     QString             m_accumulatedText;  // texte complet accumulé
+    QString             m_sentenceBuffer;   // buffer phrase en cours (sentence splitting)
     QList<ContentBlock> m_contentBlocks;   // blocs en cours
     int                 m_currentBlockIdx = -1;
 

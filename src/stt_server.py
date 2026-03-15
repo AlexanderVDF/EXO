@@ -1,8 +1,12 @@
 """
-stt_server.py — EXO STT Streaming Server (faster-whisper)
+stt_server.py — EXO STT Streaming Server (dual backend: whisper.cpp GPU / faster-whisper CPU)
 
 WebSocket server that receives audio chunks (PCM16 16kHz mono)
 and returns streaming transcription results.
+
+Backends:
+  - whispercpp: Whisper.cpp + Vulkan GPU (default, fast)
+  - faster_whisper: faster-whisper CPU (fallback)
 
 Protocol:
   → Binary: PCM16 audio chunks
@@ -16,7 +20,8 @@ Protocol:
              {"type": "error",   "message": "..."}
 
 Dependencies:
-  pip install faster-whisper websockets numpy
+  pip install websockets numpy
+  (faster-whisper only needed when backend=faster_whisper)
 """
 
 from __future__ import annotations
@@ -41,25 +46,94 @@ logging.basicConfig(
 logger = logging.getLogger("exo.stt")
 
 # ---------------------------------------------------------------------------
+# Noise reduction (optional)
+# ---------------------------------------------------------------------------
+
+_noisereduce_available = False
+try:
+    import noisereduce as nr
+    _noisereduce_available = True
+except ImportError:
+    pass
+
+
+def _apply_noise_reduction(pcm16: np.ndarray, sr: int = 16000,
+                           strength: float = 0.7) -> np.ndarray:
+    """Apply spectral-gating noise reduction to PCM16 audio."""
+    if not _noisereduce_available or strength <= 0:
+        return pcm16
+
+    audio_f32 = pcm16.astype(np.float32) / 32768.0
+    try:
+        cleaned = nr.reduce_noise(
+            y=audio_f32,
+            sr=sr,
+            prop_decrease=strength,
+            stationary=True,
+            n_fft=512,
+            hop_length=128,
+        )
+        return (cleaned * 32768.0).clip(-32768, 32767).astype(np.int16)
+    except Exception as e:
+        logger.warning("Noise reduction failed: %s", e)
+        return pcm16
+
+# ---------------------------------------------------------------------------
 # Configuration defaults
 # ---------------------------------------------------------------------------
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8766
-DEFAULT_MODEL = "large-v3"
+DEFAULT_MODEL = "large-v3"      # small = fast, medium = better quality, large-v3 = best
 DEFAULT_LANGUAGE = "fr"
 DEFAULT_BEAM_SIZE = 5
 DEFAULT_DEVICE = "auto"          # "cpu", "cuda", "auto"
-DEFAULT_COMPUTE_TYPE = "float16"  # "float16", "int8", "float32"
+DEFAULT_COMPUTE_TYPE = "int8"    # int8 = fast CPU, float16 = CUDA
+DEFAULT_BACKEND = "whispercpp"   # "whispercpp" (Vulkan GPU) or "faster_whisper" (CPU) or "whispercpp_cpu"
 SAMPLE_RATE = 16000
+NOISE_REDUCTION_STRENGTH = 0.7   # 0.0 = off, 1.0 = max
+
+# ---------------------------------------------------------------------------
+# Hallucination filter
+# ---------------------------------------------------------------------------
+
+_HALLUCINATION_PATTERNS = [
+    "sous-titres", "sous-titrage", "amara.org", "amara org",
+    "merci d'avoir regardé", "merci de regarder",
+    "n'hésitez pas à", "abonnez-vous", "likez",
+    "copyright", "tous droits réservés", "bonne vidéo",
+    "à bientôt", "à la prochaine",
+    "transcrit par", "traduit par", "sous-titré par",
+    "www.", "http", ".com", ".org", ".fr",
+    "musique", "♪", "♫",
+    "merci à tous", "merci beaucoup pour",
+    "si vous avez aimé", "partagez cette vidéo",
+]
+
+
+def _is_hallucination(text: str) -> bool:
+    """Reject common Whisper hallucinations (subtitle credits, etc.)."""
+    if not text:
+        return False
+    lower = text.lower().strip()
+    if len(lower) < 2:
+        return True
+    # Reject repeated short words (e.g., "Merci. Merci. Merci.")
+    words = lower.split()
+    if len(words) >= 3 and len(set(words)) == 1:
+        return True
+    for pat in _HALLUCINATION_PATTERNS:
+        if pat in lower:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
-# STT Engine wrapper
+# STT Engine wrapper (dual backend)
 # ---------------------------------------------------------------------------
 
 class STTEngine:
-    """Wraps faster-whisper for streaming transcription."""
+    """Wraps either whisper.cpp (Vulkan GPU) or faster-whisper (CPU)."""
 
     def __init__(
         self,
@@ -68,17 +142,69 @@ class STTEngine:
         compute_type: str = DEFAULT_COMPUTE_TYPE,
         language: str = DEFAULT_LANGUAGE,
         beam_size: int = DEFAULT_BEAM_SIZE,
+        backend: str = DEFAULT_BACKEND,
     ) -> None:
         self.model_size = model_size
         self.device = device
         self.compute_type = compute_type
         self.language = language
         self.beam_size = beam_size
-        self.model = None
+        self.backend = backend
+        self._engine = None        # underlying engine (WhisperCppEngine or WhisperModel)
         self._actual_device = "unknown"
+        self._active_backend = "unknown"
 
     def load(self) -> None:
-        """Load the Whisper model (can be slow on first run)."""
+        """Load the STT backend."""
+        if self.backend == "whispercpp":
+            self._load_whispercpp()
+        elif self.backend == "whispercpp_cpu":
+            self._load_whispercpp(use_gpu=False)
+        elif self.backend == "faster_whisper":
+            self._load_faster_whisper()
+        else:
+            logger.warning("Unknown backend '%s', trying whispercpp then faster_whisper", self.backend)
+            try:
+                self._load_whispercpp()
+            except Exception as e:
+                logger.warning("whispercpp failed (%s), falling back to faster_whisper", e)
+                self._load_faster_whisper()
+
+    def _load_whispercpp(self, use_gpu: bool = True) -> None:
+        """Load whisper.cpp backend (Vulkan GPU or CPU)."""
+        from whisper_cpp import WhisperCppEngine
+
+        # Resolve model path for whisper.cpp ggml format
+        model_map = {
+            "tiny": "ggml-tiny.bin",
+            "base": "ggml-base.bin",
+            "small": "ggml-small.bin",
+            "medium": "ggml-medium.bin",
+            "large-v3": "ggml-large-v3.bin",
+            "large": "ggml-large-v3.bin",
+        }
+        model_file = model_map.get(self.model_size, f"ggml-{self.model_size}.bin")
+        model_dir = Path(os.environ.get("EXO_WHISPER_MODELS", r"D:\EXO\models\whisper"))
+        model_path = str(model_dir / model_file)
+
+        if not os.path.isfile(model_path):
+            raise FileNotFoundError(
+                f"Whisper.cpp model not found: {model_path}. "
+                f"Download it from https://huggingface.co/ggerganov/whisper.cpp"
+            )
+
+        self._engine = WhisperCppEngine(
+            model_path=model_path,
+            language=self.language,
+            beam_size=self.beam_size,
+        )
+        self._engine.load()
+        self._actual_device = "vulkan" if use_gpu else "cpu"
+        self._active_backend = "whispercpp" if use_gpu else "whispercpp_cpu"
+        logger.info("Backend: whisper.cpp (%s)", self._actual_device.upper())
+
+    def _load_faster_whisper(self) -> None:
+        """Load faster-whisper CPU backend."""
         try:
             from faster_whisper import WhisperModel
         except ImportError:
@@ -88,7 +214,6 @@ class STTEngine:
         device = self.device
         compute = self.compute_type
 
-        # Auto-detect best device
         if device == "auto":
             try:
                 import torch
@@ -97,21 +222,22 @@ class STTEngine:
                 device = "cpu"
 
         if device == "cpu":
-            compute = "float32"  # float16 not supported on CPU
+            compute = "int8"
 
         logger.info(
-            "Loading Whisper model '%s' on %s (%s)...",
+            "Loading faster-whisper model '%s' on %s (%s)...",
             self.model_size, device, compute,
         )
         t0 = time.monotonic()
-        self.model = WhisperModel(
+        self._engine = WhisperModel(
             self.model_size,
             device=device,
             compute_type=compute,
         )
         self._actual_device = device
+        self._active_backend = "faster_whisper"
         dt = time.monotonic() - t0
-        logger.info("Model loaded in %.1fs", dt)
+        logger.info("Model loaded in %.1fs (backend: faster-whisper, device: %s)", dt, device)
 
     def transcribe(
         self,
@@ -128,27 +254,49 @@ class STTEngine:
         Returns:
             {"text": str, "segments": list, "duration": float}
         """
-        if self.model is None:
-            raise RuntimeError("Model not loaded")
+        if self._engine is None:
+            raise RuntimeError("Engine not loaded")
 
-        # Convert int16 → float32 [-1, 1]
+        if self._active_backend == "whispercpp":
+            result = self._engine.transcribe(audio_pcm16)
+        else:
+            result = self._transcribe_faster_whisper(audio_pcm16, initial_prompt)
+
+        # Filter hallucinations regardless of backend
+        if result["text"] and _is_hallucination(result["text"]):
+            logger.info("Hallucination filtered: %s", result["text"][:60])
+            result["text"] = ""
+            result["segments"] = []
+
+        return result
+
+    def _transcribe_faster_whisper(
+        self,
+        audio_pcm16: np.ndarray,
+        initial_prompt: str | None = None,
+    ) -> dict:
+        """Transcribe using faster-whisper backend."""
         audio_f32 = audio_pcm16.astype(np.float32) / 32768.0
         duration = len(audio_f32) / SAMPLE_RATE
 
-        if duration < 0.1:
+        if duration < 0.3:
             return {"text": "", "segments": [], "duration": duration}
 
         t0 = time.monotonic()
-        segments_gen, info = self.model.transcribe(
+        prompt = initial_prompt or "EXO est un assistant vocal domotique français. Jarvis, allume, éteins, météo, température, lumière."
+        segments_gen, info = self._engine.transcribe(
             audio_f32,
             language=self.language,
             beam_size=self.beam_size,
             word_timestamps=False,
-            initial_prompt=initial_prompt,
+            initial_prompt=prompt,
+            condition_on_previous_text=False,
+            no_speech_threshold=0.7,
+            log_prob_threshold=-1.0,
             vad_filter=True,
             vad_parameters={
-                "min_silence_duration_ms": 500,
-                "speech_pad_ms": 200,
+                "min_silence_duration_ms": 600,
+                "speech_pad_ms": 300,
             },
         )
 
@@ -180,6 +328,12 @@ class STTEngine:
     def actual_device(self) -> str:
         return self._actual_device
 
+    def close(self) -> None:
+        """Clean up resources."""
+        if self._active_backend == "whispercpp" and self._engine:
+            self._engine.close()
+            self._engine = None
+
 
 # ---------------------------------------------------------------------------
 # WebSocket session handler
@@ -204,6 +358,7 @@ class STTSession:
             "type": "ready",
             "model": self.engine.model_size,
             "device": self.engine.actual_device,
+            "backend": self.engine._active_backend,
         }))
 
         try:
@@ -297,16 +452,40 @@ class STTSession:
         pcm = np.frombuffer(bytes(self._audio_buffer), dtype=np.int16)
         self._audio_buffer.clear()
 
+        # ── DSP: Noise reduction ──
+        pcm = _apply_noise_reduction(pcm, SAMPLE_RATE, NOISE_REDUCTION_STRENGTH)
+
+        # ── Gain normalization: boost quiet audio to ~80% peak ──
+        peak = int(np.max(np.abs(pcm)))
+        if peak > 0:
+            target_peak = int(32768 * 0.8)  # -2 dBFS
+            if peak < target_peak:
+                gain = target_peak / peak
+                gain = min(gain, 40.0)  # cap at ~32 dB boost
+                pcm = np.clip(pcm.astype(np.float64) * gain, -32768, 32767).astype(np.int16)
+
+        # ── DEBUG: PCM statistics ──
+        rms = np.sqrt(np.mean(pcm.astype(np.float64) ** 2))
+        peak = int(np.max(np.abs(pcm)))
+        dur = len(pcm) / SAMPLE_RATE
+        logger.info("PCM stats: samples=%d dur=%.2fs rms=%.1f peak=%d (%.1f dBFS)",
+                     len(pcm), dur, rms, peak,
+                     20 * np.log10(max(peak, 1) / 32768))
         try:
             loop = asyncio.get_event_loop()
+            t0 = time.monotonic()
             result = await loop.run_in_executor(
                 None, lambda: self.engine.transcribe(pcm)
             )
+            transcribe_ms = (time.monotonic() - t0) * 1000
+            logger.info("[STT] transcribe_done dur=%.0fms text_len=%d result=%s",
+                        transcribe_ms, len(result["text"]), result["text"][:60])
             await ws.send(json.dumps({
                 "type": "final",
                 "text": result["text"],
                 "segments": result["segments"],
                 "duration": result["duration"],
+                "transcribe_ms": round(transcribe_ms),
             }))
         except Exception as e:
             logger.error("Final transcription error: %s", e)
@@ -321,19 +500,34 @@ class STTSession:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
+    global NOISE_REDUCTION_STRENGTH
+
     import argparse
 
-    parser = argparse.ArgumentParser(description="EXO STT Server (faster-whisper)")
+    parser = argparse.ArgumentParser(description="EXO STT Server (whisper.cpp GPU / faster-whisper CPU)")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--model", default=DEFAULT_MODEL,
                         help="Whisper model size (tiny, base, small, medium, large-v3)")
     parser.add_argument("--language", default=DEFAULT_LANGUAGE)
     parser.add_argument("--device", default=DEFAULT_DEVICE,
-                        help="Compute device (cpu, cuda, auto)")
+                        help="Compute device (cpu, cuda, auto) — only for faster_whisper backend")
     parser.add_argument("--compute-type", default=DEFAULT_COMPUTE_TYPE)
     parser.add_argument("--beam-size", type=int, default=DEFAULT_BEAM_SIZE)
+    parser.add_argument("--backend", default=DEFAULT_BACKEND,
+                        choices=["whispercpp", "faster_whisper", "whispercpp_cpu", "auto"],
+                        help="STT backend: whispercpp (Vulkan GPU), whispercpp_cpu (CPU), faster_whisper (CPU), auto")
+    parser.add_argument("--noise-reduction", type=float, default=NOISE_REDUCTION_STRENGTH,
+                        help="Noise reduction strength (0.0=off, 1.0=max)")
     args = parser.parse_args()
+
+    # Apply noise reduction config
+    nr_strength = args.noise_reduction
+    NOISE_REDUCTION_STRENGTH = nr_strength
+    if _noisereduce_available and nr_strength > 0:
+        logger.info("Noise reduction enabled (strength=%.2f)", NOISE_REDUCTION_STRENGTH)
+    elif not _noisereduce_available:
+        logger.info("Noise reduction unavailable (pip install noisereduce)")
 
     engine = STTEngine(
         model_size=args.model,
@@ -341,6 +535,7 @@ async def main() -> None:
         compute_type=args.compute_type,
         language=args.language,
         beam_size=args.beam_size,
+        backend=args.backend,
     )
     engine.load()
 
@@ -355,8 +550,8 @@ async def main() -> None:
         return
 
     server = await websockets.serve(handler, args.host, args.port)
-    logger.info("STT server running on ws://%s:%d (model=%s, device=%s)",
-                args.host, args.port, args.model, engine.actual_device)
+    logger.info("STT server running on ws://%s:%d (model=%s, device=%s, backend=%s)",
+                args.host, args.port, args.model, engine.actual_device, engine._active_backend)
 
     try:
         await asyncio.Future()  # run forever
@@ -365,6 +560,7 @@ async def main() -> None:
     finally:
         server.close()
         await server.wait_closed()
+        engine.close()
         logger.info("STT server stopped")
 
 

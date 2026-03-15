@@ -2,11 +2,14 @@
 #define VOICEPIPELINE_H
 
 #include <QObject>
-#include <QAudioSource>
-#include <QAudioSink>
 #include <QAudioFormat>
 #include <QAudioDevice>
 #include <QMediaDevices>
+#include "audio/audioinput.h"
+#include "audio/audioinput_qt.h"
+#ifdef ENABLE_RTAUDIO
+#include "audio/audioinput_rtaudio.h"
+#endif
 #include "ttsmanager.h"
 #include <QThread>
 #include <QMutex>
@@ -20,6 +23,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cmath>
+#include "pipelineevent.h"
 
 // ─────────────────────────────────────────────────────
 //  CircularAudioBuffer — lock-free-ish ring buffer
@@ -71,11 +75,11 @@ private:
     double m_x1=0, m_x2=0, m_y1=0, m_y2=0;
 
     // Noise gate
-    float m_gateThreshold = 0.005f;   // RMS below this → zero
+    float m_gateThreshold = 0.001f;   // RMS below this → zero (lowered for quiet mics)
     bool  m_gateOpen = false;
 
     // AGC
-    bool  m_agcEnabled = false;
+    bool  m_agcEnabled = true;
     float m_agcGain    = 1.0f;
 
     // RMS normalization target (0 = disabled)
@@ -84,25 +88,27 @@ private:
 
 // ─────────────────────────────────────────────────────
 //  VADEngine — Voice Activity Detection
-//  Built-in : energy + ZCR heuristic (always available)
-//  Optional : Silero ONNX (loaded at runtime)
+//  Builtin  : energy + ZCR heuristic (always available)
+//  Silero   : Silero VAD via WebSocket → vad_server.py
+//  Hybrid   : Builtin + Silero combined
 // ─────────────────────────────────────────────────────
 class VADEngine : public QObject
 {
     Q_OBJECT
 public:
-    enum class Backend { Builtin, SileroONNX };
+    enum class Backend { Builtin, SileroONNX, Hybrid };
     Q_ENUM(Backend)
 
     explicit VADEngine(QObject *parent = nullptr);
     ~VADEngine();
 
-    bool     initialize(Backend preferred = Backend::Builtin);
+    bool     initialize(Backend preferred = Backend::Builtin,
+                        const QString &sileroUrl = "ws://localhost:8768");
     float    processChunk(const int16_t *samples, int count);
     bool     isSpeech() const { return m_isSpeech; }
     Backend  activeBackend() const { return m_backend; }
 
-    void setThreshold(float t) { m_threshold = t; }
+    void setThreshold(float t);
     float threshold() const { return m_threshold; }
 
     // Adaptive noise floor
@@ -112,9 +118,15 @@ signals:
     void speechStarted();
     void speechEnded();
 
+private slots:
+    void onSileroConnected();
+    void onSileroDisconnected();
+    void onSileroMessage(const QString &msg);
+
 private:
     float builtinScore(const int16_t *s, int n);
     void  updateSpeechState(float score);
+    void  sendSileroAudio(const int16_t *s, int n);
 
     Backend m_backend = Backend::Builtin;
     float  m_threshold = 0.45f;
@@ -127,8 +139,14 @@ private:
     bool   m_noiseCalibrated = false;
     int    m_calibrationFrames = 0;
     static constexpr int CALIBRATION_WINDOW = 30;   // ~600 ms @ 20 ms chunks
-    static constexpr int SPEECH_HANG_FRAMES = 15;   // keep speech state for N silent frames
+    static constexpr int SPEECH_HANG_FRAMES = 30;   // keep speech state for N silent frames (~600ms)
     static constexpr int SPEECH_START_FRAMES = 2;    // require N consecutive speech frames
+
+    // Silero VAD via WebSocket (async score)
+    QWebSocket *m_sileroWs = nullptr;
+    float m_sileroScore = 0.0f;
+    bool  m_sileroConnected = false;
+    QString m_sileroUrl;
 };
 
 // ─────────────────────────────────────────────────────
@@ -226,13 +244,16 @@ public:
 
     // ── lifecycle ──
     bool initAudio();
-    bool initVAD(VADEngine::Backend preferred = VADEngine::Backend::Builtin);
+    bool initVAD(VADEngine::Backend preferred = VADEngine::Backend::Builtin,
+                 const QString &sileroUrl = "ws://localhost:8768");
     bool initSTT(const QString &serverUrl = "ws://localhost:8766");
     void initTTS(const QString &ttsServerUrl = "ws://localhost:8767");
+    void initWakeWordServer(const QString &url = "ws://localhost:8770");
 
     Q_INVOKABLE void startListening();
     Q_INVOKABLE void stopListening();
     Q_INVOKABLE void speak(const QString &text);
+    Q_INVOKABLE void speakSentence(const QString &text);
     Q_INVOKABLE void resetBuffers();
 
     // ── state queries ──
@@ -247,9 +268,14 @@ public:
     Q_INVOKABLE void setVADThreshold(float t);
     Q_INVOKABLE void setNoiseGate(float rms);
     Q_INVOKABLE void setAGC(bool on);
-    Q_INVOKABLE void setWakeWord(const QString &word) { m_wakeKeyword = word; }
+    Q_INVOKABLE void setWakeWord(const QString &word);
+    Q_INVOKABLE void setWakeWords(const QStringList &words);
     Q_INVOKABLE void setSTTServerUrl(const QString &url);
     Q_INVOKABLE void setSTTLanguage(const QString &lang);
+    Q_INVOKABLE void setTTSVoice(const QString &name);
+    Q_INVOKABLE void setTTSLanguage(const QString &lang);
+    Q_INVOKABLE void setTTSStyle(const QString &style);
+    Q_INVOKABLE void setAudioBackend(const QString &backend);
 
     // ── WebSocket bridge (for React GUI) ──
     void connectToServer(const QString &url);
@@ -272,7 +298,6 @@ signals:
     void audioLevel(float rms, float vadScore);
 
 private slots:
-    void onAudioDataReady();
     void onVADSpeechStarted();
     void onVADSpeechEnded();
     void onSTTPartial(const QString &text);
@@ -284,13 +309,19 @@ private slots:
     void onUtteranceTimeout();
     void onWsBinaryMessage(const QByteArray &msg);
     void onWsTextMessage(const QString &msg);
+    void onWakeWordWsConnected();
+    void onWakeWordWsDisconnected();
+    void onWakeWordWsMessage(const QString &msg);
 
 private:
     // ── internal pipeline stages ──
+    void onAudioSamples(const int16_t *samples, int count);
     void processAudioChunk(const int16_t *samples, int count);
     void handleVAD(const int16_t *samples, int count, float vadScore);
     void handleRecording(const int16_t *samples, int count);
     bool checkWakeWord(const QString &text);
+    QString findAndRemoveWakeWord(const QString &text);
+    int levenshteinDistance(const QString &a, const QString &b);
     void finishUtterance();
     void dispatchTranscript(const QString &text);
     void setState(PipelineState s);
@@ -304,12 +335,13 @@ private:
     bool m_isSpeaking = false;
     QString m_lastCommand;
     QString m_wakeKeyword = "exo";
+    QStringList m_wakeVariants;   // all wake-word variants (lowercase, no punctuation)
     bool m_wakeWordTriggered = false;  // wake-word détecté dans transcript courant
 
-    // ── audio capture ──
+    // ── audio capture (abstracted backend) ──
     QAudioFormat m_format;
-    std::unique_ptr<QAudioSource> m_audioSource;
-    QIODevice *m_audioIO = nullptr;
+    std::unique_ptr<AudioInput> m_audioInput;
+    QString m_audioBackend = "qt"; // "qt" or "rtaudio"
 
     // ── preprocessing ──
     AudioPreprocessor m_preproc;
@@ -331,12 +363,22 @@ private:
 
     // ── Timers ──
     QTimer *m_utteranceTimer = nullptr;
+    QTimer *m_conversationTimer = nullptr;
     QElapsedTimer m_ttsEndClock;
     QElapsedTimer m_lastWakeWordClock;
-    static constexpr int TTS_GUARD_MS         = 1500;
-    static constexpr int WAKE_COOLDOWN_MS     = 3000;
-    static constexpr int UTTERANCE_TIMEOUT_MS = 15000;
-    static constexpr int POST_WAKE_GRACE_MS   = 500;
+    static constexpr int TTS_GUARD_MS           = 1500;
+    static constexpr int WAKE_COOLDOWN_MS       = 3000;
+    static constexpr int UTTERANCE_TIMEOUT_MS   = 15000;
+    static constexpr int POST_WAKE_GRACE_MS     = 500;
+    static constexpr int CONVERSATION_TIMEOUT_MS = 15000; // 15 s conversation mode after TTS
+
+    // ── Conversation mode (no wake-word needed after TTS response) ──
+    bool m_conversationActive = false;
+
+    // ── OpenWakeWord neural detection (via wakeword_server.py) ──
+    QWebSocket *m_wakewordWs = nullptr;
+    bool m_wakewordConnected = false;
+    QString m_wakewordUrl;
 
     // ── WebSocket (to exo_server.py / React GUI) ──
     QWebSocket *m_ws = nullptr;

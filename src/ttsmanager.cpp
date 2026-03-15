@@ -1,5 +1,6 @@
 #include "ttsmanager.h"
 #include "logmanager.h"
+#include "pipelineevent.h"
 
 #include <QCoreApplication>
 #include <QRegularExpression>
@@ -166,10 +167,11 @@ void TTSFade::applyFadeOut(float *samples, int count)
 void TTSDSPProcessor::configure(int sampleRate)
 {
     m_sampleRate = sampleRate;
-    m_eq.configure(sampleRate, 3000.0f, 3.0f, 1.0f);
-    m_comp.configure(sampleRate, -18.0f, 2.0f, 5.0f, 50.0f);
-    m_norm.setTargetDb(-14.0f);
-    m_fade.configure(sampleRate, 5.0f, 10.0f);
+    // XTTS v2 produces well-normalized audio — lighter DSP
+    m_eq.configure(sampleRate, 3000.0f, 1.5f, 1.0f);  // gentle presence boost
+    m_comp.configure(sampleRate, -14.0f, 1.8f, 5.0f, 50.0f); // softer compression
+    m_norm.setTargetDb(-16.0f);
+    m_fade.configure(sampleRate, 15.0f, 20.0f); // longer fades for neural TTS
     m_firstChunk = true;
 }
 
@@ -240,15 +242,36 @@ TTSWorker::TTSWorker(QObject *parent)
 
 TTSWorker::~TTSWorker()
 {
+    qWarning() << "[TTS] TTSWorker détruit";
     if (m_pyWs) {
         m_pyWs->close();
         delete m_pyWs;
+        m_pyWs = nullptr;
     }
     delete m_tts;
+    m_tts = nullptr;
 }
 
-void TTSWorker::init()
+void TTSWorker::resetPythonConnection()
 {
+    if (m_pyWs) {
+        m_pyWs->close();
+        m_pyWs->deleteLater();
+        m_pyWs = nullptr;
+    }
+    m_pyConnected = false;
+    m_pyReadyReceived = false;
+    qWarning() << "[TTS] Connexion Python réinitialisée";
+}
+
+void TTSWorker::init(const QString &pythonWsUrl)
+{
+    // Set Python TTS URL before anything else
+    if (!pythonWsUrl.isEmpty()) {
+        m_pyWsUrl = pythonWsUrl;
+        qWarning() << "[TTS] Worker init: XTTS URL set:" << m_pyWsUrl;
+    }
+
     // Create QTextToSpeech on the worker thread so it lives there
     m_tts = new QTextToSpeech();
 
@@ -289,6 +312,18 @@ void TTSWorker::setPythonWsUrl(const QString &url)
     m_pyWsUrl = url;
 }
 
+void TTSWorker::setXTTSVoice(const QString &name)
+{
+    m_xttsVoice = name;
+    qWarning() << "[TTS] XTTS voice set to:" << name;
+}
+
+void TTSWorker::setXTTSLang(const QString &lang)
+{
+    m_xttsLang = lang;
+    qWarning() << "[TTS] XTTS language set to:" << lang;
+}
+
 void TTSWorker::processRequest(const TTSRequest &req)
 {
     m_cancelled = false;
@@ -300,7 +335,7 @@ void TTSWorker::processRequest(const TTSRequest &req)
         m_tts->setVolume(static_cast<double>(req.prosody.volume));
     }
 
-    // Cascade: try Piper (Python) first → Qt TTS fallback
+    // Cascade: try XTTS v2 (Python) first → Qt TTS fallback
     if (tryPythonTTS(req))
         return;
 
@@ -314,6 +349,8 @@ void TTSWorker::processRequest(const TTSRequest &req)
 void TTSWorker::cancelCurrent()
 {
     m_cancelled = true;
+    if (m_pyWs && m_pyConnected)
+        m_pyWs->sendTextMessage(QStringLiteral(R"({"type":"cancel"})"));
     if (m_tts)
         m_tts->stop();
 }
@@ -360,11 +397,15 @@ bool TTSWorker::tryQtTTS(const TTSRequest &req)
 
 bool TTSWorker::tryPythonTTS(const TTSRequest &req)
 {
-    if (m_pyWsUrl.isEmpty()) return false;
+    if (m_pyWsUrl.isEmpty()) {
+        qWarning() << "[TTS] tryPythonTTS: URL vide — skip XTTS";
+        return false;
+    }
 
-    // Connect to Piper TTS server if not already
+    // Connect to XTTS v2 server if not already
     if (!m_pyWs) {
         m_pyWs = new QWebSocket();
+        qWarning() << "[TTS] tryPythonTTS: connexion à" << m_pyWsUrl;
         m_pyWs->open(QUrl(m_pyWsUrl));
 
         QElapsedTimer connectTimer;
@@ -374,16 +415,76 @@ bool TTSWorker::tryPythonTTS(const TTSRequest &req)
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         }
         m_pyConnected = (m_pyWs->state() == QAbstractSocket::ConnectedState);
+        qWarning() << "[TTS] tryPythonTTS: connected =" << m_pyConnected
+                    << "state:" << m_pyWs->state()
+                    << "après" << connectTimer.elapsed() << "ms";
+
+        // Drain initial "ready" message from XTTS v2 server
+        if (m_pyConnected && !m_pyReadyReceived) {
+            QElapsedTimer readyTimer;
+            readyTimer.start();
+            bool gotReady = false;
+            QMetaObject::Connection readyConn = connect(m_pyWs, &QWebSocket::textMessageReceived,
+                this, [&gotReady](const QString &txt) {
+                    QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
+                    if (d.isObject() && d.object()["type"].toString() == "ready")
+                        gotReady = true;
+                });
+            while (!gotReady && readyTimer.elapsed() < 3000 && !m_cancelled)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            disconnect(readyConn);
+            m_pyReadyReceived = gotReady;
+            qWarning() << "[TTS] XTTS v2 ready message:" << (gotReady ? "OK" : "timeout");
+        }
     }
 
-    if (!m_pyConnected) return false;
+    if (!m_pyConnected) {
+        // Retry once: reset connection and try again
+        qWarning() << "[TTS] tryPythonTTS: non connecté — retry connexion...";
+        resetPythonConnection();
+        m_pyWs = new QWebSocket();
+        m_pyWs->open(QUrl(m_pyWsUrl));
+
+        QElapsedTimer retryTimer;
+        retryTimer.start();
+        while (m_pyWs->state() != QAbstractSocket::ConnectedState
+               && retryTimer.elapsed() < 3000 && !m_cancelled) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        m_pyConnected = (m_pyWs->state() == QAbstractSocket::ConnectedState);
+        qWarning() << "[TTS] tryPythonTTS retry: connected =" << m_pyConnected
+                    << "après" << retryTimer.elapsed() << "ms";
+
+        if (m_pyConnected && !m_pyReadyReceived) {
+            QElapsedTimer readyTimer;
+            readyTimer.start();
+            bool gotReady = false;
+            QMetaObject::Connection readyConn = connect(m_pyWs, &QWebSocket::textMessageReceived,
+                this, [&gotReady](const QString &txt) {
+                    QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
+                    if (d.isObject() && d.object()["type"].toString() == "ready")
+                        gotReady = true;
+                });
+            while (!gotReady && readyTimer.elapsed() < 3000 && !m_cancelled)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            disconnect(readyConn);
+            m_pyReadyReceived = gotReady;
+        }
+
+        if (!m_pyConnected) {
+            qWarning() << "[TTS] tryPythonTTS: échec retry — fallback Qt TTS";
+            return false;
+        }
+    }
 
     emit started(req.text);
 
-    // Send synthesis request (Piper tts_server.py protocol)
+    // Send synthesis request (XTTS v2 tts_server.py protocol)
     QJsonObject msg;
     msg["type"]  = "synthesize";
     msg["text"]  = req.text;
+    msg["voice"] = m_xttsVoice;
+    msg["lang"]  = m_xttsLang;
     msg["rate"]  = static_cast<double>(1.0 + req.prosody.rate * 0.5);  // map [-1,1] → [0.5, 1.5]
     msg["pitch"] = static_cast<double>(1.0 + req.prosody.pitch * 0.3); // map [-1,1] → [0.7, 1.3]
     m_pyWs->sendTextMessage(
@@ -396,16 +497,19 @@ bool TTSWorker::tryPythonTTS(const TTSRequest &req)
     bool gotStart = false;
 
     QMetaObject::Connection binConn = connect(m_pyWs, &QWebSocket::binaryMessageReceived,
-        this, [this](const QByteArray &data) {
+        this, [this, &timeout](const QByteArray &data) {
+            timeout.restart();   // reset idle timeout on each chunk
             emit chunk(data);
         });
     QMetaObject::Connection txtConn = connect(m_pyWs, &QWebSocket::textMessageReceived,
-        this, [&done, &gotStart](const QString &txtMsg) {
+        this, [&done, &gotStart, &timeout](const QString &txtMsg) {
             QJsonDocument d = QJsonDocument::fromJson(txtMsg.toUtf8());
             if (!d.isObject()) return;
             QString type = d.object()["type"].toString();
-            if (type == "start")
+            if (type == "start") {
                 gotStart = true;
+                timeout.restart();   // reset idle timeout on "start"
+            }
             else if (type == "end")
                 done = true;
             else if (type == "error")
@@ -423,6 +527,9 @@ bool TTSWorker::tryPythonTTS(const TTSRequest &req)
         emit finished();
         return true;
     }
+    // Timeout — reset connection so next call starts fresh
+    qWarning() << "[TTS] XTTS timeout après" << PY_TTS_TIMEOUT_MS << "ms — reset connexion";
+    resetPythonConnection();
     return false; // timeout
 }
 
@@ -438,21 +545,30 @@ TTSManager::TTSManager(QObject *parent)
 
 TTSManager::~TTSManager()
 {
+    hVoice() << "TTSManager destruction — arrêt thread TTS";
+    // Signal worker to exit blocking loops (atomic flag — thread-safe)
+    if (m_worker)
+        m_worker->requestStop();
     m_workerThread.quit();
-    m_workerThread.wait(3000);
+    if (!m_workerThread.wait(5000)) {
+        hWarning(henriVoice) << "Thread TTS ne répond pas — terminate forcé";
+        m_workerThread.terminate();
+        m_workerThread.wait(2000);
+    }
 }
 
 // ── initialisation ───────────────────────────────────
 
-void TTSManager::initTTS()
+void TTSManager::initTTS(const QString &pythonWsUrl)
 {
     // Create worker and move to thread
     m_worker = new TTSWorker();
     m_worker->moveToThread(&m_workerThread);
 
     // Wire signals: worker → manager (queued across threads)
+    // Pass pythonWsUrl directly to init() so it's set BEFORE any TTS request
     connect(&m_workerThread, &QThread::started,
-            m_worker, &TTSWorker::init);
+            m_worker, [this, pythonWsUrl]() { m_worker->init(pythonWsUrl); });
     connect(&m_workerThread, &QThread::finished,
             m_worker, &QObject::deleteLater);
 
@@ -479,7 +595,10 @@ void TTSManager::initTTS()
     m_workerThread.setObjectName("EXO-TTS");
     m_workerThread.start();
 
+    m_cascadeEnabled = !pythonWsUrl.isEmpty();
     hVoice() << "TTSManager initialisé — thread TTS démarré";
+    if (m_cascadeEnabled)
+        hVoice() << "Cascade TTS activée — Python backend:" << pythonWsUrl;
 }
 
 void TTSManager::initDSP()
@@ -489,18 +608,7 @@ void TTSManager::initDSP()
     m_sinkFormat.setSampleFormat(QAudioFormat::Int16);
 
     m_dsp.configure(SAMPLE_RATE);
-    hVoice() << "DSP pipeline configuré — EQ 3kHz +3dB, compresseur -18dB 2:1, norm -14dBFS";
-}
-
-void TTSManager::initCascade(const QString &pythonWsUrl)
-{
-    if (!pythonWsUrl.isEmpty() && m_worker) {
-        QMetaObject::invokeMethod(m_worker, [this, pythonWsUrl]() {
-            m_worker->setPythonWsUrl(pythonWsUrl);
-        }, Qt::QueuedConnection);
-        hVoice() << "Cascade TTS activée — Python backend:" << pythonWsUrl;
-    }
-    m_cascadeEnabled = true;
+    hVoice() << "DSP pipeline configuré — EQ 3kHz +1.5dB, compresseur -14dB 1.8:1, norm -16dBFS (XTTS v2)";
 }
 
 // ── prosody analysis ─────────────────────────────────
@@ -543,15 +651,15 @@ ProsodyProfile TTSManager::analyzeProsody(const QString &text) const
     if (isGreeting)
         p.pitch += 0.04f;
 
-    // Adjust rate
+    // Adjust rate — conservative to avoid accelerated speech on Qt TTS
     if (isShort)
-        p.rate -= 0.05f;    // slightly slower for short confirmations
+        p.rate -= 0.03f;    // slightly slower for short confirmations
     if (isLong)
-        p.rate += 0.08f;    // speed up long texts
+        p.rate += 0.03f;    // gentle speedup for long texts
     if (isDomotic)
-        p.rate += 0.04f;    // crisp for home commands
+        p.rate += 0.02f;    // crisp for home commands
     if (isReminder)
-        p.rate -= 0.06f;    // slower for important reminders
+        p.rate -= 0.04f;    // slower for important reminders
 
     // Adjust volume / energy
     if (isExclamation)
@@ -559,11 +667,11 @@ ProsodyProfile TTSManager::analyzeProsody(const QString &text) const
     if (isReminder)
         p.volume = std::min(p.volume + 0.05f, 1.0f);
     if (isWeather)
-        p.rate += 0.02f;    // conversational flow for weather
+        p.rate += 0.01f;    // conversational flow for weather
 
-    // Clamp
+    // Clamp — cap rate to ±0.05 to keep speech natural
     p.pitch  = std::clamp(p.pitch,  -1.0f, 1.0f);
-    p.rate   = std::clamp(p.rate,   -1.0f, 1.0f);
+    p.rate   = std::clamp(p.rate,   -0.05f, 0.05f);
     p.volume = std::clamp(p.volume,  0.0f, 1.0f);
 
     return p;
@@ -596,6 +704,13 @@ void TTSManager::speakText(const QString &text)
     req.text    = clean;
     req.prosody = prosody;
 
+    PIPELINE_EVENT(PipelineModule::TTS, "synthesis_requested",
+                   {{"text_length", clean.length()},
+                    {"pitch", prosody.pitch},
+                    {"rate", prosody.rate},
+                    {"volume", prosody.volume}});
+    PIPELINE_STATE(PipelineModule::TTS, ModuleState::Processing);
+
     hVoice() << "TTS demande — pitch:" << prosody.pitch
              << "rate:" << prosody.rate
              << "vol:" << prosody.volume
@@ -619,8 +734,38 @@ void TTSManager::speakText(const QString &text)
     processQueue();
 }
 
+void TTSManager::enqueueSentence(const QString &text)
+{
+    if (text.isEmpty()) return;
+
+    QString clean = preprocessText(text);
+    if (clean.isEmpty()) return;
+
+    ProsodyProfile prosody = analyzeProsody(clean);
+
+    TTSRequest req;
+    req.text    = clean;
+    req.prosody = prosody;
+
+    hVoice() << "TTS sentence enqueued:" << clean.left(60) << "...";
+
+    {
+        QMutexLocker lk(&m_queueMutex);
+        m_queue.enqueue(req);
+    }
+
+    PIPELINE_EVENT(PipelineModule::TTS, "sentence_queued",
+                   {{"text_length", clean.length()},
+                    {"preview", clean.left(60)}});
+
+    // If not currently speaking, start immediately
+    if (!m_speaking)
+        processQueue();
+}
+
 void TTSManager::cancelSpeech()
 {
+    PIPELINE_EVENT(PipelineModule::TTS, "speech_cancelled");
     {
         QMutexLocker lk(&m_queueMutex);
         m_queue.clear();
@@ -639,14 +784,24 @@ void TTSManager::cancelSpeech()
 
 void TTSManager::processQueue()
 {
+    // Guard against re-entrant calls (finalizeSpeech → processQueue while still inside)
+    bool expected = false;
+    if (!m_processingGuard.compare_exchange_strong(expected, true))
+        return;
+
     QMutexLocker lk(&m_queueMutex);
-    if (m_queue.isEmpty() || m_speaking) return;
+    if (m_queue.isEmpty() || m_speaking) {
+        m_processingGuard = false;
+        return;
+    }
 
     TTSRequest req = m_queue.dequeue();
     lk.unlock();
 
+    m_totalPcmBytes = 0;
     m_dsp.reset();
-    startSink();
+    m_processingGuard = false;
+    // Sink will be started lazily on first audio chunk
     emit _doRequest(req);
 }
 
@@ -655,6 +810,8 @@ void TTSManager::processQueue()
 void TTSManager::onWorkerStarted(const QString &text)
 {
     m_speaking = true;
+    PIPELINE_EVENT(PipelineModule::TTS, "worker_started",
+                   {{"text_preview", text.left(50)}});
     emit ttsStarted();
     emit speakingChanged();
     emit statusChanged("Parle...");
@@ -664,12 +821,26 @@ void TTSManager::onWorkerStarted(const QString &text)
 
 void TTSManager::onWorkerChunk(const QByteArray &pcm)
 {
+    PIPELINE_EVENT(PipelineModule::AudioOutput, "pcm_chunk",
+                   {{"bytes", pcm.size()}});
+    // Lazy start sink on first chunk
+    if (!m_sink) {
+        startSink();
+        if (!m_sink || !m_sinkIO) {
+            hWarning(henriVoice) << "onWorkerChunk: startSink failed — audio lost ("
+                                << pcm.size() << "bytes)";
+            return;
+        }
+    }
+
     // Apply DSP to chunk
     QByteArray processed = pcm;
     m_dsp.process(reinterpret_cast<int16_t *>(processed.data()),
                   processed.size() / static_cast<int>(sizeof(int16_t)),
                   false);
 
+    m_totalPcmBytes += processed.size();
+    hVoice() << "feedSink chunk" << processed.size() << "bytes — total" << m_totalPcmBytes;
     feedSink(processed);
     broadcastWaveform(processed);
     emit ttsChunk(processed);
@@ -677,21 +848,14 @@ void TTSManager::onWorkerChunk(const QByteArray &pcm)
 
 void TTSManager::onWorkerFinished()
 {
-    stopSink();
-    m_speaking = false;
-    m_lastSpeechEnd.restart();
-    emit ttsFinished();
-    emit speakingChanged();
-    emit statusChanged("Prêt");
-    broadcastState("idle");
-    hVoice() << "TTS terminé";
-
-    // Process next in queue
-    QTimer::singleShot(100, this, &TTSManager::processQueue);
+    // Don't stop sink immediately — let it drain buffered audio
+    drainAndStop();
 }
 
 void TTSManager::onWorkerError(const QString &msg)
 {
+    PIPELINE_EVENT(PipelineModule::TTS, "worker_error", {{"message", msg}});
+    PipelineEventBus::instance()->setModuleError(PipelineModule::TTS, msg);
     hVoice() << "TTS erreur:" << msg;
     emit ttsError(msg);
 
@@ -707,6 +871,12 @@ void TTSManager::onWorkerError(const QString &msg)
 
 void TTSManager::startSink()
 {
+    // Guard: prevent double sink initialization
+    if (m_sink) {
+        hVoice() << "startSink: sink already active — skipping";
+        return;
+    }
+
     // QAudioSink for direct PCM playback
     const QAudioDevice dev = QMediaDevices::defaultAudioOutput();
     if (dev.isNull()) {
@@ -714,38 +884,152 @@ void TTSManager::startSink()
         return;
     }
 
+    hVoice() << "startSink — device:" << dev.description()
+             << "format:" << m_sinkFormat.sampleRate() << "Hz"
+             << m_sinkFormat.channelCount() << "ch Int16";
+
+    m_draining = false;
+    m_pcmBuffer.clear();
+
     m_sink = std::make_unique<QAudioSink>(dev, m_sinkFormat);
+    connect(m_sink.get(), &QAudioSink::stateChanged,
+            this, &TTSManager::onSinkStateChanged);
     m_sinkIO = m_sink->start();
+
+    if (!m_sinkIO) {
+        hWarning(henriVoice) << "ERREUR: QAudioSink::start() a retourné nullptr!";
+        m_sink->stop();
+        m_sink.reset();
+        return;
+    }
+
+    // Timer to pump PCM buffer → sink at a steady pace
+    if (!m_pumpTimer) {
+        m_pumpTimer = new QTimer(this);
+        m_pumpTimer->setInterval(20); // pump every 20 ms
+        connect(m_pumpTimer, &QTimer::timeout, this, &TTSManager::pumpBuffer);
+    }
+    m_pumpTimer->start();
+
+    hVoice() << "QAudioSink démarré — bufferSize:" << m_sink->bufferSize();
 }
 
 void TTSManager::feedSink(const QByteArray &pcm)
 {
-    if (m_sinkIO && !pcm.isEmpty())
-        m_sinkIO->write(pcm);
+    if (!pcm.isEmpty())
+        m_pcmBuffer.append(pcm);
+}
+
+void TTSManager::pumpBuffer()
+{
+    if (!m_sinkIO) {
+        if (m_draining && m_pcmBuffer.isEmpty()) {
+            if (m_pumpTimer) m_pumpTimer->stop();
+            finalizeSpeech();
+        }
+        return;
+    }
+    if (m_pcmBuffer.isEmpty()) {
+        // If draining and buffer is empty, let sink play out remaining data
+        if (m_draining) {
+            if (m_pumpTimer) m_pumpTimer->stop();
+            // Sink will go IdleState when its internal buffer empties
+            // Check immediately in case it's already idle
+            if (m_sink && m_sink->state() == QAudio::IdleState) {
+                finalizeSpeech();
+            }
+        }
+        return;
+    }
+
+    // Write as much as the sink will accept
+    qint64 written = m_sinkIO->write(m_pcmBuffer);
+    if (written > 0)
+        m_pcmBuffer.remove(0, static_cast<int>(written));
 }
 
 void TTSManager::stopSink()
 {
+    if (m_pumpTimer) m_pumpTimer->stop();
+    m_pcmBuffer.clear();
     if (m_sink) {
         m_sink->stop();
         m_sink.reset();
     }
     m_sinkIO = nullptr;
+    m_draining = false;
+}
+
+void TTSManager::drainAndStop()
+{
+    hVoice() << "drainAndStop — buffer:" << m_pcmBuffer.size() << "bytes, totalPcm:" << m_totalPcmBytes;
+    m_draining = true;
+    // If no pending data and sink idle (or absent), finalize now
+    if (m_pcmBuffer.isEmpty() && (!m_sink || m_sink->state() == QAudio::IdleState)) {
+        finalizeSpeech();
+        return;
+    }
+    // pumpBuffer() will continue feeding; onSinkStateChanged handles finalization
+    // Safety timer: force stop after 30 seconds
+    QTimer::singleShot(30000, this, [this]() {
+        if (m_draining) {
+            hVoice() << "Drain timeout — forçage arrêt audio";
+            finalizeSpeech();
+        }
+    });
+}
+
+void TTSManager::onSinkStateChanged(QAudio::State state)
+{
+    if (state == QAudio::IdleState && m_draining && m_pcmBuffer.isEmpty()) {
+        finalizeSpeech();
+    }
+}
+
+void TTSManager::finalizeSpeech()
+{
+    hVoice() << "finalizeSpeech — remaining buffer:" << m_pcmBuffer.size() << "bytes";
+    PIPELINE_EVENT(PipelineModule::TTS, "speech_finalized",
+                   {{"total_pcm_bytes", m_totalPcmBytes}});
+    PIPELINE_STATE(PipelineModule::TTS, ModuleState::Idle);
+    PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Idle);
+    stopSink();
+    m_speaking = false;
+    m_lastSpeechEnd.restart();
+    emit ttsFinished();
+    emit speakingChanged();
+    emit statusChanged("Prêt");
+    broadcastState("idle");
+    hVoice() << "TTS terminé";
+
+    // Process next in queue
+    QTimer::singleShot(100, this, &TTSManager::processQueue);
 }
 
 // ── tuning ───────────────────────────────────────────
 
 void TTSManager::setVoice(const QString &name)
 {
+    m_voiceName = name;
     if (m_worker)
         QMetaObject::invokeMethod(m_worker, [this, name]() {
             m_worker->setVoice(name);
+            m_worker->setXTTSVoice(name);
         }, Qt::QueuedConnection);
 }
 
 void TTSManager::setRate(float r)   { m_baseRate   = std::clamp(r, -1.0f, 1.0f); }
 void TTSManager::setPitch(float p)  { m_basePitch  = std::clamp(p, -1.0f, 1.0f); }
 void TTSManager::setEnergy(float e) { m_baseEnergy = std::clamp(e, 0.0f, 1.0f); }
+void TTSManager::setStyle(const QString &s) { m_baseStyle = s; }
+void TTSManager::setLanguage(const QString &lang)
+{
+    m_language = lang;
+    if (m_worker)
+        QMetaObject::invokeMethod(m_worker, [this, lang]() {
+            m_worker->setXTTSLang(lang);
+        }, Qt::QueuedConnection);
+}
 void TTSManager::setDSPEnabled(bool on) { m_dsp.setEnabled(on); }
 void TTSManager::setCascadeEnabled(bool on) { m_cascadeEnabled = on; }
 

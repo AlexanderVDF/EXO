@@ -1,11 +1,13 @@
 #include "claudeapi.h"
 #include "logmanager.h"
+#include "pipelineevent.h"
 
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonParseError>
+#include <QRegularExpression>
 #include <QUrl>
 #include <QDateTime>
 #include <QThread>
@@ -113,6 +115,13 @@ void ClaudeAPI::sendMessageFull(const QString &userMessage,
                                 const QJsonArray &tools,
                                 bool stream)
 {
+    PIPELINE_EVENT(PipelineModule::Claude, "request_started",
+                   {{"message_length", userMessage.length()},
+                    {"tools_count", tools.size()},
+                    {"stream", stream},
+                    {"model", m_model}});
+    PIPELINE_STATE(PipelineModule::Claude, ModuleState::Processing);
+
     if (!m_isReady || m_apiKey.isEmpty()) {
         setError(QStringLiteral("API Claude non configurée — clé manquante"));
         return;
@@ -325,6 +334,7 @@ void ClaudeAPI::startRequest(const QByteArray &payload, bool stream)
     m_sseBuffer.clear();
     m_currentEventType.clear();
     m_accumulatedText.clear();
+    m_sentenceBuffer.clear();
     m_contentBlocks.clear();
     m_currentBlockIdx = -1;
 
@@ -358,12 +368,16 @@ void ClaudeAPI::startRequest(const QByteArray &payload, bool stream)
 
 void ClaudeAPI::onStreamDataReady()
 {
-    if (!m_currentReply) return;
+    if (!m_currentReply) {
+        hWarning(henriClaude) << "onStreamDataReady: m_currentReply est nullptr";
+        return;
+    }
 
     // Restart timeout à chaque chunk reçu
     m_timeoutTimer->start(m_timeoutMs);
 
     QByteArray newData = m_currentReply->readAll();
+    if (newData.isEmpty()) return;
     processStreamChunk(newData);
 }
 
@@ -474,6 +488,12 @@ void ClaudeAPI::handleContentBlockStart(const QJsonObject &data)
     QJsonObject blockObj = data[QStringLiteral("content_block")].toObject();
     QString blockType = blockObj[QStringLiteral("type")].toString();
 
+    // Guard against unbounded growth from malformed index
+    if (index < 0 || index > 100) {
+        hWarning(henriClaude) << "handleContentBlockStart: index hors limites:" << index;
+        return;
+    }
+
     ContentBlock block;
     block.type = blockType;
 
@@ -506,9 +526,19 @@ void ClaudeAPI::handleContentBlockDelta(const QJsonObject &data)
         QString text = delta[QStringLiteral("text")].toString();
         block.text += text;
         m_accumulatedText += text;
+        m_sentenceBuffer += text;
+
+        // First token event
+        if (m_accumulatedText.length() == text.length()) {
+            PIPELINE_EVENT(PipelineModule::Claude, "first_token",
+                           {{"token", text.left(20)}});
+        }
 
         // Émettre le token en temps réel
         emit partialResponse(text);
+
+        // Sentence splitting : émettre les phrases complètes pour TTS
+        trySplitSentences();
 
     } else if (deltaType == QLatin1String("input_json_delta")) {
         // Accumulation progressive du JSON pour tool_use
@@ -543,6 +573,8 @@ void ClaudeAPI::handleContentBlockStop(const QJsonObject &data)
                          QJsonDocument(args).toJson(QJsonDocument::Compact));
 
         emit toolCallDetected(block.toolUseId, block.toolName, args);
+        PIPELINE_EVENT(PipelineModule::Claude, "tool_call",
+                       {{"tool", block.toolName}, {"id", block.toolUseId}});
     }
 }
 
@@ -563,6 +595,9 @@ void ClaudeAPI::handleMessageStop()
 
     setStreaming(false);
 
+    // Flush remaining sentence buffer for TTS
+    flushSentenceBuffer();
+
     // Si du texte a été accumulé, émettre la réponse finale
     if (!m_accumulatedText.isEmpty()) {
         // Ajouter la réponse assistant à l'historique (si pas de tool call)
@@ -582,7 +617,54 @@ void ClaudeAPI::handleMessageStop()
         }
 
         emit finalResponse(m_accumulatedText);
+        PIPELINE_EVENT(PipelineModule::Claude, "final_response",
+                       {{"length", m_accumulatedText.length()}});
+        PIPELINE_STATE(PipelineModule::Claude, ModuleState::Idle);
         emit responseReceived(m_accumulatedText); // compat QML
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  Sentence splitting — émet sentenceReady() dès qu'une
+//  phrase complète est détectée (. ! ? \n suivi d'espace)
+// ═══════════════════════════════════════════════════════
+
+void ClaudeAPI::trySplitSentences()
+{
+    // Chercher la dernière fin de phrase (.!?\n) suivie d'un espace ou fin
+    // On garde au minimum 2 caractères après le délimiteur pour éviter
+    // de couper "M. Dupont" ou "3.14"
+    static const QRegularExpression sentenceEnd(
+        QStringLiteral("(?<=[.!?\\n])\\s"));
+
+    int lastSplit = -1;
+    auto it = sentenceEnd.globalMatch(m_sentenceBuffer);
+    while (it.hasNext()) {
+        auto match = it.next();
+        lastSplit = match.capturedStart();
+    }
+
+    if (lastSplit < 0) return;
+
+    // Extraire la phrase complète (tout avant le dernier split + le délimiteur)
+    QString sentence = m_sentenceBuffer.left(lastSplit).trimmed();
+    m_sentenceBuffer = m_sentenceBuffer.mid(lastSplit).trimmed();
+
+    if (!sentence.isEmpty()) {
+        hClaude() << "Sentence ready (streaming):" << sentence.left(60);
+        PIPELINE_EVENT(PipelineModule::Claude, "sentence_ready",
+                       {{"length", sentence.length()}, {"preview", sentence.left(60)}});
+        emit sentenceReady(sentence);
+    }
+}
+
+void ClaudeAPI::flushSentenceBuffer()
+{
+    QString remaining = m_sentenceBuffer.trimmed();
+    m_sentenceBuffer.clear();
+    if (!remaining.isEmpty()) {
+        hClaude() << "Sentence flush (final):" << remaining.left(60);
+        emit sentenceReady(remaining);
     }
 }
 
@@ -667,6 +749,8 @@ void ClaudeAPI::onReplyFinished()
     if (!m_currentReply) return;
 
     m_timeoutTimer->stop();
+    PIPELINE_EVENT(PipelineModule::Claude, "reply_finished");
+    PIPELINE_STATE(PipelineModule::Claude, ModuleState::Idle);
 
     int httpStatus = m_currentReply->attribute(
         QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -705,6 +789,11 @@ void ClaudeAPI::onNetworkError(QNetworkReply::NetworkError error)
     }
 
     ++m_totalErrors;
+    PIPELINE_EVENT(PipelineModule::Claude, "network_error",
+                   {{"error_code", static_cast<int>(error)},
+                    {"total_errors", m_totalErrors}});
+    PipelineEventBus::instance()->setModuleError(
+        PipelineModule::Claude, QStringLiteral("Network error %1").arg(static_cast<int>(error)));
 
     QString errorString;
     switch (error) {

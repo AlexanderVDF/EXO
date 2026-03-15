@@ -4,7 +4,7 @@
 
 [Claude]
 api_key=${CLAUDE_API_KEY}
-model=claude-3-haiku-20240307
+model=claude-sonnet-4-20250514
 base_url=https://api.anthropic.com/v1/messages
 max_tokens=4096
 temperature=0.7
@@ -27,9 +27,24 @@ debug_enabled=true
 console_enabled=true
 file_enabled=false
 
+[STT]
+server_url=ws://localhost:8766
+model=large-v3
+language=fr
+
+[TTS]
+server_url=ws://localhost:8767
+backend=xtts
+voice=Claribel Dervla
+language=fr
+pitch=1.0
+rate=1.0
+style=neutral
+sample_rate=16000
+
 [General]
 app_name=EXO Assistant
-version=3.0
+version=4.0.0
 
 # Base de données
 DATABASE_PATH=/home/pi/.raspberry-assistant/memory.db

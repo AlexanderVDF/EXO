@@ -1,6 +1,37 @@
 # EXO Assistant — Python dependencies
+
+# Backend (exo_server.py)
 aiohttp>=3.9,<4
 websockets>=12,<14
+
+# STT (stt_server.py)
+faster-whisper>=1.0
+
+# TTS (tts_server.py) — XTTS v2
+TTS>=0.22.0
+torch>=2.4,<2.5
+torchaudio>=2.4,<2.5
+torch-directml
+soundfile
+transformers>=4.40,<4.50
+numpy>=1.24
+
+# VAD (vad_server.py) — Silero VAD
+silero-vad>=5.1
+onnxruntime>=1.17
+
+# DSP (noise reduction in stt_server.py)
+noisereduce>=3.0
+
+# Wake Word (wakeword_server.py) — OpenWakeWord
+openwakeword>=0.6
+
+# Semantic Memory (memory_server.py) — FAISS + Embeddings
+faiss-cpu>=1.7
+sentence-transformers>=2.2
+
+# NLU (nlu_server.py) — optional transformer NLU
+# transformers (already included above)
 
 # Testing
 pytest>=8

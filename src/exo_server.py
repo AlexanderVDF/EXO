@@ -111,8 +111,9 @@ class GUIServer:
         elif msg_type == "transcript":
             text = msg.get("text", "")
             timestamp = msg.get("timestamp", 0)
-            logger.info("Voice transcript: %s (ts=%s)", text, timestamp)
-            await self.broadcast({"type": "transcript", "text": text})
+            req_id = msg.get("req_id", "")
+            logger.info("[req_id=%s] Voice transcript: %s (ts=%s)", req_id, text, timestamp)
+            await self.broadcast({"type": "transcript", "text": text, "req_id": req_id})
 
         elif msg_type == "partial_transcript":
             text = msg.get("text", "")

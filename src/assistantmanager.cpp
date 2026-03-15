@@ -5,6 +5,8 @@
 #include "claudeapi.h"
 #include "voicepipeline.h"
 #include "weathermanager.h"
+#include "pipelineevent.h"
+#include "pipelinetracer.h"
 #include <QQmlContext>
 #include <QTimer>
 #include <QTime>
@@ -56,7 +58,7 @@ bool AssistantManager::initializeWithConfig(const QString &configPath)
     // 2. Initialiser le système de logging avec la config
     LogManager* logManager = LogManager::instance();
     LogManager::LogLevel logLevel = LogManager::stringToLogLevel(m_configManager->getLogLevel());
-    logManager->initialize(logLevel, true, false); // Console activée, fichier désactivé par défaut
+    logManager->initialize(logLevel, true, true); // Console + fichier activés pour diagnostic
     
     // 3. Initialiser les composants principaux
     initializeComponents();
@@ -103,15 +105,45 @@ void AssistantManager::initializeComponents()
 
     // === Voice Pipeline ===
     m_voicePipeline = new VoicePipeline(this);
+
+    // Configure audio backend from config (qt or rtaudio)
+    QString audioBackend = m_configManager->getString("Audio", "backend", "qt");
+    m_voicePipeline->setAudioBackend(audioBackend);
+
     m_voicePipeline->initAudio();
-    m_voicePipeline->initVAD();
+
+    // Configure VAD backend from config
+    QString vadBackend = m_configManager->getVADBackend();
+    VADEngine::Backend vadEnum = VADEngine::Backend::Builtin;
+    if (vadBackend == "silero")
+        vadEnum = VADEngine::Backend::SileroONNX;
+    else if (vadBackend == "hybrid")
+        vadEnum = VADEngine::Backend::Hybrid;
+    QString vadUrl = m_configManager->getString("VAD", "server_url", "ws://localhost:8768");
+    m_voicePipeline->initVAD(vadEnum, vadUrl);
+
     m_voicePipeline->initSTT(m_configManager->getSTTServerUrl());
     m_voicePipeline->initTTS(m_configManager->getTTSServerUrl());
+
+    // OpenWakeWord neural wake word detection (optional)
+    bool wakewordNeural = m_configManager->getBool("WakeWord", "neural_enabled", false);
+    if (wakewordNeural) {
+        QString wakewordUrl = m_configManager->getString("WakeWord", "server_url", "ws://localhost:8770");
+        m_voicePipeline->initWakeWordServer(wakewordUrl);
+    }
+
+    // Apply TTS settings from config
+    m_voicePipeline->setTTSVoice(m_configManager->getTTSVoice());
+    m_voicePipeline->setTTSLanguage(m_configManager->getTTSLanguage());
+    m_voicePipeline->setTTSStyle(m_configManager->getTTSStyle());
 
     // Configure STT language from config
     m_voicePipeline->setSTTLanguage(m_configManager->getSTTLanguage());
     m_voicePipeline->setVADThreshold(static_cast<float>(
         m_configManager->getVADThreshold()));
+
+    // Configure wake-word with phonetic variants
+    m_voicePipeline->setWakeWord(m_configManager->getWakeWord());
 
     // Connect to GUI WebSocket server for state/audio broadcast
     m_voicePipeline->connectToServer(m_configManager->getGUIServerUrl());
@@ -135,7 +167,17 @@ void AssistantManager::initializeComponents()
     
     // === Memory Manager ===
     m_memoryManager = new AIMemoryManager(this);
+    // Connect to FAISS semantic memory server if configured
+    QString memoryUrl = m_configManager->getString("Memory", "semantic_server_url", "ws://localhost:8771");
+    bool semanticEnabled = m_configManager->getBool("Memory", "semantic_enabled", true);
+    if (semanticEnabled) {
+        m_memoryManager->initSemanticServer(memoryUrl);
+    }
     hAssistant() << "Memory Manager initialisé - mémoire EXO activée";
+
+    // === Pipeline Tracer ===
+    PipelineTracer::instance();
+    hAssistant() << "PipelineTracer initialisé — analyse post-interaction activée";
 }
 
 void AssistantManager::setupConnections()
@@ -184,13 +226,13 @@ void AssistantManager::setupConnections()
                 });
     }
     
-    // Connexion Claude -> Voice pour les réponses vocales
+    // Connexion Claude -> Voice pour les réponses vocales (sentence streaming)
     if (m_claudeApi && m_voicePipeline) {
-        connect(m_claudeApi, &ClaudeAPI::finalResponse,
-                m_voicePipeline, [this](const QString& response) {
-                    m_voicePipeline->speak(response);
+        connect(m_claudeApi, &ClaudeAPI::sentenceReady,
+                m_voicePipeline, [this](const QString& sentence) {
+                    m_voicePipeline->speakSentence(sentence);
                 });
-        hAssistant() << "Connexion Claude -> VoicePipeline établie";
+        hAssistant() << "Connexion Claude sentenceReady -> VoicePipeline établie";
     }
     
     // Note: claudeResponseReceived n'est plus connecté au TTS pour éviter le double speak
@@ -214,6 +256,24 @@ void AssistantManager::setupConnections()
     
     // Note: la mémoire est gérée dans onClaudeResponse() uniquement
     // pour éviter les doublons
+
+    // Pipeline Event Bus → LogManager (structured logging)
+    auto *eventBus = PipelineEventBus::instance();
+    connect(eventBus, &PipelineEventBus::eventEmitted,
+            LogManager::instance(), &LogManager::logPipelineEvent);
+
+    // Initialiser les modules comme Idle
+    PIPELINE_STATE(PipelineModule::Orchestrator, ModuleState::Idle);
+    PIPELINE_STATE(PipelineModule::AudioCapture, ModuleState::Idle);
+    if (m_claudeApi)
+        PIPELINE_STATE(PipelineModule::Claude, ModuleState::Idle);
+    if (m_voicePipeline) {
+        PIPELINE_STATE(PipelineModule::VAD, ModuleState::Idle);
+        PIPELINE_STATE(PipelineModule::STT, ModuleState::Idle);
+        PIPELINE_STATE(PipelineModule::TTS, ModuleState::Idle);
+        PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Idle);
+    }
+    hAssistant() << "Pipeline Event Bus initialisé et connecté";
 }
 
 void AssistantManager::exposeToQml()
@@ -242,6 +302,12 @@ void AssistantManager::exposeToQml()
     if (m_memoryManager) {
         m_qmlEngine->rootContext()->setContextProperty("memoryManager", m_memoryManager);
     }
+
+    // Exposer le LogManager pour le panneau Logs QML
+    m_qmlEngine->rootContext()->setContextProperty("logManager", LogManager::instance());
+
+    // Exposer le PipelineEventBus pour le moniteur de pipeline QML
+    m_qmlEngine->rootContext()->setContextProperty("pipelineEventBus", PipelineEventBus::instance());
     
     hAssistant() << "Composants exposés au QML avec succès";
 }
@@ -281,6 +347,14 @@ void AssistantManager::sendMessage(const QString &message)
 
     // Envoyer le message avec streaming + function calling
     m_claudeApi->sendMessageFull(message, systemContext, tools, true);
+}
+
+void AssistantManager::sendManualQuery(const QString &text)
+{
+    QString trimmed = text.trimmed();
+    if (trimmed.isEmpty()) return;
+    hAssistant() << "Requête manuelle:" << trimmed.left(50);
+    sendMessage(trimmed);
 }
 
 void AssistantManager::startListening()
@@ -337,20 +411,12 @@ void AssistantManager::onError(const QString &error)
 
 void AssistantManager::sendWelcomeMessage()
 {
-    const QString welcomeMessage = "Bonjour Alex, je suis EXO, ton assistant personnel.";
+    const QString welcomeMessage = "EXO prêt.";
     
-    // Émettre le message d'accueil pour l'interface
+    // Émettre le message d'accueil pour l'interface (texte seulement)
     emit claudeResponseReceived(welcomeMessage);
     
-    // Lire le message d'accueil à voix haute
-    if (m_voicePipeline) {
-        m_voicePipeline->speak(welcomeMessage);
-    }
-    
-    // Stocker dans la mémoire comme première interaction
-    if (m_memoryManager) {
-        m_memoryManager->addConversation("Initialisation", welcomeMessage);
-    }
+    // Pas de TTS au démarrage — l'utilisateur peut tester la voix dans les paramètres
     
     hAssistant() << "Message d'accueil EXO envoyé:" << welcomeMessage;
 }
@@ -363,6 +429,9 @@ void AssistantManager::onConfigurationLoaded()
 void AssistantManager::onClaudeResponse(const QString &response)
 {
     hClaude() << "Réponse Claude reçue:" << response.left(80) + "...";
+    PIPELINE_EVENT(PipelineModule::Claude, "response_received",
+                   QJsonObject{{"length", response.length()}});
+    PIPELINE_STATE(PipelineModule::Claude, ModuleState::Idle);
     
     emit claudeResponseReceived(response);
     
@@ -377,33 +446,17 @@ void AssistantManager::onClaudeResponse(const QString &response)
 void AssistantManager::onSpeechTranscribed(const QString &transcription)
 {
     hClaude() << "Transcription vocale reçue:" << transcription;
+    PIPELINE_EVENT(PipelineModule::Orchestrator, "speech_transcribed",
+                   QJsonObject{{"text", transcription}, {"length", transcription.length()}});
     
-    // Ajouter la transcription au chat comme message utilisateur en temps réel
-    if (m_qmlEngine) {
-        QObject *rootObject = m_qmlEngine->rootObjects().first();
-        if (rootObject) {
-            QObject *chatSection = rootObject->findChild<QObject*>("chatSection");
-            if (chatSection) {
-                QVariant messageModel = chatSection->property("messageModel");
-                if (messageModel.isValid()) {
-                    // Créer le QVariantMap correctement
-                    QVariantMap messageData;
-                    messageData["message"] = transcription;
-                    messageData["isUser"] = true;
-                    messageData["timestamp"] = QTime::currentTime().toString("hh:mm");
-                    
-                    QMetaObject::invokeMethod(messageModel.value<QObject*>(), "append",
-                        Q_ARG(QVariant, messageData));
-                    
-                    hClaude() << "Message de transcription ajouté au chat";
-                }
-            }
-        }
-    }
+    // L'affichage dans le chat est géré côté QML via Connections { target: voiceManager }
+    // → onSpeechTranscribed → transcriptView.addMessage()
 }
 
 void AssistantManager::onClaudePartial(const QString &text)
 {
+    PIPELINE_EVENT(PipelineModule::Claude, "partial_response",
+                   QJsonObject{{"length", text.length()}});
     // Relayer le streaming partiel vers l'interface QML
     emit claudePartialResponse(text);
 }
@@ -413,6 +466,8 @@ void AssistantManager::onToolCall(const QString &toolUseId,
                                   const QJsonObject &arguments)
 {
     hAssistant() << "Tool call reçu:" << toolName << "— id:" << toolUseId;
+    PIPELINE_EVENT(PipelineModule::Claude, "tool_call_dispatched",
+                   QJsonObject{{"tool", toolName}, {"tool_use_id", toolUseId}});
 
     QJsonObject result;
 

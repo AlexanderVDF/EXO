@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QLoggingCategory>
 #include <QString>
+#include <QJsonObject>
 
 /**
  * @brief Gestionnaire centralisé de logging pour Henri
@@ -47,6 +48,18 @@ public:
     static QString logLevelToString(LogLevel level);
     static LogLevel stringToLogLevel(const QString &levelName);
 
+    Q_INVOKABLE QStringList getRecentLogs() const { return m_recentLogs; }
+    Q_INVOKABLE void clearLogs() { m_recentLogs.clear(); }
+    Q_INVOKABLE void copyToClipboard(const QString &text);
+
+    // Structured pipeline logging
+    Q_INVOKABLE QStringList getRecentPipelineEvents() const { return m_pipelineEvents; }
+    void logPipelineEvent(const QJsonObject &event);
+
+signals:
+    void newLogEntry(const QString &entry);
+    void newPipelineEvent(const QJsonObject &event);
+
 public slots:
     void handleMessage(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 
@@ -66,6 +79,14 @@ private:
     
     // Ancienne fonction de message pour restauration
     QtMessageHandler m_oldHandler;
+
+    // Buffer circulaire pour le QML LogPanel
+    QStringList m_recentLogs;
+    static constexpr int MAX_LOG_ENTRIES = 500;
+
+    // Pipeline events for structured logging
+    QStringList m_pipelineEvents;
+    static constexpr int MAX_PIPELINE_EVENTS = 200;
 };
 
 // Macros de convenance pour un usage simplifié

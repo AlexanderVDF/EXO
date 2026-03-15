@@ -40,6 +40,7 @@ public:
     // Méthodes publiques
     Q_INVOKABLE bool initializeWithConfig(const QString &configPath = "config/assistant.conf");
     Q_INVOKABLE void sendMessage(const QString &message);
+    Q_INVOKABLE void sendManualQuery(const QString &text);
     Q_INVOKABLE void startListening();
     Q_INVOKABLE void stopListening();
     Q_INVOKABLE QString getWeatherSummary() const;

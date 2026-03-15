@@ -151,11 +151,13 @@ public:
     ~TTSWorker();
 
 public slots:
-    void init();
+    void init(const QString &pythonWsUrl = {});
     void processRequest(const TTSRequest &req);
     void cancelCurrent();
     void setVoice(const QString &name);
     void setPythonWsUrl(const QString &url);
+    void setXTTSVoice(const QString &name);
+    void setXTTSLang(const QString &lang);
 
 signals:
     void started(const QString &text);
@@ -164,21 +166,27 @@ signals:
     void error(const QString &msg);
     void voiceInfo(const QString &name, int voiceCount);
 
-private:
-    bool tryQtTTS(const TTSRequest &req);
-    bool tryPythonTTS(const TTSRequest &req);
+public:
+    void requestStop() { m_cancelled = true; }
 
-    void onQtStateChanged(QTextToSpeech::State s);
+private:
+    bool tryPythonTTS(const TTSRequest &req);
+    bool tryQtTTS(const TTSRequest &req);
 
     QTextToSpeech *m_tts = nullptr;
     QWebSocket    *m_pyWs = nullptr;
     QString  m_pyWsUrl;
-    bool     m_cancelled = false;
+    std::atomic<bool> m_cancelled{false};
     bool     m_pyConnected = false;
+    bool     m_pyReadyReceived = false;
+    QString  m_xttsVoice = "Claribel Dervla";
+    QString  m_xttsLang  = "fr";
 
     static constexpr int QT_TTS_TIMEOUT_MS   = 30000;
-    static constexpr int PY_TTS_TIMEOUT_MS   = 15000;
+    static constexpr int PY_TTS_TIMEOUT_MS   = 12000;  // idle timeout, reset on each chunk
     static constexpr int MAX_RETRIES          = 2;
+
+    void resetPythonConnection();
 };
 
 // ─────────────────────────────────────────────────────
@@ -205,12 +213,12 @@ public:
     ~TTSManager();
 
     // ── lifecycle ──
-    void initTTS();
+    void initTTS(const QString &pythonWsUrl = {});
     void initDSP();
-    void initCascade(const QString &pythonWsUrl = {});
 
     // ── main API ──
     Q_INVOKABLE void speakText(const QString &text);
+    Q_INVOKABLE void enqueueSentence(const QString &text);
     Q_INVOKABLE void cancelSpeech();
 
     // ── state ──
@@ -221,6 +229,8 @@ public:
     Q_INVOKABLE void setRate(float r);
     Q_INVOKABLE void setPitch(float p);
     Q_INVOKABLE void setEnergy(float e);
+    Q_INVOKABLE void setStyle(const QString &s);
+    Q_INVOKABLE void setLanguage(const QString &lang);
     Q_INVOKABLE void setDSPEnabled(bool on);
     Q_INVOKABLE void setCascadeEnabled(bool on);
 
@@ -257,16 +267,25 @@ private:
     // ── streaming playback ──
     void startSink();
     void feedSink(const QByteArray &pcm);
+    void pumpBuffer();
     void stopSink();
+    void drainAndStop();
+    void finalizeSpeech();
+    void onSinkStateChanged(QAudio::State state);
     void broadcastWaveform(const QByteArray &pcm);
     void broadcastState(const QString &state);
 
     // ── state ──
     std::atomic<bool> m_speaking{false};
+    std::atomic<bool> m_processingGuard{false}; // prevents re-entrant processQueue
+    bool m_draining = false;
     bool m_cascadeEnabled = true;
     float m_baseRate   = 0.0f;
     float m_basePitch  = 0.0f;
     float m_baseEnergy = 0.8f;
+    QString m_baseStyle = "neutral";
+    QString m_voiceName = "Claribel Dervla";
+    QString m_language  = "fr";
 
     // ── queue ──
     QMutex m_queueMutex;
@@ -279,6 +298,9 @@ private:
     QAudioFormat m_sinkFormat;
     std::unique_ptr<QAudioSink> m_sink;
     QIODevice *m_sinkIO = nullptr;
+    QByteArray m_pcmBuffer;    // intermediate PCM accumulator
+    QTimer    *m_pumpTimer = nullptr; // feeds sink from m_pcmBuffer
+    qint64     m_totalPcmBytes = 0;  // diagnostic counter
 
     // ── worker thread ──
     QThread      m_workerThread;
@@ -291,7 +313,7 @@ private:
     QWebSocket *m_ws = nullptr;
 
     // ── constants ──
-    static constexpr int SAMPLE_RATE     = 16000;
+    static constexpr int SAMPLE_RATE     = 24000; // XTTS v2 native rate
     static constexpr int CHANNELS        = 1;
     static constexpr int BITS_PER_SAMPLE = 16;
 };

@@ -176,13 +176,14 @@ void AudioPreprocessor::process(int16_t *samples, int count)
         }
     }
 
-    // ---- 5. AGC (slow envelope follower) ----
+    // ---- 5. AGC (envelope follower) ----
     if (m_agcEnabled && rms > 1e-6f) {
         constexpr float TARGET = 0.15f;  // target RMS ~ -16 dBFS
         float desired = TARGET / rms;
-        // smooth
-        m_agcGain += 0.05f * (desired - m_agcGain);
-        m_agcGain = std::clamp(m_agcGain, 0.1f, 10.0f);
+        // faster convergence for quiet signals
+        float alpha = (desired > m_agcGain) ? 0.15f : 0.05f;
+        m_agcGain += alpha * (desired - m_agcGain);
+        m_agcGain = std::clamp(m_agcGain, 0.1f, 30.0f);
         for (int i = 0; i < count; ++i) {
             float v = samples[i] * m_agcGain;
             samples[i] = static_cast<int16_t>(std::clamp(v, -32768.0f, 32767.0f));
@@ -198,20 +199,91 @@ VADEngine::VADEngine(QObject *parent)
     : QObject(parent)
 {}
 
-VADEngine::~VADEngine() = default;
-
-bool VADEngine::initialize(Backend preferred)
+VADEngine::~VADEngine()
 {
-    // Note: SileroONNX requires ONNX Runtime library (not bundled yet).
-    // Silero VAD is also active server-side in stt_server.py (faster-whisper vad_filter).
-    // For now we use the Builtin backend which is calibrated and works well.
-    if (preferred == Backend::SileroONNX) {
-        hVoice() << "Silero ONNX VAD demandé mais non compilé — fallback Builtin";
+    if (m_sileroWs) {
+        m_sileroWs->close();
     }
-    m_backend = Backend::Builtin;
+}
+
+bool VADEngine::initialize(Backend preferred, const QString &sileroUrl)
+{
+    m_sileroUrl = sileroUrl;
+
+    if (preferred == Backend::SileroONNX || preferred == Backend::Hybrid) {
+        // Connect to Silero VAD server via WebSocket
+        m_sileroWs = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+        connect(m_sileroWs, &QWebSocket::connected,
+                this, &VADEngine::onSileroConnected);
+        connect(m_sileroWs, &QWebSocket::disconnected,
+                this, &VADEngine::onSileroDisconnected);
+        connect(m_sileroWs, &QWebSocket::textMessageReceived,
+                this, &VADEngine::onSileroMessage);
+        m_sileroWs->open(QUrl(sileroUrl));
+
+        m_backend = preferred;
+        hVoice() << "VAD initialisé (backend:"
+                 << (preferred == Backend::SileroONNX ? "Silero" : "Hybrid")
+                 << "url:" << sileroUrl << ")";
+    } else {
+        m_backend = Backend::Builtin;
+        hVoice() << "VAD initialisé (backend: Builtin energy+ZCR)";
+    }
+
     resetNoiseEstimate();
-    hVoice() << "VAD initialisé (backend: Builtin energy+ZCR, Silero actif côté STT server)";
     return true;
+}
+
+void VADEngine::setThreshold(float t)
+{
+    m_threshold = t;
+    // Forward to Silero server if connected
+    if (m_sileroWs && m_sileroConnected) {
+        QJsonObject cfg;
+        cfg["type"] = "config";
+        cfg["threshold"] = static_cast<double>(t);
+        m_sileroWs->sendTextMessage(QString::fromUtf8(
+            QJsonDocument(cfg).toJson(QJsonDocument::Compact)));
+    }
+}
+
+void VADEngine::onSileroConnected()
+{
+    m_sileroConnected = true;
+    hVoice() << "Silero VAD serveur connecté";
+}
+
+void VADEngine::onSileroDisconnected()
+{
+    m_sileroConnected = false;
+    hVoice() << "Silero VAD serveur déconnecté — fallback Builtin";
+    // Reconnect after delay
+    QTimer::singleShot(3000, this, [this]() {
+        if (m_sileroWs && !m_sileroConnected) {
+            m_sileroWs->open(QUrl(m_sileroUrl));
+        }
+    });
+}
+
+void VADEngine::onSileroMessage(const QString &msg)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(msg.toUtf8());
+    if (!doc.isObject()) return;
+    QJsonObject obj = doc.object();
+    QString type = obj["type"].toString();
+
+    if (type == "vad") {
+        m_sileroScore = static_cast<float>(obj["score"].toDouble());
+    } else if (type == "ready") {
+        hVoice() << "Silero VAD prêt — modèle:" << obj["model"].toString();
+    }
+}
+
+void VADEngine::sendSileroAudio(const int16_t *s, int n)
+{
+    if (!m_sileroWs || !m_sileroConnected) return;
+    QByteArray data(reinterpret_cast<const char *>(s), n * sizeof(int16_t));
+    m_sileroWs->sendBinaryMessage(data);
 }
 
 void VADEngine::resetNoiseEstimate()
@@ -274,7 +346,32 @@ float VADEngine::builtinScore(const int16_t *s, int n)
 
 float VADEngine::processChunk(const int16_t *samples, int count)
 {
-    float score = builtinScore(samples, count);
+    float builtinS = builtinScore(samples, count);
+    float score = builtinS;
+
+    // Send audio to Silero if backend requires it
+    if ((m_backend == Backend::SileroONNX || m_backend == Backend::Hybrid)
+        && m_sileroConnected) {
+        sendSileroAudio(samples, count);
+    }
+
+    switch (m_backend) {
+    case Backend::Builtin:
+        score = builtinS;
+        break;
+    case Backend::SileroONNX:
+        // Use Silero score if connected, else fallback to builtin
+        score = m_sileroConnected ? m_sileroScore : builtinS;
+        break;
+    case Backend::Hybrid:
+        // Weighted combination: Silero is more accurate, builtin is low-latency
+        if (m_sileroConnected)
+            score = 0.3f * builtinS + 0.7f * m_sileroScore;
+        else
+            score = builtinS;
+        break;
+    }
+
     updateSpeechState(score);
     return score;
 }
@@ -516,10 +613,22 @@ VoicePipeline::VoicePipeline(QObject *parent)
     m_ttsEndClock.start();
     m_lastWakeWordClock.start();
 
+    // Initialize default wake-word variants (accept both Jarvis and EXO)
+    m_wakeVariants << "jarvis" << "jarvice" << "jarvi" << "jarviss" << "garvis"
+                   << "exo" << "egzo" << "ekso" << "exho" << "exau"
+                   << "eczau" << "egzau" << "ekzo";
+
     m_utteranceTimer = new QTimer(this);
     m_utteranceTimer->setSingleShot(true);
     connect(m_utteranceTimer, &QTimer::timeout,
             this, &VoicePipeline::onUtteranceTimeout);
+
+    m_conversationTimer = new QTimer(this);
+    m_conversationTimer->setSingleShot(true);
+    connect(m_conversationTimer, &QTimer::timeout, this, [this]() {
+        m_conversationActive = false;
+        hVoice() << "Mode conversation expiré";
+    });
 }
 
 VoicePipeline::~VoicePipeline()
@@ -535,33 +644,51 @@ bool VoicePipeline::initAudio()
     m_format.setChannelCount(1);
     m_format.setSampleFormat(QAudioFormat::Int16);
 
-    const QAudioDevice &dev = QMediaDevices::defaultAudioInput();
-    if (dev.isNull()) {
-        hVoice() << "Aucun périphérique audio d'entrée";
-        emit voiceError("Aucun micro détecté");
+    // Create backend based on config
+    m_audioInput.reset();
+#ifdef ENABLE_RTAUDIO
+    if (m_audioBackend == "rtaudio") {
+        m_audioInput = std::make_unique<AudioInputRtAudio>(this);
+    } else
+#endif
+    {
+        m_audioInput = std::make_unique<AudioInputQt>(this);
+    }
+
+    connect(m_audioInput.get(), &AudioInput::error,
+            this, [this](const QString &msg) {
+                hVoice() << "Audio backend erreur:" << msg;
+                emit voiceError(msg);
+            });
+
+    // Set callback: preprocess + feed pipeline
+    // RtAudio calls from its own thread — marshal to Qt event loop
+    m_audioInput->setCallback([this](const int16_t *samples, int count) {
+        // Copy samples (RtAudio buffer is temporary)
+        auto copy = std::make_shared<std::vector<int16_t>>(samples, samples + count);
+        QMetaObject::invokeMethod(this, [this, copy]() {
+            onAudioSamples(copy->data(), static_cast<int>(copy->size()));
+        }, Qt::QueuedConnection);
+    });
+
+    if (!m_audioInput->open(SAMPLE_RATE, 1)) {
+        emit voiceError("Impossible d'ouvrir le backend audio");
         return false;
     }
 
-    if (!dev.isFormatSupported(m_format)) {
-        hVoice() << "Format 16kHz/mono/Int16 non supporté, utilisation du format préféré";
-        m_format = dev.preferredFormat();
-        m_preproc.setSampleRate(m_format.sampleRate());
-    }
-
-    hVoice() << "Audio initialisé — device:" << dev.description()
-             << "rate:" << m_format.sampleRate()
-             << "ch:" << m_format.channelCount();
+    hVoice() << "Audio initialisé — backend:" << m_audioInput->backendName()
+             << "rate:" << m_format.sampleRate();
     return true;
 }
 
-bool VoicePipeline::initVAD(VADEngine::Backend preferred)
+bool VoicePipeline::initVAD(VADEngine::Backend preferred, const QString &sileroUrl)
 {
     m_vad = std::make_unique<VADEngine>(this);
     connect(m_vad.get(), &VADEngine::speechStarted,
             this, &VoicePipeline::onVADSpeechStarted);
     connect(m_vad.get(), &VADEngine::speechEnded,
             this, &VoicePipeline::onVADSpeechEnded);
-    return m_vad->initialize(preferred);
+    return m_vad->initialize(preferred, sileroUrl);
 }
 
 bool VoicePipeline::initSTT(const QString &serverUrl)
@@ -586,13 +713,8 @@ bool VoicePipeline::initSTT(const QString &serverUrl)
 void VoicePipeline::initTTS(const QString &ttsServerUrl)
 {
     m_ttsManager = new TTSManager(this);
-    m_ttsManager->initTTS();
+    m_ttsManager->initTTS(ttsServerUrl);
     m_ttsManager->initDSP();
-
-    // Initialize Piper TTS cascade
-    if (!ttsServerUrl.isEmpty()) {
-        m_ttsManager->initCascade(ttsServerUrl);
-    }
 
     // Pass WebSocket for GUI broadcast
     if (m_ws)
@@ -608,27 +730,80 @@ void VoicePipeline::initTTS(const QString &ttsServerUrl)
     hVoice() << "TTSManager initialisé avec DSP pipeline";
 }
 
+// ── OpenWakeWord server integration ──────────────────
+
+void VoicePipeline::initWakeWordServer(const QString &url)
+{
+    m_wakewordUrl = url;
+    if (m_wakewordWs) {
+        m_wakewordWs->close();
+        m_wakewordWs->deleteLater();
+    }
+    m_wakewordWs = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+    connect(m_wakewordWs, &QWebSocket::connected,
+            this, &VoicePipeline::onWakeWordWsConnected);
+    connect(m_wakewordWs, &QWebSocket::disconnected,
+            this, &VoicePipeline::onWakeWordWsDisconnected);
+    connect(m_wakewordWs, &QWebSocket::textMessageReceived,
+            this, &VoicePipeline::onWakeWordWsMessage);
+    m_wakewordWs->open(QUrl(url));
+    hVoice() << "Connecting to OpenWakeWord server:" << url;
+}
+
+void VoicePipeline::onWakeWordWsConnected()
+{
+    m_wakewordConnected = true;
+    hVoice() << "OpenWakeWord server connected";
+}
+
+void VoicePipeline::onWakeWordWsDisconnected()
+{
+    m_wakewordConnected = false;
+    hWarning(henriVoice) << "OpenWakeWord server disconnected — fallback transcript detection";
+    QTimer::singleShot(5000, this, [this]() {
+        if (!m_wakewordConnected && m_wakewordWs && !m_wakewordUrl.isEmpty())
+            m_wakewordWs->open(QUrl(m_wakewordUrl));
+    });
+}
+
+void VoicePipeline::onWakeWordWsMessage(const QString &msg)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(msg.toUtf8());
+    if (!doc.isObject()) return;
+    QJsonObject obj = doc.object();
+    if (obj["type"].toString() == "wakeword") {
+        float score = static_cast<float>(obj["score"].toDouble());
+        QString word = obj["word"].toString();
+        // Only trigger from Idle state, require score > 0.7, and enforce cooldown
+        if (score > 0.7f && m_state == PipelineState::Idle
+            && m_lastWakeWordClock.elapsed() > WAKE_COOLDOWN_MS
+            && m_ttsEndClock.elapsed() > TTS_GUARD_MS) {
+            hVoice() << "OpenWakeWord detected:" << word << "score:" << score;
+            PIPELINE_EVENT(PipelineModule::WakeWord, "wakeword_detected",
+                           {{"word", word}, {"score", score}, {"source", "neural"}});
+            m_wakeWordTriggered = true;
+            m_lastWakeWordClock.restart();
+            emit wakeWordDetected();
+            setState(PipelineState::DetectingSpeech);
+        }
+    }
+}
+
 // ── start / stop ─────────────────────────────────────
 
 void VoicePipeline::startListening()
 {
     if (m_audioRunning) return;
 
-    const QAudioDevice &dev = QMediaDevices::defaultAudioInput();
-    if (dev.isNull()) {
-        emit voiceError("Aucun micro disponible");
+    if (!m_audioInput) {
+        emit voiceError("Backend audio non initialisé");
         return;
     }
 
-    m_audioSource = std::make_unique<QAudioSource>(dev, m_format);
-    m_audioIO = m_audioSource->start();
-    if (!m_audioIO) {
+    if (!m_audioInput->start()) {
         emit voiceError("Impossible de démarrer la capture audio");
         return;
     }
-
-    connect(m_audioIO, &QIODevice::readyRead,
-            this, &VoicePipeline::onAudioDataReady);
 
     m_audioRunning = true;
     setState(PipelineState::Idle);
@@ -644,11 +819,9 @@ void VoicePipeline::stopListening()
 {
     if (!m_audioRunning) return;
 
-    if (m_audioSource) {
-        m_audioSource->stop();
-        m_audioSource.reset();
+    if (m_audioInput) {
+        m_audioInput->stop();
     }
-    m_audioIO = nullptr;
     m_audioRunning = false;
     m_utteranceTimer->stop();
     setState(PipelineState::Idle);
@@ -660,12 +833,32 @@ void VoicePipeline::speak(const QString &text)
 {
     if (text.isEmpty() || !m_ttsManager) return;
 
+    PIPELINE_EVENT(PipelineModule::TTS, "speak_requested",
+                   {{"text_length", text.length()},
+                    {"preview", text.left(80)}});
+
     // Stop capture while speaking to avoid self-triggering
-    if (m_audioSource)
-        m_audioSource->suspend();
+    if (m_audioInput)
+        m_audioInput->suspend();
 
     hVoice() << "TTS:" << text.left(80) << "...";
     m_ttsManager->speakText(text);
+}
+
+void VoicePipeline::speakSentence(const QString &text)
+{
+    if (text.isEmpty() || !m_ttsManager) return;
+
+    PIPELINE_EVENT(PipelineModule::TTS, "sentence_enqueued",
+                   {{"text_length", text.length()},
+                    {"preview", text.left(80)}});
+
+    // Suspend capture to avoid self-triggering
+    if (m_audioInput)
+        m_audioInput->suspend();
+
+    hVoice() << "TTS sentence:" << text.left(80) << "...";
+    m_ttsManager->enqueueSentence(text);
 }
 
 void VoicePipeline::resetBuffers()
@@ -712,6 +905,66 @@ void VoicePipeline::setSTTLanguage(const QString &lang)
 {
     if (m_stt) m_stt->setLanguage(lang);
     hVoice() << "STT language:" << lang;
+}
+
+void VoicePipeline::setTTSVoice(const QString &name)
+{
+    if (m_ttsManager) m_ttsManager->setVoice(name);
+    hVoice() << "TTS voice:" << name;
+}
+
+void VoicePipeline::setTTSLanguage(const QString &lang)
+{
+    if (m_ttsManager) m_ttsManager->setLanguage(lang);
+    hVoice() << "TTS language:" << lang;
+}
+
+void VoicePipeline::setTTSStyle(const QString &style)
+{
+    if (m_ttsManager) m_ttsManager->setStyle(style);
+    hVoice() << "TTS style:" << style;
+}
+
+void VoicePipeline::setAudioBackend(const QString &backend)
+{
+    QString b = backend.toLower().trimmed();
+#ifndef ENABLE_RTAUDIO
+    if (b == "rtaudio") {
+        hVoice() << "RtAudio non disponible dans cette build, fallback Qt";
+        b = "qt";
+    }
+#endif
+    if (b != "qt" && b != "rtaudio") b = "qt";
+    m_audioBackend = b;
+    hVoice() << "Audio backend sélectionné:" << m_audioBackend;
+}
+
+void VoicePipeline::setWakeWord(const QString &word)
+{
+    m_wakeKeyword = word.toLower().trimmed();
+    // Rebuild variants: primary keyword + common phonetic variants for "exo"
+    m_wakeVariants.clear();
+    m_wakeVariants << m_wakeKeyword;
+    // Always accept both Jarvis and EXO as wake words
+    m_wakeVariants << "jarvis" << "jarvice" << "jarvi" << "jarviss" << "garvis"
+                   << "exo" << "egzo" << "ekso" << "exho" << "exau"
+                   << "eczau" << "egzau" << "ekzo";
+    m_wakeVariants.removeDuplicates();
+    hVoice() << "Wake-word:" << m_wakeKeyword << "variants:" << m_wakeVariants;
+}
+
+void VoicePipeline::setWakeWords(const QStringList &words)
+{
+    m_wakeVariants.clear();
+    for (const QString &w : words) {
+        QString clean = w.toLower().trimmed();
+        clean.remove(QRegularExpression("[!?.,;]"));
+        if (!clean.isEmpty() && !m_wakeVariants.contains(clean))
+            m_wakeVariants << clean;
+    }
+    if (!m_wakeVariants.isEmpty())
+        m_wakeKeyword = m_wakeVariants.first();
+    hVoice() << "Wake-words:" << m_wakeVariants;
 }
 
 // ── WebSocket bridge ─────────────────────────────────
@@ -765,30 +1018,23 @@ void VoicePipeline::onWsBinaryMessage(const QByteArray &msg)
     Q_UNUSED(msg)
 }
 
-// ── audio data callback (main thread) ────────────────
+// ── audio callback (from AudioInput backend) ─────────
 
-void VoicePipeline::onAudioDataReady()
+void VoicePipeline::onAudioSamples(const int16_t *samples, int count)
 {
-    if (!m_audioIO) return;
-    QByteArray raw = m_audioIO->readAll();
-    if (raw.isEmpty()) return;
-
-    int sampleCount = raw.size() / static_cast<int>(sizeof(int16_t));
-    if (sampleCount <= 0) return;
+    if (count <= 0) return;
 
     // Work on a mutable copy for preprocessing
-    std::vector<int16_t> chunk(sampleCount);
-    std::memcpy(chunk.data(), raw.constData(), sampleCount * sizeof(int16_t));
+    std::vector<int16_t> chunk(samples, samples + count);
 
     // Preprocess (high-pass, gate, AGC)
-    m_preproc.process(chunk.data(), sampleCount);
+    m_preproc.process(chunk.data(), count);
 
     // Write to ring buffer
-    m_ringBuf.write(chunk.data(), sampleCount);
+    m_ringBuf.write(chunk.data(), count);
 
     // Process in CHUNK_SAMPLES-sized blocks
-    // (remaining samples carry over via ring buffer)
-    processAudioChunk(chunk.data(), sampleCount);
+    processAudioChunk(chunk.data(), count);
 }
 
 // ── core pipeline ────────────────────────────────────
@@ -802,8 +1048,12 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
 
     // ── VAD scoring ──
     float vadScore = 0.0f;
-    if (m_vad)
+    if (m_vad) {
         vadScore = m_vad->processChunk(samples, count);
+    } else {
+        hWarning(henriVoice) << "processAudioChunk: m_vad est nullptr — VAD désactivé";
+        return;
+    }
 
     // ── Compute RMS for UI ──
     double sumSq = 0.0;
@@ -817,6 +1067,12 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
 
     switch (m_state) {
     case PipelineState::Idle:
+        // Send audio to OpenWakeWord server for neural wake word detection
+        if (m_wakewordConnected && m_wakewordWs) {
+            QByteArray pcmData(reinterpret_cast<const char*>(samples),
+                               count * sizeof(int16_t));
+            m_wakewordWs->sendBinaryMessage(pcmData);
+        }
         // VAD déclenche le passage en DetectingSpeech
         if (m_vad && vadScore >= m_vad->threshold()) {
             handleVAD(samples, count, vadScore);
@@ -837,9 +1093,9 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
         if (m_stt && m_stt->isConnected() && m_sttStreaming) {
             m_stt->feedAudio(samples, count);
         }
-        // End-of-speech detection via VAD
+        // End-of-speech detection via VAD (min 2s pour éviter clips trop courts)
         if (m_vad && !m_vad->isSpeech()
-            && m_utteranceBuf.size() > static_cast<size_t>(SAMPLE_RATE)) {
+            && m_utteranceBuf.size() > static_cast<size_t>(SAMPLE_RATE * 2)) {
             finishUtterance();
         }
         break;
@@ -853,9 +1109,6 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
 
 void VoicePipeline::handleVAD(const int16_t *samples, int count, float vadScore)
 {
-    Q_UNUSED(samples)
-    Q_UNUSED(count)
-
     // VAD a détecté de la parole → commencer capture + streaming STT
     if (m_lastWakeWordClock.elapsed() < WAKE_COOLDOWN_MS) return;
 
@@ -873,6 +1126,14 @@ void VoicePipeline::handleVAD(const int16_t *samples, int count, float vadScore)
         if (m_stt && m_stt->isConnected()) {
             m_stt->startUtterance();
             m_sttStreaming = true;
+            PIPELINE_EVENT(PipelineModule::STT, "stream_started");
+            PIPELINE_STATE(PipelineModule::STT, ModuleState::Active);
+        }
+
+        // Feed the triggering chunk so beginning of speech isn't lost
+        handleRecording(samples, count);
+        if (m_stt && m_stt->isConnected() && m_sttStreaming) {
+            m_stt->feedAudio(samples, count);
         }
 
         // Grace period → passer en Listening
@@ -883,11 +1144,76 @@ void VoicePipeline::handleVAD(const int16_t *samples, int count, float vadScore)
     }
 }
 
-// ── Wake-word logiciel : détection de "EXO" dans le transcript ──
+// ── Wake-word logiciel : détection fuzzy + phonétique de "EXO" ──
+
+int VoicePipeline::levenshteinDistance(const QString &a, const QString &b)
+{
+    const int m = a.length(), n = b.length();
+    if (m == 0) return n;
+    if (n == 0) return m;
+    std::vector<int> prev(n + 1), curr(n + 1);
+    for (int j = 0; j <= n; ++j) prev[j] = j;
+    for (int i = 1; i <= m; ++i) {
+        curr[0] = i;
+        for (int j = 1; j <= n; ++j) {
+            int cost = (a[i-1] == b[j-1]) ? 0 : 1;
+            curr[j] = std::min({prev[j] + 1, curr[j-1] + 1, prev[j-1] + cost});
+        }
+        std::swap(prev, curr);
+    }
+    return prev[n];
+}
 
 bool VoicePipeline::checkWakeWord(const QString &text)
 {
-    return text.toLower().contains(m_wakeKeyword);
+    QString lower = text.toLower();
+
+    // Direct contains check for primary keyword
+    if (lower.contains(m_wakeKeyword))
+        return true;
+
+    // Check all variants with fuzzy matching (Levenshtein ≤ 1)
+    QStringList words = lower.split(QRegularExpression("[\\s,;.!?]+"), Qt::SkipEmptyParts);
+    for (const QString &word : words) {
+        for (const QString &variant : m_wakeVariants) {
+            if (word == variant)
+                return true;
+            if (std::abs(word.length() - variant.length()) <= 1
+                && levenshteinDistance(word, variant) <= 1)
+                return true;
+        }
+    }
+    return false;
+}
+
+QString VoicePipeline::findAndRemoveWakeWord(const QString &text)
+{
+    QString result = text;
+    // Remove primary keyword
+    result.remove(QRegularExpression("\\b" + QRegularExpression::escape(m_wakeKeyword) + "\\b",
+                                     QRegularExpression::CaseInsensitiveOption));
+    // Remove known variants
+    for (const QString &variant : m_wakeVariants) {
+        result.remove(QRegularExpression("\\b" + QRegularExpression::escape(variant) + "\\b",
+                                         QRegularExpression::CaseInsensitiveOption));
+    }
+    // Remove fuzzy-matched words
+    QStringList words = result.split(QRegularExpression("[\\s]+"), Qt::SkipEmptyParts);
+    QStringList kept;
+    for (const QString &word : words) {
+        QString clean = word.toLower();
+        clean.remove(QRegularExpression("[,;.!?]"));
+        bool isWake = false;
+        for (const QString &variant : m_wakeVariants) {
+            if (std::abs(clean.length() - variant.length()) <= 1
+                && levenshteinDistance(clean, variant) <= 1) {
+                isWake = true;
+                break;
+            }
+        }
+        if (!isWake) kept.append(word);
+    }
+    return kept.join(" ").trimmed();
 }
 
 void VoicePipeline::handleRecording(const int16_t *samples, int count)
@@ -906,6 +1232,9 @@ void VoicePipeline::handleRecording(const int16_t *samples, int count)
 void VoicePipeline::finishUtterance()
 {
     m_utteranceTimer->stop();
+    PIPELINE_EVENT(PipelineModule::STT, "utterance_finished",
+                   {{"samples", static_cast<qint64>(m_utteranceBuf.size())},
+                    {"duration_ms", static_cast<qint64>(m_utteranceBuf.size() * 1000 / SAMPLE_RATE)}});
 
     if (m_utteranceBuf.empty()) {
         hVoice() << "Utterance vide — retour à Idle";
@@ -928,14 +1257,16 @@ void VoicePipeline::finishUtterance()
     if (m_stt && m_stt->isConnected()) {
         if (m_sttStreaming) {
             // We were already streaming audio — just signal end
+            hVoice() << "finishUtterance: endUtterance() sur STT";
             m_stt->endUtterance();
             m_sttStreaming = false;
         } else {
             // Fallback: send entire buffer in one shot
+            hVoice() << "finishUtterance: transcribeBuffer (" << m_utteranceBuf.size() << " samples)";
             m_stt->transcribeBuffer(m_utteranceBuf);
         }
     } else {
-        // Internal energy-based fallback (placeholder until STT server is available)
+        hWarning(henriVoice) << "finishUtterance: STT non connecté — fallback interne";
         QString text = analyzeAudioFallback(m_utteranceBuf);
         if (!text.isEmpty()) {
             dispatchTranscript(text);
@@ -948,18 +1279,26 @@ void VoicePipeline::finishUtterance()
 
 void VoicePipeline::dispatchTranscript(const QString &text)
 {
+    // Début d'une nouvelle interaction
+    PipelineEventBus::instance()->beginInteraction();
+    PIPELINE_EVENT(PipelineModule::Orchestrator, "transcript_dispatched",
+                   {{"text", text}, {"length", text.length()}});
+
     m_lastCommand = text;
     hVoice() << "Transcript final:" << text;
     emit finalTranscript(text);
     emit speechTranscribed(text);
     emit commandDetected(text);
 
-    // Send to Python backend via WebSocket
+    // Send to Python backend via WebSocket (with correlationId for tracing)
     if (m_ws && m_ws->state() == QAbstractSocket::ConnectedState) {
         QJsonObject msg;
         msg["type"] = "transcript";
         msg["text"] = text;
         msg["timestamp"] = QDateTime::currentMSecsSinceEpoch();
+        QString cid = PipelineEventBus::instance()->currentCorrelationId();
+        if (!cid.isEmpty())
+            msg["req_id"] = cid;
         m_ws->sendTextMessage(QString::fromUtf8(QJsonDocument(msg).toJson(QJsonDocument::Compact)));
     }
 
@@ -981,12 +1320,16 @@ void VoicePipeline::onUtteranceTimeout()
 void VoicePipeline::onVADSpeechStarted()
 {
     if (m_state == PipelineState::DetectingSpeech || m_state == PipelineState::Listening) {
+        PIPELINE_EVENT(PipelineModule::VAD, "speech_started");
+        PIPELINE_STATE(PipelineModule::VAD, ModuleState::Active);
         emit speechStarted();
     }
 }
 
 void VoicePipeline::onVADSpeechEnded()
 {
+    PIPELINE_EVENT(PipelineModule::VAD, "speech_ended");
+    PIPELINE_STATE(PipelineModule::VAD, ModuleState::Idle);
     // Speech end is handled in processAudioChunk for tighter control
 }
 
@@ -994,6 +1337,8 @@ void VoicePipeline::onVADSpeechEnded()
 
 void VoicePipeline::onSTTPartial(const QString &text)
 {
+    PIPELINE_EVENT(PipelineModule::STT, "partial_transcript",
+                   {{"text", text.left(100)}});
     emit partialTranscript(text);
     emit statusChanged("\"" + text + "\"...");
 
@@ -1001,6 +1346,8 @@ void VoicePipeline::onSTTPartial(const QString &text)
     if (!m_wakeWordTriggered && checkWakeWord(text)) {
         m_wakeWordTriggered = true;
         hVoice() << "Wake-word logiciel détecté dans transcript:" << text;
+        PIPELINE_EVENT(PipelineModule::WakeWord, "wakeword_detected",
+                       {{"text", text.left(60)}, {"source", "transcript_partial"}});
         emit wakeWordDetected();
         emit statusChanged("EXO écoute...");
     }
@@ -1015,25 +1362,35 @@ void VoicePipeline::onSTTPartial(const QString &text)
 
 void VoicePipeline::onSTTFinal(const QString &text)
 {
+    PIPELINE_EVENT(PipelineModule::STT, "final_transcript",
+                   {{"text", text}, {"length", text.length()}});
+    PIPELINE_STATE(PipelineModule::STT, ModuleState::Idle);
     // Vérifier wake-word dans le transcript final aussi
     if (!m_wakeWordTriggered && checkWakeWord(text)) {
         m_wakeWordTriggered = true;
         hVoice() << "Wake-word logiciel détecté dans transcript final:" << text;
+        PIPELINE_EVENT(PipelineModule::WakeWord, "wakeword_detected",
+                       {{"text", text.left(60)}, {"source", "transcript_final"}});
         emit wakeWordDetected();
     }
 
     if (m_wakeWordTriggered) {
         // Wake-word détecté → dispatch vers Claude
-        // Retirer le mot-clé du texte envoyé à Claude
-        QString command = text;
-        command.remove(QRegularExpression("\\bexo\\b", QRegularExpression::CaseInsensitiveOption));
-        command = command.trimmed();
+        // Retirer le mot-clé et ses variantes du texte
+        QString command = findAndRemoveWakeWord(text);
         if (!command.isEmpty()) {
+            m_conversationTimer->start(CONVERSATION_TIMEOUT_MS);
+            m_conversationActive = true;
             dispatchTranscript(command);
         } else {
             hVoice() << "Transcript ne contient que le wake-word — retour Idle";
             setState(PipelineState::Idle);
         }
+    } else if (m_conversationActive && !text.trimmed().isEmpty()) {
+        // Mode conversation actif — pas besoin de wake-word
+        hVoice() << "Mode conversation — dispatch sans wake-word:" << text;
+        m_conversationTimer->start(CONVERSATION_TIMEOUT_MS);
+        dispatchTranscript(text);
     } else {
         // Pas de wake-word → ignorer et retourner en Idle
         hVoice() << "Transcript sans wake-word ignoré:" << text;
@@ -1044,6 +1401,8 @@ void VoicePipeline::onSTTFinal(const QString &text)
 
 void VoicePipeline::onSTTError(const QString &msg)
 {
+    PIPELINE_EVENT(PipelineModule::STT, "error", {{"message", msg}});
+    PipelineEventBus::instance()->setModuleError(PipelineModule::STT, msg);
     hVoice() << "STT erreur:" << msg;
     // Fallback to internal analysis
     if (!m_utteranceBuf.empty()) {
@@ -1061,6 +1420,9 @@ void VoicePipeline::onSTTError(const QString &msg)
 
 void VoicePipeline::onTtsStarted()
 {
+    PIPELINE_EVENT(PipelineModule::TTS, "playback_started");
+    PIPELINE_STATE(PipelineModule::TTS, ModuleState::Active);
+    PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Active);
     m_isSpeaking = true;
     setState(PipelineState::Speaking);
     emit speakingChanged();
@@ -1069,14 +1431,31 @@ void VoicePipeline::onTtsStarted()
 void VoicePipeline::onTtsFinished()
 {
     if (m_isSpeaking) {
+        PIPELINE_EVENT(PipelineModule::TTS, "playback_finished");
+        PIPELINE_STATE(PipelineModule::TTS, ModuleState::Idle);
+        PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Idle);
+
+        // End l'interaction courante
+        QString cid = PipelineEventBus::instance()->currentCorrelationId();
+        if (!cid.isEmpty())
+            PipelineEventBus::instance()->endInteraction(cid);
+
         m_isSpeaking = false;
         m_ttsEndClock.restart();
         emit speakingChanged();
         hVoice() << "TTS terminé — reprise écoute dans" << TTS_GUARD_MS << "ms";
 
+        // Activer le mode conversation après une réponse TTS
+        m_conversationActive = true;
+        m_conversationTimer->start(CONVERSATION_TIMEOUT_MS);
+        hVoice() << "Mode conversation activé pour" << CONVERSATION_TIMEOUT_MS << "ms";
+
         QTimer::singleShot(TTS_GUARD_MS, this, [this]() {
-            if (m_audioSource)
-                m_audioSource->resume();
+            if (m_audioInput) {
+                m_audioInput->resume();
+            } else {
+                hWarning(henriVoice) << "onTtsFinished: m_audioInput est nullptr — impossible de reprendre capture";
+            }
             resetBuffers();
             setState(PipelineState::Idle);
         });
@@ -1085,12 +1464,14 @@ void VoicePipeline::onTtsFinished()
 
 void VoicePipeline::onTtsError(const QString &msg)
 {
+    PIPELINE_EVENT(PipelineModule::TTS, "error", {{"message", msg}});
+    PipelineEventBus::instance()->setModuleError(PipelineModule::TTS, msg);
     hVoice() << "TTS erreur:" << msg;
     if (m_isSpeaking) {
         m_isSpeaking = false;
         m_ttsEndClock.restart();
         emit speakingChanged();
-        if (m_audioSource) m_audioSource->resume();
+        if (m_audioInput) m_audioInput->resume();
         setState(PipelineState::Idle);
     }
 }
@@ -1100,12 +1481,45 @@ void VoicePipeline::onTtsError(const QString &msg)
 void VoicePipeline::setState(PipelineState s)
 {
     if (m_state == s) return;
+
+    // Guard: block invalid transitions while Speaking (only Idle is allowed after Speaking)
+    if (m_state == PipelineState::Speaking && s != PipelineState::Idle) {
+        hWarning(henriVoice) << "setState: transition bloquée pendant Speaking → "
+                             << static_cast<int>(s);
+        return;
+    }
+    // Guard: don't go backwards from Thinking/Transcribing to DetectingSpeech/Listening
+    if ((m_state == PipelineState::Thinking || m_state == PipelineState::Transcribing)
+        && (s == PipelineState::DetectingSpeech || s == PipelineState::Listening)) {
+        hWarning(henriVoice) << "setState: transition arrière bloquée "
+                             << static_cast<int>(m_state) << " → " << static_cast<int>(s);
+        return;
+    }
+
+    hVoice() << "Pipeline state:" << static_cast<int>(m_state) << "→" << static_cast<int>(s);
     m_state = s;
     emit stateChanged(static_cast<int>(s));
     broadcastState();
 
     static const char *names[] = {"Idle", "DetectingSpeech", "Listening", "Transcribing", "Thinking", "Speaking"};
     hVoice() << "État:" << names[static_cast<int>(s)];
+
+    // Update pipeline event bus orchestrator state
+    ModuleState ms = ModuleState::Idle;
+    switch (s) {
+    case PipelineState::DetectingSpeech:
+    case PipelineState::Listening:
+        ms = ModuleState::Active; break;
+    case PipelineState::Transcribing:
+    case PipelineState::Thinking:
+    case PipelineState::Speaking:
+        ms = ModuleState::Processing; break;
+    default:
+        ms = ModuleState::Idle; break;
+    }
+    PIPELINE_STATE(PipelineModule::Orchestrator, ms);
+    PIPELINE_EVENT(PipelineModule::Orchestrator, "state_changed",
+                   {{"state", names[static_cast<int>(s)]}});
 }
 
 void VoicePipeline::broadcastState()

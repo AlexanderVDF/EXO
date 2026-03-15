@@ -14,13 +14,18 @@
 #include <QMutex>
 #include <cmath>
 
+#include <QWebSocket>
+
 // ═══════════════════════════════════════════════════════
 //  AIMemoryManager — Mémoire intelligente 3 couches
+//  + Bridge optionnel vers memory_server.py (FAISS)
 //
 //  1) Conversations : buffer circulaire historique
 //  2) Préférences   : clé/valeur persistantes
 //  3) Souvenirs     : mémoire sémantique avec importance,
 //                     tags, récence, détection auto
+//     → Si memory_server connecté : recherche vectorielle FAISS
+//     → Sinon : recherche regex locale (fallback)
 //
 //  Persistance : JSON atomique dans %APPDATA%/EXOAssistant/
 //  Format v2 : { version, conversations, preferences, memories }
@@ -128,6 +133,10 @@ public:
     void setImportanceThreshold(double t);
     void setHalfLifeDays(double d);
 
+    // ── Semantic memory server (FAISS) ───────────────
+    void initSemanticServer(const QString &url = "ws://localhost:8771");
+    bool isSemanticConnected() const { return m_semanticConnected; }
+
 signals:
     void memoryEnabledChanged();
     void conversationCountChanged();
@@ -150,8 +159,14 @@ private:
     bool   isDuplicate(const QString &text) const;
     static QJsonObject memoryToJson(const MemoryEntry &m);
     static MemoryEntry jsonToMemory(const QJsonObject &obj);
+    void sendToSemanticServer(const QString &action, const QJsonObject &payload);
 
-    // ── Données ──────────────────────────────────────
+private slots:
+    void onSemanticConnected();
+    void onSemanticDisconnected();
+    void onSemanticMessage(const QString &msg);
+
+private:
     bool m_enabled = true;
     QList<ConversationEntry> m_conversations;
     QVariantMap              m_userPreferences;
@@ -166,6 +181,12 @@ private:
     // ── Save debounce ────────────────────────────────
     QTimer *m_saveTimer = nullptr;
     mutable QMutex m_mutex;
+
+    // ── Semantic memory server (FAISS + SentenceTransformers) ─
+    QWebSocket *m_semanticWs = nullptr;
+    bool m_semanticConnected = false;
+    QString m_semanticUrl;
+    QVariantList m_pendingSemanticResults; // last search results from server
 
     static constexpr int SAVE_DEBOUNCE_MS = 2000;
     static constexpr int JSON_VERSION     = 2;

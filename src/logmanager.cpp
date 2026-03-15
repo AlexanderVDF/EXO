@@ -5,6 +5,9 @@
 #include <QDateTime>
 #include <QTextStream>
 #include <QCoreApplication>
+#include <QJsonDocument>
+#include <QGuiApplication>
+#include <QClipboard>
 #include <iostream>
 
 // Définition des catégories de logging
@@ -56,7 +59,7 @@ void LogManager::initialize(LogLevel level, bool enableConsole, bool enableFile)
     setupLoggingRules();
     
     if (m_fileEnabled) {
-        createLogFile();
+        enableFileLogging(); // Configure le chemin par défaut et crée le fichier
     }
     
     hLog() << "=== Système de logging Henri initialisé ===";
@@ -81,7 +84,7 @@ void LogManager::setLogLevel(const QString &levelName)
 void LogManager::enableFileLogging(const QString &logFilePath)
 {
     if (logFilePath.isEmpty()) {
-        QString logDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QString logDir = QStringLiteral("D:/EXO/logs");
         QDir().mkpath(logDir);
         m_logFilePath = QDir(logDir).filePath("henri.log");
     } else {
@@ -199,6 +202,12 @@ void LogManager::handleMessage(QtMsgType type, const QMessageLogContext &context
         std::cout << formattedMsg.toStdString() << std::endl;
     }
     
+    // Buffer pour exposition QML
+    manager->m_recentLogs.append(formattedMsg);
+    while (manager->m_recentLogs.size() > MAX_LOG_ENTRIES)
+        manager->m_recentLogs.removeFirst();
+    emit manager->newLogEntry(formattedMsg);
+
     // Sortie fichier
     if (manager->m_fileEnabled && !manager->m_logFilePath.isEmpty()) {
         QFile logFile(manager->m_logFilePath);
@@ -215,4 +224,31 @@ void LogManager::handleMessage(QtMsgType type, const QMessageLogContext &context
         }
         abort();
     }
+}
+
+void LogManager::logPipelineEvent(const QJsonObject &event)
+{
+    QString compact = QString::fromUtf8(
+        QJsonDocument(event).toJson(QJsonDocument::Compact));
+
+    m_pipelineEvents.append(compact);
+    while (m_pipelineEvents.size() > MAX_PIPELINE_EVENTS)
+        m_pipelineEvents.removeFirst();
+
+    emit newPipelineEvent(event);
+
+    // Also write to log file if enabled
+    if (m_fileEnabled && !m_logFilePath.isEmpty()) {
+        QFile logFile(m_logFilePath);
+        if (logFile.open(QIODevice::WriteOnly | QIODevice::Append)) {
+            QTextStream stream(&logFile);
+            stream << "[PIPELINE] " << compact << Qt::endl;
+        }
+    }
+}
+
+void LogManager::copyToClipboard(const QString &text)
+{
+    if (auto *clip = QGuiApplication::clipboard())
+        clip->setText(text);
 }

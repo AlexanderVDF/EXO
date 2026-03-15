@@ -72,3 +72,7 @@ npm-debug.log*
 *_GUIDE.md
 *_REPORT.md
 TEST_*.md
+
+# External dependencies (built locally)
+whisper.cpp/
+rtaudio/

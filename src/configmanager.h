@@ -105,13 +105,15 @@ public:
     Q_INVOKABLE QString getSTTModel() const;
     Q_INVOKABLE QString getSTTLanguage() const;
     Q_INVOKABLE int     getSTTBeamSize() const;
-    Q_INVOKABLE QString getPiperVoice() const;
+    Q_INVOKABLE QString getTTSVoice() const;
+    Q_INVOKABLE QString getTTSLanguage() const;
+    Q_INVOKABLE QString getTTSStyle() const;
     Q_INVOKABLE QString getVADBackend() const;
     Q_INVOKABLE double  getVADThreshold() const;
 
     Q_INVOKABLE void setSTTServerUrl(const QString &url);
     Q_INVOKABLE void setTTSServerUrl(const QString &url);
-    Q_INVOKABLE void setPiperVoice(const QString &voice);
+    Q_INVOKABLE void setTTSVoice(const QString &voice);
     // ── Sauvegarde ───────────────────────────────────
     Q_INVOKABLE bool saveConfiguration();
 
@@ -172,7 +174,7 @@ private:
     static constexpr const char *DEFAULT_STT_MODEL       = "large-v3";
     static constexpr const char *DEFAULT_STT_LANGUAGE    = "fr";
     static constexpr int         DEFAULT_STT_BEAM_SIZE   = 5;
-    static constexpr const char *DEFAULT_PIPER_VOICE     = "fr_FR-siwis-medium";
+    static constexpr const char *DEFAULT_TTS_VOICE       = "Claribel Dervla";
     static constexpr const char *DEFAULT_VAD_BACKEND     = "builtin";
     static constexpr double      DEFAULT_VAD_THRESHOLD   = 0.45;
 };

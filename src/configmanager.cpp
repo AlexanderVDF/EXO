@@ -371,9 +371,19 @@ int ConfigManager::getSTTBeamSize() const
     return getInt("STT", "beam_size", DEFAULT_STT_BEAM_SIZE);
 }
 
-QString ConfigManager::getPiperVoice() const
+QString ConfigManager::getTTSVoice() const
 {
-    return getString("TTS", "piper_voice", DEFAULT_PIPER_VOICE);
+    return getString("TTS", "voice", DEFAULT_TTS_VOICE);
+}
+
+QString ConfigManager::getTTSLanguage() const
+{
+    return getString("TTS", "language", "fr");
+}
+
+QString ConfigManager::getTTSStyle() const
+{
+    return getString("TTS", "style", "neutral");
 }
 
 QString ConfigManager::getVADBackend() const
@@ -396,9 +406,9 @@ void ConfigManager::setTTSServerUrl(const QString &url)
     setUserValue("TTS", "server_url", url);
 }
 
-void ConfigManager::setPiperVoice(const QString &voice)
+void ConfigManager::setTTSVoice(const QString &voice)
 {
-    setUserValue("TTS", "piper_voice", voice);
+    setUserValue("TTS", "voice", voice);
 }
 
 // ═══════════════════════════════════════════════════════

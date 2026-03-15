@@ -44,7 +44,7 @@ if (Test-Path $qtCache) {
 $essentialFiles = @(
     "$projectRoot\src\main.cpp",
     "$projectRoot\CMakeLists.txt",
-    "$projectRoot\EXO_DOCUMENTATION.md",
+    "$projectRoot\docs\EXO_DOCUMENTATION.md",
     "$projectRoot\README.md"
 )
 

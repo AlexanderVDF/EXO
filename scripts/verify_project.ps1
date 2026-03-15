@@ -17,7 +17,7 @@ $essentialFiles = @{
     "src\weathermanager.cpp" = "Météo avec géolocalisation"
     "src\voicemanager.cpp" = "Reconnaissance vocale"
     "CMakeLists.txt" = "Configuration build"
-    "EXO_DOCUMENTATION.md" = "Documentation unifiée"
+    "docs\EXO_DOCUMENTATION.md" = "Documentation unifiée"
     "README.md" = "Guide rapide"
 }
 

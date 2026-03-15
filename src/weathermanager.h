@@ -50,7 +50,7 @@ public:
     void initialize();
 
 public slots:
-    // Méthodes appelables depuis QML et VoiceManager
+    // Méthodes appelables depuis QML et VoicePipeline
     Q_INVOKABLE void updateWeather();
     Q_INVOKABLE void getForecast();
     Q_INVOKABLE QString getWeatherSummary();

@@ -1,23 +1,23 @@
 """
-tts_server.py — EXO TTS Streaming Server (Piper)
+tts_server.py — EXO TTS Streaming Server (XTTS v2)
 
-WebSocket server that receives text and returns synthesized audio
-as PCM16 16kHz mono chunks.
+WebSocket server using Coqui XTTS v2 for high-quality neural TTS.
+Returns synthesized audio as PCM16 24kHz mono chunks.
 
 Protocol:
-  → JSON:   {"type": "synthesize", "text": "...", "voice": "fr_FR-siwis-medium",
-             "rate": 1.0, "pitch": 1.0}
+  → JSON:   {"type": "synthesize", "text": "...", "voice": "Claribel Dervla",
+             "lang": "fr", "rate": 1.0, "pitch": 1.0, "style": "neutral"}
              {"type": "cancel"}
              {"type": "list_voices"}
   ← Binary: PCM16 audio chunks (streamed)
   ← JSON:   {"type": "start",  "text": "...", "estimated_duration": float}
              {"type": "end",    "duration": float}
              {"type": "voices", "available": [...]}
-             {"type": "ready",  "voice": "...", "sample_rate": 16000}
+             {"type": "ready",  "voice": "...", "sample_rate": 24000}
              {"type": "error",  "message": "..."}
 
 Dependencies:
-  pip install piper-tts websockets numpy
+  pip install TTS torch torchaudio websockets numpy soundfile
 """
 
 from __future__ import annotations
@@ -26,12 +26,22 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import time
+import hashlib
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
+
+# ---------------------------------------------------------------------------
+# PyTorch compat: Coqui TTS uses torch.inference_mode() internally, but
+# PyTorch >= 2.4 raises "Cannot set version_counter for inference tensor".
+# Monkey-patching inference_mode → no_grad fixes this.
+# ---------------------------------------------------------------------------
+import torch
+torch.inference_mode = torch.no_grad  # type: ignore[assignment]
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,197 +56,281 @@ logger = logging.getLogger("exo.tts")
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8767
-DEFAULT_VOICE = "fr_FR-siwis-medium"
-DEFAULT_SPEAKER_ID = 0
-SAMPLE_RATE = 16000
-CHUNK_SIZE = 4096  # bytes per WebSocket binary frame
+DEFAULT_VOICE = "Claribel Dervla"
+DEFAULT_LANG = "fr"
+XTTS_SAMPLE_RATE = 24000   # XTTS v2 native rate
+OUTPUT_SAMPLE_RATE = 24000  # Send at native rate (C++ TTSManager expects 24kHz)
+CHUNK_SIZE = 4096           # bytes per WebSocket binary frame
+
+SUPPORTED_LANGUAGES = [
+    "en", "es", "fr", "de", "it", "pt", "pl", "tr",
+    "ru", "nl", "cs", "ar", "zh-cn", "hu", "ko", "ja", "hi",
+]
 
 
 # ---------------------------------------------------------------------------
-# TTS Engine wrapper
+# Short phrase cache
 # ---------------------------------------------------------------------------
 
-class TTSEngine:
-    """Wraps Piper TTS for streaming synthesis."""
+class PhraseCache:
+    """LRU cache for short phrases to avoid re-synthesis."""
 
-    def __init__(self, voice: str = DEFAULT_VOICE) -> None:
+    def __init__(self, max_entries: int = 64) -> None:
+        self._cache: dict[str, bytes] = {}
+        self._order: list[str] = []
+        self._max = max_entries
+
+    def key(self, text: str, voice: str, lang: str) -> str:
+        h = hashlib.md5(f"{text}|{voice}|{lang}".encode()).hexdigest()
+        return h
+
+    def get(self, text: str, voice: str, lang: str) -> Optional[bytes]:
+        k = self.key(text, voice, lang)
+        return self._cache.get(k)
+
+    def put(self, text: str, voice: str, lang: str, pcm: bytes) -> None:
+        if len(text) > 40:
+            return
+        k = self.key(text, voice, lang)
+        if k in self._cache:
+            return
+        if len(self._cache) >= self._max:
+            oldest = self._order.pop(0)
+            self._cache.pop(oldest, None)
+        self._cache[k] = pcm
+        self._order.append(k)
+
+
+# ---------------------------------------------------------------------------
+# TTS Engine wrapper — XTTS v2
+# ---------------------------------------------------------------------------
+
+class XTTSEngine:
+    """Wraps Coqui XTTS v2 for streaming synthesis."""
+
+    def __init__(self, voice: str = DEFAULT_VOICE, lang: str = DEFAULT_LANG) -> None:
         self.voice_name = voice
-        self.voice = None
+        self.language = lang
+        self.model = None
+        self.speakers: dict = {}
+        self.gpt_cond_latent = None
+        self.speaker_embedding = None
         self._loaded = False
+        self._cache = PhraseCache()
+        self.device = "cpu"
+
+    @staticmethod
+    def _detect_device():
+        """Detect best available device: CUDA > DirectML > CPU."""
+        import torch
+        if torch.cuda.is_available():
+            name = torch.cuda.get_device_name(0)
+            logger.info("GPU detected: CUDA — %s", name)
+            return "cuda"
+        try:
+            import torch_directml
+            if torch_directml.is_available():
+                logger.info("GPU detected: DirectML — %s", torch_directml.device())
+                return torch_directml.device()
+        except ImportError:
+            pass
+        logger.info("No GPU detected, using CPU")
+        return "cpu"
 
     def load(self) -> None:
-        """Load Piper voice model."""
-        try:
-            from piper import PiperVoice
-        except ImportError:
-            logger.error("piper-tts not installed. Run: pip install piper-tts")
-            raise
+        """Load XTTS v2 model and speaker embeddings."""
+        import torch
+        from TTS.api import TTS
 
-        # Piper downloads voice models automatically or expects local path
-        model_path = self._find_model()
-        if model_path:
-            logger.info("Loading Piper voice from: %s", model_path)
-            self.voice = PiperVoice.load(str(model_path))
-        else:
-            logger.info("Loading Piper voice: %s (will download if needed)", self.voice_name)
-            try:
-                self.voice = PiperVoice.load(self.voice_name)
-            except Exception:
-                # Try with piper_phonemize + model download
-                self.voice = self._download_and_load()
+        self.device = self._detect_device()
 
-        self._loaded = True
-        logger.info("Piper voice loaded: %s", self.voice_name)
-
-    def _find_model(self) -> Optional[Path]:
-        """Search for local Piper model files."""
-        search_dirs = [
-            Path("resources/piper"),
-            Path("models/piper"),
-            Path.home() / ".local/share/piper-voices",
-            Path.home() / "piper_models",
-        ]
-        for d in search_dirs:
-            if d.exists():
-                for f in d.rglob("*.onnx"):
-                    if self.voice_name.replace("-", "_") in f.stem or self.voice_name in f.stem:
-                        return f
-        return None
-
-    def _download_and_load(self):
-        """Download voice model from Piper GitHub releases and load it."""
-        from piper import PiperVoice
-        import urllib.request
-
-        cache_dir = Path.home() / ".local/share/piper-voices"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        # Check cache first
-        for f in cache_dir.rglob("*.onnx"):
-            if self.voice_name.replace("-", "_") in f.stem or self.voice_name in f.stem:
-                logger.info("Found cached voice: %s", f)
-                json_f = f.with_suffix(".onnx.json")
-                if json_f.exists():
-                    return PiperVoice.load(str(f))
-
-        # Download from Piper releases
-        # Voice name format: lang_COUNTRY-name-quality  e.g. fr_FR-siwis-medium
-        parts = self.voice_name.split("-")
-        if len(parts) < 3:
-            raise RuntimeError(f"Invalid voice name format: {self.voice_name}")
-
-        lang_country = parts[0]   # fr_FR
-        lang = lang_country.split("_")[0]  # fr
-        name = parts[1]           # siwis
-        quality = parts[2]        # medium
-
-        base_url = (
-            f"https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/"
-            f"{lang}/{lang_country}/{name}/{quality}/"
+        logger.info("Loading XTTS v2 model on %s...", self.device)
+        tts_api = TTS(
+            model_name="tts_models/multilingual/multi-dataset/xtts_v2",
+            progress_bar=False,
         )
-        onnx_filename = f"{self.voice_name}.onnx"
-        json_filename = f"{self.voice_name}.onnx.json"
+        self.model = tts_api.synthesizer.tts_model
 
-        voice_dir = cache_dir / lang / lang_country / name / quality
-        voice_dir.mkdir(parents=True, exist_ok=True)
+        # Move model to GPU
+        if str(self.device) != "cpu":
+            self.model = self.model.to(self.device)
+            logger.info("XTTS model moved to %s", self.device)
 
-        for filename in (onnx_filename, json_filename):
-            dest = voice_dir / filename
-            if dest.exists():
-                logger.info("Already cached: %s", dest)
-                continue
-            url = base_url + filename
-            logger.info("Downloading %s ...", url)
-            try:
-                urllib.request.urlretrieve(url, str(dest))
-                logger.info("Downloaded: %s (%.1f MB)", dest, dest.stat().st_size / 1e6)
-            except Exception as e:
-                raise RuntimeError(f"Failed to download {url}: {e}")
+        # Load speaker embeddings
+        model_dir = os.environ.get(
+            "EXO_XTTS_MODELS",
+            r"D:\EXO\models\xtts",
+        )
+        spk_file = os.path.join(model_dir, "speakers_xtts.pth")
+        if os.path.exists(spk_file):
+            self.speakers = torch.load(spk_file, weights_only=False)
+            # Move speaker embeddings to GPU
+            if str(self.device) != "cpu":
+                for name in self.speakers:
+                    for key in self.speakers[name]:
+                        if hasattr(self.speakers[name][key], "to"):
+                            self.speakers[name][key] = self.speakers[name][key].to(self.device)
+            logger.info("Loaded %d speakers from %s", len(self.speakers), spk_file)
+        else:
+            logger.warning("No speakers file found at %s", spk_file)
 
-        model_path = voice_dir / onnx_filename
-        return PiperVoice.load(str(model_path))
+        # Set initial voice
+        self.set_voice(self.voice_name)
+        self._loaded = True
+        logger.info(
+            "XTTS v2 ready — device=%s, voice=%s, lang=%s, speakers=%d",
+            self.device, self.voice_name, self.language, len(self.speakers),
+        )
 
-    def synthesize(self, text: str, rate: float = 1.0, pitch: float = 1.0) -> bytes:
+    def set_voice(self, voice: str) -> bool:
+        """Switch to a different speaker. Returns True if found."""
+        if voice in self.speakers:
+            self.voice_name = voice
+            self.gpt_cond_latent = self.speakers[voice]["gpt_cond_latent"]
+            self.speaker_embedding = self.speakers[voice]["speaker_embedding"]
+            logger.info("Voice set to: %s", voice)
+            return True
+
+        # Try case-insensitive match
+        for name in self.speakers:
+            if name.lower() == voice.lower():
+                return self.set_voice(name)
+
+        logger.warning("Speaker '%s' not found, keeping '%s'", voice, self.voice_name)
+        return False
+
+    def set_language(self, lang: str) -> None:
+        """Set synthesis language."""
+        if lang in SUPPORTED_LANGUAGES:
+            self.language = lang
+            logger.info("Language set to: %s", lang)
+        else:
+            logger.warning("Unsupported language: %s", lang)
+
+    def list_voices(self) -> list[str]:
+        """Return sorted list of available speaker names."""
+        return sorted(self.speakers.keys())
+
+    def synthesize(
+        self,
+        text: str,
+        voice: Optional[str] = None,
+        lang: Optional[str] = None,
+        rate: float = 1.0,
+        pitch: float = 1.0,
+    ) -> bytes:
         """
-        Synthesize text to PCM16 audio.
+        Synthesize text to PCM16 audio at OUTPUT_SAMPLE_RATE Hz mono.
 
-        Returns: raw PCM16 bytes at SAMPLE_RATE Hz mono
+        Returns: raw PCM16 bytes
         """
-        if not self._loaded or self.voice is None:
-            raise RuntimeError("Voice not loaded")
-
+        if not self._loaded or self.model is None:
+            raise RuntimeError("Model not loaded")
         if not text.strip():
             return b""
 
-        t0 = time.monotonic()
-
-        from piper.config import SynthesisConfig
-        syn_config = SynthesisConfig(
-            length_scale=1.0 / max(rate, 0.1),
-        )
-
-        # synthesize() returns an iterable of AudioChunk with audio_float_array
-        pcm_parts = []
-        for chunk in self.voice.synthesize(text, syn_config=syn_config):
-            pcm_parts.append(chunk.audio_float_array)
-
-        if not pcm_parts:
+        # Strip emojis so TTS doesn't try to pronounce them
+        text = re.sub(
+            r"[\U0001F600-\U0001F64F"   # emoticons
+            r"\U0001F300-\U0001F5FF"     # symbols & pictographs
+            r"\U0001F680-\U0001F6FF"     # transport & map
+            r"\U0001F1E0-\U0001F1FF"     # flags
+            r"\U00002702-\U000027B0"     # dingbats
+            r"\U000024C2-\U0001F251"     # misc
+            r"\U0001F900-\U0001F9FF"     # supplemental symbols
+            r"\U0001FA00-\U0001FA6F"     # chess symbols
+            r"\U0001FA70-\U0001FAFF"     # symbols extended-A
+            r"\U00002600-\U000026FF"     # misc symbols
+            r"\U0000FE00-\U0000FE0F"     # variation selectors
+            r"\U0000200D"               # zero-width joiner
+            r"]+", "", text
+        ).strip()
+        if not text:
             return b""
 
-        audio_array = np.concatenate(pcm_parts)
-        src_rate = self.voice.config.sample_rate
+        use_voice = voice if voice and voice in self.speakers else self.voice_name
+        use_lang = lang if lang and lang in SUPPORTED_LANGUAGES else self.language
 
-        # Convert float32 [-1,1] to int16 if needed
-        if audio_array.dtype == np.float32:
-            audio_array = np.clip(audio_array * 32767, -32768, 32767).astype(np.int16)
+        # Check cache for short phrases
+        cached = self._cache.get(text, use_voice, use_lang)
+        if cached is not None:
+            logger.info("Cache hit: %s", text[:40])
+            return cached
 
-        raw_pcm = audio_array.tobytes()
+        # Select speaker embeddings
+        gpt_cond = self.speakers[use_voice]["gpt_cond_latent"]
+        spk_emb = self.speakers[use_voice]["speaker_embedding"]
 
-        # Resample if needed
-        if src_rate != SAMPLE_RATE:
-            raw_pcm = self._resample(raw_pcm, src_rate, SAMPLE_RATE)
+        t0 = time.monotonic()
 
-        # Apply pitch shift if significantly different from 1.0
+        # XTTS v2 inference
+        out = self.model.inference(
+            text=text,
+            language=use_lang,
+            gpt_cond_latent=gpt_cond,
+            speaker_embedding=spk_emb,
+            speed=rate,
+        )
+        wav = out["wav"]
+
+        # wav is a numpy-like tensor at 24kHz — convert to numpy
+        if hasattr(wav, "cpu"):
+            wav = wav.cpu()
+        if hasattr(wav, "numpy"):
+            wav = wav.numpy()
+        wav = np.asarray(wav, dtype=np.float32)
+
+        # Convert float32 wav at native rate to PCM16
+        if XTTS_SAMPLE_RATE != OUTPUT_SAMPLE_RATE:
+            pcm16k = self._resample(wav, XTTS_SAMPLE_RATE, OUTPUT_SAMPLE_RATE)
+        else:
+            pcm16k = wav  # No resampling needed
+
+        # Apply pitch shift if requested
         if abs(pitch - 1.0) > 0.05:
-            raw_pcm = self._pitch_shift(raw_pcm, pitch)
+            pcm16k = self._pitch_shift(pcm16k, pitch)
+
+        # Convert float32 → int16 PCM
+        pcm16k = np.clip(pcm16k * 32767, -32768, 32767).astype(np.int16)
+        raw_pcm = pcm16k.tobytes()
 
         dt = time.monotonic() - t0
-        duration = len(raw_pcm) / (SAMPLE_RATE * 2)
+        duration = len(raw_pcm) / (OUTPUT_SAMPLE_RATE * 2)
         logger.info(
-            "Synthesized %.1fs audio in %.2fs (RTF=%.2f): %s",
-            duration, dt, dt / max(duration, 0.01), text[:60],
+            "XTTS synthesized %.1fs audio in %.2fs (RTF=%.2f) voice=%s lang=%s: %s",
+            duration, dt, dt / max(duration, 0.01), use_voice, use_lang, text[:60],
         )
+
+        # Cache short phrases
+        self._cache.put(text, use_voice, use_lang, raw_pcm)
 
         return raw_pcm
 
     @staticmethod
-    def _resample(pcm_bytes: bytes, src_rate: int, dst_rate: int) -> bytes:
-        """Simple linear interpolation resampling."""
-        samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32)
+    def _resample(samples: np.ndarray, src_rate: int, dst_rate: int) -> np.ndarray:
+        """Linear interpolation resampling."""
+        if src_rate == dst_rate:
+            return samples
         ratio = dst_rate / src_rate
         n_out = int(len(samples) * ratio)
         indices = np.arange(n_out) / ratio
         indices = np.clip(indices, 0, len(samples) - 1)
         idx_floor = indices.astype(np.int64)
         idx_ceil = np.minimum(idx_floor + 1, len(samples) - 1)
-        frac = indices - idx_floor
-        resampled = samples[idx_floor] * (1 - frac) + samples[idx_ceil] * frac
-        return resampled.astype(np.int16).tobytes()
+        frac = (indices - idx_floor).astype(np.float32)
+        return samples[idx_floor] * (1 - frac) + samples[idx_ceil] * frac
 
     @staticmethod
-    def _pitch_shift(pcm_bytes: bytes, factor: float) -> bytes:
-        """Simple pitch shift by resampling + speed correction."""
-        samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32)
-        # Resample to change pitch, then time-stretch back
+    def _pitch_shift(samples: np.ndarray, factor: float) -> np.ndarray:
+        """Simple pitch shift by resampling."""
         n_out = int(len(samples) / factor)
         if n_out < 1:
-            return pcm_bytes
+            return samples
         indices = np.linspace(0, len(samples) - 1, n_out)
         idx_floor = indices.astype(np.int64)
         idx_ceil = np.minimum(idx_floor + 1, len(samples) - 1)
-        frac = indices - idx_floor
-        shifted = samples[idx_floor] * (1 - frac) + samples[idx_ceil] * frac
-        return shifted.astype(np.int16).tobytes()
+        frac = (indices - idx_floor).astype(np.float32)
+        return samples[idx_floor] * (1 - frac) + samples[idx_ceil] * frac
 
 
 # ---------------------------------------------------------------------------
@@ -246,10 +340,9 @@ class TTSEngine:
 class TTSSession:
     """One WebSocket client session."""
 
-    def __init__(self, engine: TTSEngine) -> None:
+    def __init__(self, engine: XTTSEngine) -> None:
         self.engine = engine
         self._cancel_flag = False
-        self._synth_task: Optional[asyncio.Task] = None
 
     async def handle(self, ws) -> None:
         """Handle a WebSocket connection."""
@@ -258,7 +351,9 @@ class TTSSession:
         await ws.send(json.dumps({
             "type": "ready",
             "voice": self.engine.voice_name,
-            "sample_rate": SAMPLE_RATE,
+            "sample_rate": OUTPUT_SAMPLE_RATE,
+            "backend": "xtts_v2",
+            "languages": SUPPORTED_LANGUAGES,
         }))
 
         try:
@@ -280,6 +375,8 @@ class TTSSession:
 
         if msg_type == "synthesize":
             text = msg.get("text", "")
+            voice = msg.get("voice", None)
+            lang = msg.get("lang", None)
             rate = float(msg.get("rate", 1.0))
             pitch = float(msg.get("pitch", 1.0))
 
@@ -288,7 +385,7 @@ class TTSSession:
                 return
 
             self._cancel_flag = False
-            await self._synthesize_and_stream(ws, text, rate, pitch)
+            await self._synthesize_and_stream(ws, text, voice, lang, rate, pitch)
 
         elif msg_type == "cancel":
             self._cancel_flag = True
@@ -297,56 +394,77 @@ class TTSSession:
         elif msg_type == "list_voices":
             await ws.send(json.dumps({
                 "type": "voices",
-                "available": [self.engine.voice_name],
+                "available": self.engine.list_voices(),
+            }))
+
+        elif msg_type == "set_voice":
+            voice = msg.get("voice", "")
+            ok = self.engine.set_voice(voice)
+            await ws.send(json.dumps({
+                "type": "voice_changed",
+                "voice": self.engine.voice_name,
+                "success": ok,
+            }))
+
+        elif msg_type == "set_language":
+            lang = msg.get("lang", "")
+            self.engine.set_language(lang)
+            await ws.send(json.dumps({
+                "type": "language_changed",
+                "lang": self.engine.language,
             }))
 
     async def _synthesize_and_stream(
-        self, ws, text: str, rate: float, pitch: float
+        self, ws, text: str, voice: Optional[str],
+        lang: Optional[str], rate: float, pitch: float,
     ) -> None:
         """Synthesize and stream audio in chunks."""
         try:
-            # Notify start
             await ws.send(json.dumps({
                 "type": "start",
                 "text": text,
             }))
 
-            # Run synthesis in executor (blocking call)
             loop = asyncio.get_event_loop()
+            t0 = time.monotonic()
             pcm_data = await loop.run_in_executor(
-                None, lambda: self.engine.synthesize(text, rate, pitch)
+                None,
+                lambda: self.engine.synthesize(text, voice, lang, rate, pitch),
             )
+            synth_ms = (time.monotonic() - t0) * 1000
 
             if self._cancel_flag:
                 return
 
-            # Stream chunks
-            duration = len(pcm_data) / (SAMPLE_RATE * 2)
+            duration = len(pcm_data) / (OUTPUT_SAMPLE_RATE * 2)
+            logger.info("[TTS] synthesized %.1fs audio in %.0fms text=%s",
+                        duration, synth_ms, text[:60])
             offset = 0
             while offset < len(pcm_data):
                 if self._cancel_flag:
                     logger.debug("Streaming cancelled at offset %d", offset)
                     return
 
-                chunk = pcm_data[offset:offset + CHUNK_SIZE]
+                chunk = pcm_data[offset : offset + CHUNK_SIZE]
                 await ws.send(chunk)
                 offset += CHUNK_SIZE
-
-                # Small yield to allow cancel checks
                 await asyncio.sleep(0)
 
-            # Notify end
             await ws.send(json.dumps({
                 "type": "end",
                 "duration": round(duration, 2),
+                "synth_ms": round(synth_ms),
             }))
 
         except Exception as e:
             logger.error("Synthesis error: %s", e)
-            await ws.send(json.dumps({
-                "type": "error",
-                "message": str(e),
-            }))
+            try:
+                await ws.send(json.dumps({
+                    "type": "error",
+                    "message": str(e),
+                }))
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -356,14 +474,16 @@ class TTSSession:
 async def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="EXO TTS Server (Piper)")
+    parser = argparse.ArgumentParser(description="EXO TTS Server (XTTS v2)")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--voice", default=DEFAULT_VOICE,
-                        help="Piper voice model name")
+                        help="XTTS v2 speaker name (e.g. 'Claribel Dervla')")
+    parser.add_argument("--lang", default=DEFAULT_LANG,
+                        help="Default language (e.g. fr, en, de)")
     args = parser.parse_args()
 
-    engine = TTSEngine(voice=args.voice)
+    engine = XTTSEngine(voice=args.voice, lang=args.lang)
     engine.load()
 
     async def handler(ws):
@@ -377,11 +497,13 @@ async def main() -> None:
         return
 
     server = await websockets.serve(handler, args.host, args.port)
-    logger.info("TTS server running on ws://%s:%d (voice=%s)",
-                args.host, args.port, args.voice)
+    logger.info(
+        "XTTS v2 TTS server running on ws://%s:%d (voice=%s, lang=%s, speakers=%d)",
+        args.host, args.port, args.voice, args.lang, len(engine.speakers),
+    )
 
     try:
-        await asyncio.Future()  # run forever
+        await asyncio.Future()
     except KeyboardInterrupt:
         pass
     finally:

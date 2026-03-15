@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("exo.ha.devices")
 
-_CACHE_DIR = Path(os.environ.get("APPDATA", Path.home())) / "EXOAssistant"
+_CACHE_DIR = Path(os.environ.get("EXO_FAISS_DIR", r"D:\EXO\faiss"))
 _DEVICES_FILE = _CACHE_DIR / "ha_devices.json"
 
 

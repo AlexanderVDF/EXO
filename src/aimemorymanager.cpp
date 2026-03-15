@@ -173,14 +173,40 @@ void AIMemoryManager::addMemory(const QString &text, double importance,
     emit memoryCountChanged();
     hAssistant() << "Souvenir ajouté [" << category << "]:"
                  << text.left(60) << "(importance:" << importance << ")";
+
+    // Forward to FAISS semantic server if connected
+    if (m_semanticConnected) {
+        QJsonObject payload;
+        payload["text"]       = text;
+        payload["importance"] = importance;
+        payload["category"]   = category;
+        payload["source"]     = source;
+        QJsonArray tagsArr;
+        for (const QString &t : tags) tagsArr.append(t);
+        payload["tags"] = tagsArr;
+        sendToSemanticServer("add", payload);
+    }
 }
 
 QVariantList AIMemoryManager::searchMemories(const QString &query,
                                               int maxResults) const
 {
-    QMutexLocker lk(&m_mutex);
     QVariantList results;
     if (query.isEmpty()) return results;
+
+    // If semantic server is connected, use FAISS vector search
+    if (m_semanticConnected && m_semanticWs) {
+        QJsonObject payload;
+        payload["query"] = query;
+        payload["top_k"] = maxResults;
+        const_cast<AIMemoryManager*>(this)->sendToSemanticServer("search", payload);
+        // Return any pending results from previous search (async model)
+        if (!m_pendingSemanticResults.isEmpty())
+            return m_pendingSemanticResults;
+    }
+
+    // Fallback: local regex-based search
+    QMutexLocker lk(&m_mutex);
 
     QString low = query.toLower();
     QStringList keywords = low.split(QRegularExpression("\\s+"),
@@ -612,6 +638,90 @@ void AIMemoryManager::setImportanceThreshold(double t) { m_importanceThreshold =
 void AIMemoryManager::setHalfLifeDays(double d)   { m_halfLifeMs = qMax(1.0, d) * 24.0 * 3600.0 * 1000.0; }
 
 // ═══════════════════════════════════════════════════════
+//  Semantic memory server (FAISS) — WebSocket bridge
+// ═══════════════════════════════════════════════════════
+
+void AIMemoryManager::initSemanticServer(const QString &url)
+{
+    m_semanticUrl = url;
+    if (m_semanticWs) {
+        m_semanticWs->close();
+        m_semanticWs->deleteLater();
+    }
+    m_semanticWs = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+    connect(m_semanticWs, &QWebSocket::connected,
+            this, &AIMemoryManager::onSemanticConnected);
+    connect(m_semanticWs, &QWebSocket::disconnected,
+            this, &AIMemoryManager::onSemanticDisconnected);
+    connect(m_semanticWs, &QWebSocket::textMessageReceived,
+            this, &AIMemoryManager::onSemanticMessage);
+    m_semanticWs->open(QUrl(url));
+    hAssistant() << "Connecting to semantic memory server:" << url;
+}
+
+void AIMemoryManager::onSemanticConnected()
+{
+    m_semanticConnected = true;
+    hAssistant() << "Semantic memory server connected";
+}
+
+void AIMemoryManager::onSemanticDisconnected()
+{
+    m_semanticConnected = false;
+    hWarning(henriAssistant) << "Semantic memory server disconnected — fallback regex";
+    // Auto-reconnect after 5s
+    QTimer::singleShot(5000, this, [this]() {
+        if (!m_semanticConnected && m_semanticWs && !m_semanticUrl.isEmpty()) {
+            m_semanticWs->open(QUrl(m_semanticUrl));
+        }
+    });
+}
+
+void AIMemoryManager::onSemanticMessage(const QString &msg)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(msg.toUtf8());
+    if (!doc.isObject()) return;
+    QJsonObject obj = doc.object();
+    QString type = obj["type"].toString();
+
+    if (type == "search_result") {
+        // Store results for synchronous retrieval
+        m_pendingSemanticResults.clear();
+        for (const auto &r : obj["results"].toArray()) {
+            QJsonObject entry = r.toObject();
+            QVariantMap vm;
+            vm["id"]         = entry["id"].toString();
+            vm["text"]       = entry["text"].toString();
+            vm["importance"] = entry["importance"].toDouble();
+            vm["score"]      = entry["similarity"].toDouble();
+            vm["category"]   = entry["category"].toString();
+            vm["source"]     = entry["source"].toString();
+            // Convert tags
+            QStringList tags;
+            for (const auto &t : entry["tags"].toArray())
+                tags << t.toString();
+            vm["tags"] = QVariant(tags);
+            m_pendingSemanticResults.append(vm);
+        }
+    } else if (type == "add_result") {
+        hAssistant() << "Semantic server: memory added, id=" << obj["id"].toString();
+    } else if (type == "error") {
+        hWarning(henriAssistant) << "Semantic server error:" << obj["message"].toString();
+    }
+}
+
+void AIMemoryManager::sendToSemanticServer(const QString &action, const QJsonObject &payload)
+{
+    if (!m_semanticConnected || !m_semanticWs) return;
+    QJsonObject msg;
+    msg["action"] = action;
+    for (auto it = payload.begin(); it != payload.end(); ++it)
+        msg[it.key()] = it.value();
+    m_semanticWs->sendTextMessage(
+        QString::fromUtf8(QJsonDocument(msg).toJson(QJsonDocument::Compact)));
+}
+
+// ═══════════════════════════════════════════════════════
 //  Persistance JSON — lecture / écriture atomique
 // ═══════════════════════════════════════════════════════
 
@@ -734,8 +844,8 @@ void AIMemoryManager::saveToFile()
 
 QString AIMemoryManager::memoryFilePath() const
 {
-    QString dataPath = QStandardPaths::writableLocation(
-        QStandardPaths::AppDataLocation);
+    QString dataPath = QStringLiteral("D:/EXO/faiss");
+    QDir().mkpath(dataPath);
     return dataPath + "/exa_memory.json";
 }
 
