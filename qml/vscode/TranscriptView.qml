@@ -1,14 +1,12 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 Rectangle {
     id: root
     color: "#1E1E1E"
 
     property string partialTranscript: ""
-    property alias messageModel: messageListModel
-
     ListModel {
         id: messageListModel
     }
@@ -22,15 +20,6 @@ Rectangle {
             "timestamp": Qt.formatTime(new Date(), "hh:mm")
         })
         messageListView.positionViewAtEnd()
-    }
-
-    // Supprimer le dernier partial
-    function clearPartial() {
-        for (var i = messageListModel.count - 1; i >= 0; i--) {
-            if (messageListModel.get(i).isPartial) {
-                messageListModel.remove(i)
-            }
-        }
     }
 
     ColumnLayout {

@@ -14,6 +14,12 @@ Pour la documentation technique à jour, voir [EXO_DOCUMENTATION.md](EXO_DOCUMEN
 5. [Intégration Premium Open-Source v4.2](#intégration-premium-open-source-v42)
 6. [Intégration XTTS v2](#intégration-xtts-v2)
 7. [Intégration RtAudio](#intégration-rtaudio)
+8. [Instructions de réparation (historique)](#instructions-de-réparation-historique)
+9. [Automatisation Documentation & CleanUp](#automatisation-documentation--cleanup-mars-2026)
+10. [Nettoyage Global EXO](#nettoyage-global-exo-mars-2026)
+11. [Refactoring Massif](#refactoring-massif-mars-2026)
+12. [Intégration XTTS v2 DirectML](#intégration-xtts-v2-directml-mars-2026)
+13. [Stabilisation & Anti-Doublons](#stabilisation--anti-doublons-mars-2026)
 
 ---
 
@@ -142,9 +148,9 @@ Pour la documentation technique à jour, voir [EXO_DOCUMENTATION.md](EXO_DOCUMEN
 **Statut : ✅ TERMINÉ**
 
 ### Architecture
-- Couche d'abstraction `AudioInput` (src/audio/audioinput.h)
-- Backend Qt Multimedia : `AudioInputQt` (audioinput_qt.h/.cpp)
-- Backend RtAudio WASAPI : `AudioInputRtAudio` (audioinput_rtaudio.h/.cpp)
+- Couche d'abstraction `AudioInput` (app/audio/AudioInput.h)
+- Backend Qt Multimedia : `AudioInputQt` (app/audio/AudioInputQt.h/.cpp)
+- Backend RtAudio WASAPI : `AudioInputRtAudio` (app/audio/AudioInputRtAudio.h/.cpp)
 - Compilé conditionnellement via `ENABLE_RTAUDIO` CMake option (ON par défaut)
 - RtAudio intégré comme sous-répertoire statique (rtaudio/)
 
@@ -174,5 +180,81 @@ Après la migration des données de `J:\EXO\` vers `D:\EXO\` (SSD), plusieurs pr
 
 ---
 
+## Automatisation Documentation & CleanUp (mars 2026)
+
+*Source : AutomatisationDocCleanUp.md — Archivé le 21 mars 2026*  
+**Statut : ✅ IMPLÉMENTÉ**
+
+Système de maintenance automatique implémenté :
+1. `scripts/auto_maintain.py` — 6 commandes : scan, docs, clean, context, check, all
+2. Hooks Git (pre-commit, post-commit) dans `scripts/hooks/`
+3. `.exo_context/context.md` pour optimiser le contexte Copilot
+4. `scripts/setup_maintenance.ps1` — Installation automatique
+
+---
+
+## Nettoyage Global EXO (mars 2026)
+
+*Source : Nettoyage.md — Archivé le 21 mars 2026*  
+**Statut : ✅ EXÉCUTÉ**
+
+Plan de nettoyage complet en 8 phases :
+1. Environnement Windows (PATH, venvs, caches)
+2. Dépôt (\_\_pycache\_\_, .pytest_cache, dirs vides, .gitignore)
+3. Code C++ (includes inutilisés, conventions, warnings)
+4. Code Python (modules morts, imports, dépendances)
+5. QML (composants inutilisés, signaux non connectés)
+6. Microservices (ports, URLs, préparation CUDA RTX 3070)
+7. Documentation (régénération auto)
+8. Intégration auto_maintain.py
+
+---
+
+## Refactoring Massif (mars 2026)
+
+*Source : RefactoringMassif.md — Archivé le 21 mars 2026*  
+**Statut : ✅ RÉALISÉ (phases 1-3)**
+
+Plan de refactoring structurant :
+1. Réorganisation `app/` (core, audio, llm, utils) + `python/` (7 microservices)
+2. Module WebSocket unifié (`WebSocketClient.h/.cpp`)
+3. Backend TTS abstrait (`TTSBackend.h` + Qt/XTTS implémentations)
+4. Conventions de nommage PascalCase/camelCase
+
+---
+
+## Intégration XTTS v2 DirectML (mars 2026)
+
+*Source : INTÉGRATION XTTS v2 DIRECTML.md — Archivé le 21 mars 2026*  
+**Statut : ⚠️ OBSOLÈTE — Remplacé par XTTS v2 natif Windows (DirectML/CUDA)**
+
+Plan initial d'intégration XTTS v2 avec ONNX Runtime DirectML pour AMD GPU.
+AbandonnÃ© au profit de :
+- Phase actuelle : XTTS v2 natif Windows (DirectML, port 8767)
+- Phase future : XTTS v2 natif Windows + CUDA (RTX 3070 SUPRIM X)
+
+---
+
+## Stabilisation & Anti-Doublons (mars 2026)
+
+*Sources : docs/archives/StabilisationFinale.md, CorrectionComplèteMicroservices.md, Fix_RAM_Doublons_Microservices.md, Validation.md*  
+**Statut : ✅ TERMINÉ**
+
+### Stabilisation finale
+- Vérification complète des 7 microservices post-migration `src/` → `python/`
+- Suppression WSL2/ROCm (scripts archivés dans `scripts/legacy_wsl2/`)
+- Fix TTS CPU fallback (`.to("cpu")`), fix NLU protocole (`"action"` → `"type"`)
+- Validation fonctionnelle des 8 ports (8765-8772)
+
+### Fix RAM & Doublons
+- Diagnostic : 21 processus zombies (14 Python + 7 whisper-server) = 8.7 GB RAM
+- Protection : `python/shared/singleton_guard.py` — vérifie le port TCP avant chargement modèle
+- 7/7 microservices protégés contre les doublons
+- Script `scripts/auto_kill_zombies.py` pour nettoyage automatique (WMIC, `--kill`)
+- Optimisation VS Code : `files.watcherExclude`, C++ intellisense limité
+- Rapport détaillé : [Rapport_Fix_RAM_Doublons.md](Rapport_Fix_RAM_Doublons.md)
+
+---
+
 *Archives générées le 14 mars 2026 — EXO v4.2*  
-*Dernière mise à jour : consolidation documentation*
+*Dernière mise à jour : 21 mars 2026 — Stabilisation & anti-doublons*

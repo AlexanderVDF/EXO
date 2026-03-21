@@ -1,25 +1,46 @@
 ﻿#!/usr/bin/env powershell
 # Script de lancement EXO Assistant
 # Utilisation: .\launch_exo.ps1
-# Le TTS GPU s'exécute dans WSL2 (XTTS v2 + ROCm/AMD GPU)
+# TTS GPU via DirectML (XTTS v2 + ONNX Runtime DirectML / AMD GPU)
 
 Write-Host "Lancement d'EXO Assistant..." -ForegroundColor Cyan
 
 # --- Racines projet ---
 $projectDir = "C:\Users\aalou\Exo"
 $ssdRoot    = "D:\EXO"
+$pythonSTT  = "$projectDir\.venv_stt_tts\Scripts\python.exe"
 
-# --- TTS GPU via WSL2 ---
+# --- Dossier logs ---
+$logDir = "$ssdRoot\logs"
+if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+
+# --- TTS GPU DirectML ---
 $ttsPort = 8767
 $ttsRunning = Get-NetTCPConnection -LocalPort $ttsPort -ErrorAction SilentlyContinue |
     Where-Object { $_.State -eq 'Listen' }
 if (-not $ttsRunning) {
-    Write-Host "Demarrage du TTS GPU WSL2..." -ForegroundColor Yellow
-    & "$projectDir\scripts\launch_tts_wsl2.ps1" -Voice "Claribel Dervla" -Lang "fr" -Port $ttsPort
-    $ttsRunning = Get-NetTCPConnection -LocalPort $ttsPort -ErrorAction SilentlyContinue |
-        Where-Object { $_.State -eq 'Listen' }
-    if (-not $ttsRunning) {
-        Write-Host "ATTENTION: TTS GPU non disponible - EXO utilisera le fallback Qt TTS" -ForegroundColor Red
+    $ttsScript = "$projectDir\python\tts\tts_server_directml.py"
+    if ((Test-Path $pythonSTT) -and (Test-Path $ttsScript)) {
+        Write-Host "Demarrage du TTS GPU DirectML (XTTS v2)..." -ForegroundColor Yellow
+        $ttsProc = Start-Process -FilePath $pythonSTT -ArgumentList "$ttsScript --voice `"Claribel Dervla`" --lang fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\tts_stdout.log" -RedirectStandardError "$logDir\tts_stderr.log"
+        Write-Host "TTS DirectML lance (PID: $($ttsProc.Id)) - attente demarrage..." -ForegroundColor Yellow
+        $timeout = 120
+        $elapsed = 0
+        while ($elapsed -lt $timeout) {
+            Start-Sleep -Seconds 2
+            $elapsed += 2
+            $listening = Get-NetTCPConnection -LocalPort $ttsPort -ErrorAction SilentlyContinue |
+                Where-Object { $_.State -eq 'Listen' }
+            if ($listening) {
+                Write-Host "TTS DirectML pret sur le port $ttsPort" -ForegroundColor Green
+                break
+            }
+        }
+        if ($elapsed -ge $timeout) {
+            Write-Host "ATTENTION: TTS DirectML non demarre dans les ${timeout}s - fallback Qt TTS" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "ATTENTION: TTS DirectML non disponible - EXO utilisera le fallback Qt TTS" -ForegroundColor Red
     }
 } else {
     Write-Host "TTS GPU deja actif sur le port $ttsPort" -ForegroundColor Green
@@ -64,14 +85,13 @@ if (Test-Path $envFile) {
 }
 
 # Lancer le serveur STT (whisper.cpp) en arriere-plan
-$python = "$ssdRoot\venv\exo\Scripts\python.exe"
-$sttServer = "$projectDir\src\stt_server.py"
+$sttServer = "$projectDir\python\stt\stt_server.py"
 
 $sttRunning = Get-NetTCPConnection -LocalPort 8766 -ErrorAction SilentlyContinue
 if (-not $sttRunning) {
-    if (Test-Path $python) {
+    if (Test-Path $pythonSTT) {
         Write-Host "Demarrage du serveur STT (whisper.cpp large-v3)..." -ForegroundColor Yellow
-        $sttProc = Start-Process -FilePath $python -ArgumentList "$sttServer --backend whispercpp --model large-v3 --language fr" -PassThru -WindowStyle Minimized
+        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model large-v3 --language fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
         Write-Host "STT server lance (PID: $($sttProc.Id)) - attente connexion..." -ForegroundColor Yellow
         # Attendre que le serveur soit pret (max 30s)
         $timeout = 30
@@ -89,7 +109,7 @@ if (-not $sttRunning) {
             Write-Host "Attention: STT server n'a pas demarre dans les $timeout s" -ForegroundColor Red
         }
     } else {
-        Write-Host "Attention: Python venv non trouve - STT server non lance" -ForegroundColor Red
+        Write-Host "Attention: Python venv non trouve ($pythonSTT) - STT server non lance" -ForegroundColor Red
     }
 } else {
     Write-Host "STT server deja en cours sur le port 8766" -ForegroundColor Green
@@ -98,9 +118,16 @@ if (-not $sttRunning) {
 # Lancer EXO
 Write-Host "Demarrage d'EXO..." -ForegroundColor Green
 Set-Location "$projectDir\build\Debug"
-& .\RaspberryAssistant.exe
+Write-Host "EXO demarre a $(Get-Date -Format 'HH:mm:ss') - logs dans $logDir" -ForegroundColor Cyan
+& .\RaspberryAssistant.exe 2>&1 | Tee-Object -FilePath "$logDir\exo_console.log"
+$exoExitCode = $LASTEXITCODE
+Write-Host "EXO termine avec code: $exoExitCode a $(Get-Date -Format 'HH:mm:ss')" -ForegroundColor $(if ($exoExitCode -eq 0) { 'Green' } else { 'Red' })
 
-# Cleanup: arreter le serveur STT si on l'a lance
+# Cleanup: arreter les serveurs lances
+if ($ttsProc -and -not $ttsProc.HasExited) {
+    Write-Host "Arret du serveur TTS DirectML (PID: $($ttsProc.Id))..." -ForegroundColor Yellow
+    Stop-Process -Id $ttsProc.Id -Force -ErrorAction SilentlyContinue
+}
 if ($sttProc -and -not $sttProc.HasExited) {
     Write-Host "Arret du serveur STT (PID: $($sttProc.Id))..." -ForegroundColor Yellow
     Stop-Process -Id $sttProc.Id -Force -ErrorAction SilentlyContinue

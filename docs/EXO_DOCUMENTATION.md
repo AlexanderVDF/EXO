@@ -123,27 +123,25 @@ npm install
 
 # Ou manuellement : 7 serveurs Python + moteur C++
 # Terminal 1 — Serveur GUI/HA
-python src/exo_server.py
+python python/orchestrator/exo_server.py
 
 # Terminal 2 — Serveur STT (Whisper.cpp GPU)
-.\.venv_stt_tts\Scripts\python.exe src/stt_server.py --backend whispercpp --model large-v3 --device gpu
+.\.venv_stt_tts\Scripts\python.exe python/stt/stt_server.py --backend whispercpp --model large-v3 --device gpu
 
-# Terminal 3 — Serveur TTS (XTTS v2 GPU via WSL2 — RECOMMANDÉ)
-wsl -d Ubuntu-22.04 -- bash -c "source ~/exo_tts_venv/bin/activate && export HSA_OVERRIDE_GFX_VERSION=10.3.0 && python3 ~/exo_tts_server/tts_gpu_server.py --voice 'Claribel Dervla' --lang fr"
-# Ou fallback Windows (DirectML/CPU) :
-# .\.venv_stt_tts\Scripts\python.exe src/tts_server.py --voice "Claribel Dervla" --lang fr
+# Terminal 3 — Serveur TTS (XTTS v2)
+.\.venv_stt_tts\Scripts\python.exe python/tts/tts_server.py --voice "Claribel Dervla" --lang fr
 
 # Terminal 4 — Serveur VAD Silero (optionnel)
-.\.venv_stt_tts\Scripts\python.exe src/vad_server.py
+.\.venv_stt_tts\Scripts\python.exe python/vad/vad_server.py
 
 # Terminal 5 — Serveur WakeWord OpenWakeWord (optionnel)
-.\.venv_stt_tts\Scripts\python.exe src/wakeword_server.py
+.\.venv_stt_tts\Scripts\python.exe python/wakeword/wakeword_server.py
 
 # Terminal 6 — Serveur Mémoire FAISS (optionnel)
-.\.venv_stt_tts\Scripts\python.exe src/memory_server.py
+.\.venv_stt_tts\Scripts\python.exe python/memory/memory_server.py
 
 # Terminal 7 — Serveur NLU local (optionnel)
-.\.venv_stt_tts\Scripts\python.exe src/nlu_server.py
+.\.venv_stt_tts\Scripts\python.exe python/nlu/nlu_server.py
 
 # Terminal 8 — Moteur C++
 build\Debug\RaspberryAssistant.exe
@@ -176,37 +174,53 @@ Tous les modèles et données volumineuses résident sur le SSD dédié `D:\EXO\
 
 ```
 EXO/
-├── src/                           # Moteur C++ + Backend Python
+├── app/                           # Moteur C++ (architecture modulaire)
 │   ├── main.cpp                   # Point d'entrée Windows
-│   ├── assistantmanager.cpp/.h    # Coordinateur central v4
-│   ├── configmanager.cpp/.h       # Config 3 couches (.env > user > conf)
-│   ├── claudeapi.cpp/.h           # Client SSE Anthropic + Function Calling
-│   ├── voicepipeline.cpp/.h       # Pipeline audio (VAD + STT + FSM)
-│   ├── ttsmanager.cpp/.h          # TTS cascade (XTTS v2 → Qt) + DSP
-│   ├── weathermanager.cpp/.h      # OpenWeatherMap + géoloc IP
-│   ├── aimemorymanager.cpp/.h     # Mémoire 3 couches (conversations, prefs, sémantique)
-│   ├── logmanager.cpp/.h          # Logging par catégories (hVoice, hClaude...)
-│   ├── audio/                     # ★ Couche d'abstraction audio (v4.2)
-│   │   ├── audioinput.h           # Interface abstraite AudioInput
-│   │   ├── audioinput_qt.h/.cpp   # Backend Qt Multimedia (QAudioSource)
-│   │   └── audioinput_rtaudio.h/.cpp  # Backend RtAudio WASAPI (optionnel)
-│   ├── stt_server.py              # Serveur STT WebSocket (Whisper.cpp GPU / faster-whisper CPU)
-│   ├── tts_server.py              # Serveur TTS WebSocket (XTTS v2 multi-voix)
-│   ├── vad_server.py              # Serveur VAD Silero (port 8768)
-│   ├── wakeword_server.py         # Serveur WakeWord OpenWakeWord (port 8770)
-│   ├── memory_server.py           # Serveur mémoire FAISS vectoriel (port 8771)
-│   ├── nlu_server.py              # Serveur NLU local (port 8772)
-│   ├── exo_server.py              # Serveur Python principal (GUI + HA)
-│   ├── whisper_cpp.py             # Wrapper Python pour whisper-server.exe (Vulkan)
-│   └── integrations/              # Modules Home Assistant
-│       ├── __init__.py
-│       ├── home_bridge.py         # WebSocket + REST + EventBus
-│       ├── ha_entities.py         # Cache & requêtes entités
-│       ├── ha_devices.py          # Appareils (MAC/IP matching)
-│       ├── ha_areas.py            # Pièces (Plans ↔ HA sync)
-│       ├── ha_actions.py          # 13 actions LLM Function Calling
-│       ├── ha_sync.py             # Synchronisation complète
-│       └── tests/                 # 92 tests pytest
+│   ├── core/                      # Orchestrateur, Config, Logs, Pipeline, HealthCheck
+│   │   ├── AssistantManager.cpp/.h    # Coordinateur central v4
+│   │   ├── ConfigManager.cpp/.h       # Config 3 couches (.env > user > conf)
+│   │   ├── LogManager.cpp/.h          # Logging par catégories (hVoice, hClaude...)
+│   │   ├── PipelineEvent.cpp/.h       # Événements pipeline
+│   │   ├── PipelineTracer.cpp/.h      # Traceur pipeline
+│   │   ├── PipelineTypes.h            # Types d'événements (33 enum)
+│   │   ├── WebSocketClient.cpp/.h     # Client WebSocket générique
+│   │   └── HealthCheck.cpp/.h         # Monitoring des services
+│   ├── audio/                     # ★ Pipeline vocal + abstraction audio (v4.2)
+│   │   ├── VoicePipeline.cpp/.h       # Pipeline audio (VAD + STT + FSM)
+│   │   ├── TTSManager.cpp/.h          # TTS cascade (XTTS v2 → Qt) + DSP
+│   │   ├── TTSBackend.h              # Interface abstraite TTS
+│   │   ├── TTSBackendQt.cpp/.h       # Backend Qt TextToSpeech
+│   │   ├── TTSBackendXTTS.cpp/.h     # Backend XTTS v2 WebSocket
+│   │   ├── AudioInput.h              # Interface abstraite AudioInput
+│   │   ├── AudioInputQt.cpp/.h       # Backend Qt Multimedia (QAudioSource)
+│   │   └── AudioInputRtAudio.cpp/.h  # Backend RtAudio WASAPI (optionnel)
+│   ├── llm/                       # Intelligence artificielle
+│   │   ├── ClaudeAPI.cpp/.h           # Client SSE Anthropic + Function Calling
+│   │   └── AIMemoryManager.cpp/.h     # Mémoire 3 couches + bridge FAISS
+│   └── utils/                     # Utilitaires
+│       └── WeatherManager.cpp/.h      # OpenWeatherMap + géoloc IP
+│
+├── python/                        # Microservices Python
+│   ├── orchestrator/              # Serveur principal (port 8765)
+│   │   ├── exo_server.py             # GUI WebSocket + bridge HA
+│   │   └── integrations/             # Modules Home Assistant
+│   ├── stt/                       # Reconnaissance vocale (port 8766)
+│   │   ├── stt_server.py             # Serveur STT dual backend
+│   │   └── whisper_cpp.py            # Wrapper whisper-server.exe (Vulkan)
+│   ├── tts/                       # Synthèse vocale (port 8767)
+│   │   ├── tts_server.py             # Serveur TTS XTTS v2
+│   │   └── tts_server_directml.py    # Serveur TTS DirectML (AMD)
+│   ├── vad/                       # VAD Silero (port 8768)
+│   │   └── vad_server.py
+│   ├── wakeword/                  # OpenWakeWord (port 8770)
+│   │   └── wakeword_server.py
+│   ├── memory/                    # FAISS vectoriel (port 8771)
+│   │   └── memory_server.py
+│   ├── nlu/                       # NLU local (port 8772)
+│   │   └── nlu_server.py
+│   └── shared/                    # Modules partagés
+│       ├── cache.py                   # PhraseCache commun
+│       └── singleton_guard.py         # Protection anti-doublon par port TCP
 │
 ├── gui/                           # Interface React
 │   ├── index.html
@@ -246,11 +260,14 @@ EXO/
 │   └── icons/
 │
 ├── scripts/
+│   ├── auto_kill_zombies.py          # Détection/nettoyage processus zombies
+│   ├── auto_maintain.py              # Maintenance auto (scan, docs, clean)
 │   ├── benchmark_stt.py
 │   ├── check_dependencies.ps1
 │   ├── cleanup.ps1
 │   ├── install_dependencies.ps1
 │   ├── quick_build.ps1
+│   ├── setup_maintenance.ps1
 │   ├── test_environment.ps1
 │   └── verify_project.ps1
 │
@@ -259,7 +276,13 @@ EXO/
 ├── docs/                           # Documentation unifiée
 │   ├── EXO_DOCUMENTATION.md        # ★ Ce fichier — doc technique complète
 │   ├── EXO_SPEC_V4.2.md            # Spécification concise (source de vérité)
-│   └── ARCHIVES.md                 # Plans, prompts et réparations historiques (v4.0–v4.2)
+│   ├── ARCHIVES.md                 # Plans, prompts et réparations historiques (v4.0–v4.2)
+│   ├── Rapport_Fix_RAM_Doublons.md # Rapport nettoyage RAM
+│   ├── services.md                 # Documentation des microservices
+│   ├── modules.md                  # Référence des modules C++
+│   ├── pipeline.md                 # Documentation du pipeline vocal
+│   ├── limitations.md              # Limitations connues
+│   └── archives/                   # Prompts historiques archivés
 │
 ├── CMakeLists.txt                  # Build CMake (Qt6, v4.2.0, option ENABLE_RTAUDIO)
 ├── requirements.txt                # Dépendances Python (aiohttp, websockets, silero-vad, faiss-cpu...)
@@ -328,7 +351,7 @@ EXO/
 |------|-----------|---------|-----------|
 | 8765 | WebSocket | GUI / Home Assistant bridge | exo_server.py |
 | 8766 | WebSocket | Speech-to-Text (Whisper) | stt_server.py |
-| 8767 | WebSocket | Text-to-Speech (XTTS v2) | tts_gpu_server.py (WSL2) / tts_server.py (fallback) |
+| 8767 | WebSocket | Text-to-Speech (XTTS v2) | tts_server.py |
 | 8768 | WebSocket | VAD Silero neural | vad_server.py |
 | 8769 | HTTP | Whisper.cpp backend interne | whisper-server.exe |
 | 8770 | WebSocket | WakeWord OpenWakeWord | wakeword_server.py |
@@ -403,7 +426,7 @@ OpenWeatherMap avec mise à jour automatique toutes les 10 minutes. Conseils ves
 Couche d'abstraction pour la capture audio, permettant de choisir entre Qt Multimedia et RtAudio WASAPI :
 
 ```
-AudioInput (interface abstraite, src/audio/audioinput.h)
+AudioInput (interface abstraite, app/audio/AudioInput.h)
 ├── AudioInputQt     → QAudioSource (Qt Multimedia, compatible universel)
 └── AudioInputRtAudio → RtAudio WASAPI (Windows, faible latence, compilé si ENABLE_RTAUDIO=ON)
 ```
@@ -547,7 +570,7 @@ Avant synthèse, le texte est analysé pour ajuster pitch, débit et volume :
 - **Voix** : `Claribel Dervla` (58 voix intégrées, auto-téléchargement HuggingFace)
 - **Sample rate** : 24000 Hz
 - **Protocole** : `{"type":"synthesize","text":"...","rate":1.0,"pitch":1.0}` → chunks PCM16 binaires → `{"type":"end"}`
-- **Performance** : RTF ~0.05 (20× temps réel sur GPU AMD ROCm via WSL2)
+- **Performance** : RTF ~0.05 (20× temps réel sur GPU via DirectML/CUDA)
 
 ---
 
@@ -605,13 +628,13 @@ Serveur WebSocket sur `:8766`. Backend dual : Whisper.cpp (Vulkan GPU) ou faster
 
 ```powershell
 # Backend GPU par défaut (whisper.cpp + Vulkan)
-.\.venv_stt_tts\Scripts\python.exe src/stt_server.py --backend whispercpp --model large-v3 --device gpu
+.\.venv_stt_tts\Scripts\python.exe python/stt/stt_server.py --backend whispercpp --model large-v3 --device gpu
 
 # Fallback CPU
-.\.venv_stt_tts\Scripts\python.exe src/stt_server.py --backend faster_whisper --model small
+.\.venv_stt_tts\Scripts\python.exe python/stt/stt_server.py --backend faster_whisper --model small
 
 # Auto (essaie GPU, fallback CPU)
-.\.venv_stt_tts\Scripts\python.exe src/stt_server.py --backend auto
+.\.venv_stt_tts\Scripts\python.exe python/stt/stt_server.py --backend auto
 ```
 
 ### `tts_server.py` — Synthèse vocale XTTS v2
@@ -619,7 +642,7 @@ Serveur WebSocket sur `:8766`. Backend dual : Whisper.cpp (Vulkan GPU) ou faster
 Serveur WebSocket sur `:8767`. Encapsule Coqui XTTS v2 avec 58 voix intégrées (défaut: `Claribel Dervla`).
 
 ```powershell
-.\.venv_stt_tts\Scripts\python.exe src/tts_server.py --voice "Claribel Dervla" --lang fr
+.\.venv_stt_tts\Scripts\python.exe python/tts/tts_server.py --voice "Claribel Dervla" --lang fr
 # Options: --voice <speaker> --lang fr --port 8767
 ```
 
@@ -630,7 +653,7 @@ Le modèle XTTS v2 (~1.87 Go) est auto-téléchargé dans `~\AppData\Local\tts\`
 Serveur WebSocket sur `:8768`. Détection d'activité vocale neurale via Silero VAD. Reçoit du PCM16 binaire, retourne `{"type":"vad","score":float,"is_speech":bool}`.
 
 ```powershell
-.\.venv_stt_tts\Scripts\python.exe src/vad_server.py
+.\.venv_stt_tts\Scripts\python.exe python/vad/vad_server.py
 # Port par défaut: 8768
 ```
 
@@ -639,7 +662,7 @@ Serveur WebSocket sur `:8768`. Détection d'activité vocale neurale via Silero 
 Serveur WebSocket sur `:8770`. Détection neurale de wake-word via OpenWakeWord. Reçoit du PCM16 binaire, retourne `{"type":"wakeword","word":"...","score":float}`.
 
 ```powershell
-.\.venv_stt_tts\Scripts\python.exe src/wakeword_server.py
+.\.venv_stt_tts\Scripts\python.exe python/wakeword/wakeword_server.py
 # Port par défaut: 8770
 ```
 
@@ -648,7 +671,7 @@ Serveur WebSocket sur `:8770`. Détection neurale de wake-word via OpenWakeWord.
 Serveur WebSocket sur `:8771`. Mémoire sémantique vectorielle FAISS + SentenceTransformers (`all-MiniLM-L6-v2`). Opérations : `add` (indexer un souvenir), `search` (recherche vectorielle par similarité).
 
 ```powershell
-.\.venv_stt_tts\Scripts\python.exe src/memory_server.py
+.\.venv_stt_tts\Scripts\python.exe python/memory/memory_server.py
 # Port par défaut: 8771
 ```
 
@@ -657,7 +680,7 @@ Serveur WebSocket sur `:8771`. Mémoire sémantique vectorielle FAISS + Sentence
 Serveur WebSocket sur `:8772`. Classification d'intentions locale (11 catégories : météo, heure, timer, domotique, musique, rappel, salutation…) avec extraction d'entités. Regex par défaut, framework transformers optionnel.
 
 ```powershell
-.\.venv_stt_tts\Scripts\python.exe src/nlu_server.py
+.\.venv_stt_tts\Scripts\python.exe python/nlu/nlu_server.py
 # Port par défaut: 8772
 ```
 
@@ -1088,7 +1111,7 @@ Système de logging par catégories avec macros dédiées :
 ### Tests Python (92)
 
 ```powershell
-python -m pytest src/integrations/tests/ -v
+python -m pytest tests/python/ -v
 ```
 
 | Fichier | Tests | Couverture |
@@ -1171,7 +1194,7 @@ Le moteur cherche `config/assistant.conf` en relatif depuis le répertoire du pr
 ## 📝 Changelog
 
 ### v4.2 — Mars 2026 — "Premium Open-Source Edition"
-- ✅ **RtAudio WASAPI** — capture audio faible latence via abstraction AudioInput (src/audio/), backend sélectionnable Qt/RtAudio
+- ✅ **RtAudio WASAPI** — capture audio faible latence via abstraction AudioInput (app/audio/), backend sélectionnable Qt/RtAudio
 - ✅ **XTTS v2** — TTS premium neural multilingue, streaming PCM16, contrôle pitch/rate/style
 - ✅ **Silero VAD** — VAD neural via WebSocket (vad_server.py :8768), modes builtin/silero/hybrid
 - ✅ **DSP noisereduce** — réduction de bruit spectrale intégrée à stt_server.py, intensité configurable
@@ -1232,7 +1255,7 @@ Le moteur cherche `config/assistant.conf` en relatif depuis le répertoire du pr
 - ✅ Interface radiale Material Design
 - ✅ Intégration Claude API complète
 - ✅ Système de mémoire persistante
-- ✅ Reconnaissance vocale Porcupine + TTS
+- ✅ Reconnaissance vocale OpenWakeWord + TTS
 - ✅ Météo temps réel OpenWeatherMap
 - ✅ Configuration modulaire
 
@@ -1255,6 +1278,22 @@ Le moteur cherche `config/assistant.conf` en relatif depuis le répertoire du pr
 - [x] **Multi-langues** — support international (fr, en, es, de, it, pt, ja, zh)
 - [ ] **Auto-update** — mise à jour automatique
 - [ ] **Docker** — déploiement containerisé
+
+---
+
+## Limitations connues — XTTS v2 DirectML
+
+### Goulot GPT autorégressif (CPU)
+Le module GPT de XTTS v2 s'exécute **sur CPU** (PyTorch). Seul le vocodeur HiFi-GAN est accéléré via ONNX Runtime DirectML sur le GPU AMD. La latence de première syllabe dépend donc de la vitesse CPU pour la partie autorégressive.
+
+### Portée de DirectML
+DirectML accélère uniquement le **vocodeur HiFi-GAN** (conversion mel-spectrogramme → PCM). Le modèle GPT et le speaker encoder restent sur CPU. L'accélération GPU est donc partielle.
+
+### CUDA (RTX 3070 — À venir)
+Le support CUDA natif sous Windows est prévu pour remplacer le pipeline DirectML. Cela permettra l'accélération complète (GPT + vocodeur) sur GPU NVIDIA.
+
+### Latence réseau WebSocket
+Le streaming TTS passe par WebSocket (`ws://localhost:8767`). Sur une machine locale, la latence est négligeable, mais elle peut devenir perceptible si le serveur TTS est distant.
 
 ---
 

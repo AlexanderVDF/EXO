@@ -21,14 +21,13 @@ La méthode OBLIGATOIRE est d'exécuter la tâche VS Code "launch_all"
 qui lance les 7 serveurs en parallèle dans le terminal intégré.
 
 Tâches définies dans .vscode/tasks.json :
-1. exo_server      → .venv/Scripts/python.exe src/exo_server.py
-2. stt_server      → .venv_stt_tts/Scripts/python.exe src/stt_server.py --backend whispercpp --model large-v3 --device gpu
-3. tts_gpu_wsl2    → WSL2 Ubuntu-22.04, ~/exo_tts_server/tts_gpu_server.py (GPU AMD ROCm)
-4. vad_server      → .venv_stt_tts/Scripts/python.exe src/vad_server.py
-5. wakeword_server → .venv_stt_tts/Scripts/python.exe src/wakeword_server.py
-6. memory_server   → .venv_stt_tts/Scripts/python.exe src/memory_server.py
-7. nlu_server      → .venv_stt_tts/Scripts/python.exe src/nlu_server.py
-   (tts_server Windows conservé en fallback, non inclus dans launch_all)
+1. exo_server      → .venv/Scripts/python.exe python/orchestrator/exo_server.py
+2. stt_server      → .venv_stt_tts/Scripts/python.exe python/stt/stt_server.py --backend whispercpp --model large-v3 --device gpu
+3. tts_server      → .venv_stt_tts/Scripts/python.exe python/tts/tts_server.py --voice "Claribel Dervla" --lang fr
+4. vad_server      → .venv_stt_tts/Scripts/python.exe python/vad/vad_server.py
+5. wakeword_server → .venv_stt_tts/Scripts/python.exe python/wakeword/wakeword_server.py
+6. memory_server   → .venv_stt_tts/Scripts/python.exe python/memory/memory_server.py
+7. nlu_server      → .venv_stt_tts/Scripts/python.exe python/nlu/nlu_server.py
 
 Après les 7 serveurs, lancer : build\Debug\RaspberryAssistant.exe
 
@@ -185,49 +184,39 @@ Copilot NE DOIT JAMAIS utiliser C:\ pour les modèles ou données volumineuses.
 Copilot NE DOIT JAMAIS référencer J:\EXO\ (ancien chemin obsolète, migré vers D:\EXO\).
 
 ────────────────────────────────────────────────────────────
-11) TTS GPU OBLIGATOIRE — WSL2 + ROCm (AMD)
+11) TTS GPU — Windows natif (préparation CUDA RTX 3070)
 ────────────────────────────────────────────────────────────
 
-Le TTS XTTS v2 DOIT s'exécuter dans WSL2 Ubuntu-22.04 pour 
-exploiter le GPU AMD (RX 6750 XT, RDNA2) via PyTorch ROCm.
+Le TTS XTTS v2 s'exécute nativement sous Windows via tts_server.py.
+Le serveur détecte automatiquement CUDA (RTX 3070) ou CPU fallback.
 
-Architecture :
-- WSL2 Ubuntu-22.04, Python 3.10, venv ~/exo_tts_venv/
-- PyTorch ROCm 6.2 (torch+rocm6.2)
-- Serveur : ~/exo_tts_server/tts_gpu_server.py → ws://0.0.0.0:8767
-- Modèles : ~/exo_tts_models/ (copie locale depuis D:\EXO\models\xtts\)
-- Variables ROCm : HSA_OVERRIDE_GFX_VERSION=10.3.0, HIP_VISIBLE_DEVICES=0
+Architecture actuelle :
+- Windows natif, Python 3.11, venv .venv_stt_tts/
+- Serveur : python/tts/tts_server.py → ws://localhost:8767
+- Modèles : D:\EXO\models\xtts\
+- Tâche VS Code : "tts_server" (incluse dans launch_all)
+- Scripts legacy archivés dans scripts/legacy_wsl2/ (ne plus utiliser)
 
 Copilot DOIT TOUJOURS :
-- Lancer le TTS via la tâche VS Code "tts_gpu_wsl2" (dans tasks.json)
-- Utiliser WSL2 comme environnement TTS exclusif
-- Vérifier que le port 8767 est accessible depuis Windows (localhost forwarding)
-- Copier tts_gpu_server.py dans WSL2 avant lancement si modifié
+- Lancer le TTS via la tâche VS Code "tts_server"
+- Vérifier que le port 8767 est accessible
+- Utiliser les modèles XTTS depuis D:\EXO\models\xtts\
 
 Copilot NE DOIT JAMAIS :
-- Lancer tts_server.py Windows SAUF si WSL2 est indisponible (fallback)
-- Proposer DirectML Windows comme solution TTS primaire
 - Modifier le port TTS (8767 est obligatoire)
-- Ignorer les variables d'environnement ROCm
-
-Fallback : Si WSL2 GPU échoue, le serveur bascule automatiquement 
-sur CPU dans WSL2. Si WSL2 est totalement indisponible, 
-tts_server.py Windows (DirectML/CPU) reste en fallback d'urgence.
+- Proposer Piper ou un autre moteur TTS
 
 ────────────────────────────────────────────────────────────
-12) LANCEMENT EXO — ORDRE ACTUALISÉ AVEC WSL2 TTS
+12) LANCEMENT EXO — ORDRE ACTUALISÉ
 ────────────────────────────────────────────────────────────
 
 L'ordre de lancement actualisé est :
-1. tts_gpu_wsl2   → WSL2 Ubuntu, ~/exo_tts_server/tts_gpu_server.py (GPU AMD)
-2. exo_server     → .venv/Scripts/python.exe src/exo_server.py
-3. stt_server     → .venv_stt_tts/Scripts/python.exe src/stt_server.py
-4. vad_server     → .venv_stt_tts/Scripts/python.exe src/vad_server.py
-5. wakeword_server→ .venv_stt_tts/Scripts/python.exe src/wakeword_server.py
-6. memory_server  → .venv_stt_tts/Scripts/python.exe src/memory_server.py
-7. nlu_server     → .venv_stt_tts/Scripts/python.exe src/nlu_server.py
-
-Note : "tts_server" Windows est conservé dans tasks.json comme fallback
-mais n'est PAS inclus dans "launch_all" (remplacé par tts_gpu_wsl2).
+1. exo_server     → .venv/Scripts/python.exe python/orchestrator/exo_server.py
+2. stt_server     → .venv_stt_tts/Scripts/python.exe python/stt/stt_server.py
+3. tts_server     → .venv_stt_tts/Scripts/python.exe python/tts/tts_server.py
+4. vad_server     → .venv_stt_tts/Scripts/python.exe python/vad/vad_server.py
+5. wakeword_server→ .venv_stt_tts/Scripts/python.exe python/wakeword/wakeword_server.py
+6. memory_server  → .venv_stt_tts/Scripts/python.exe python/memory/memory_server.py
+7. nlu_server     → .venv_stt_tts/Scripts/python.exe python/nlu/nlu_server.py
 
 Ce fichier est la source de vérité pour Copilot dans ce dépôt.

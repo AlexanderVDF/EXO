@@ -69,24 +69,22 @@ pip install torch-directml TTS
 pip install silero-vad onnxruntime noisereduce openwakeword faiss-cpu sentence-transformers
 
 # Terminal 1 : serveur STT (ws://localhost:8766)
-python src/stt_server.py --backend whispercpp --model large-v3 --device gpu
+python python/stt/stt_server.py --backend whispercpp --model large-v3 --device gpu
 
-# Terminal 2 : serveur TTS XTTS v2 GPU (ws://localhost:8767 — RECOMMANDÉ via WSL2)
-wsl -d Ubuntu-22.04 -- bash -c "source ~/exo_tts_venv/bin/activate && export HSA_OVERRIDE_GFX_VERSION=10.3.0 && python3 ~/exo_tts_server/tts_gpu_server.py --voice 'Claribel Dervla' --lang fr"
-# Ou fallback Windows (DirectML/CPU) :
-# python src/tts_server.py --voice "Claribel Dervla" --lang fr
+# Terminal 2 : serveur TTS XTTS v2 (ws://localhost:8767)
+python python/tts/tts_server.py --voice "Claribel Dervla" --lang fr
 
 # Terminal 3 : serveur VAD Silero (ws://localhost:8768)
-python src/vad_server.py
+python python/vad/vad_server.py
 
 # Terminal 4 : serveur WakeWord OpenWakeWord (ws://localhost:8770)
-python src/wakeword_server.py
+python python/wakeword/wakeword_server.py
 
 # Terminal 5 : serveur Mémoire FAISS (ws://localhost:8771)
-python src/memory_server.py
+python python/memory/memory_server.py
 
 # Terminal 6 : serveur NLU local (ws://localhost:8772)
-python src/nlu_server.py
+python python/nlu/nlu_server.py
 ```
 
 ### 3. Python — Backend Home Assistant
@@ -98,7 +96,7 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # Terminal 7 : serveur GUI/HA (ws://localhost:8765)
-python src/exo_server.py
+python python/orchestrator/exo_server.py
 ```
 
 ### 4. Lancement rapide (tout-en-un)
@@ -113,25 +111,22 @@ python src/exo_server.py
 
 ```
 EXO/
-├── src/                        # C++ — moteur principal
+├── app/                        # C++ — moteur principal
 │   ├── main.cpp                # Point d'entrée Qt
-│   ├── assistantmanager.*      # Orchestrateur FSM
-│   ├── voicepipeline.*         # Pipeline vocal (VAD, STT, DSP, WakeWord)
-│   ├── ttsmanager.*            # TTS cascade XTTS v2/Qt + DSP 5 étapes
-│   ├── configmanager.*         # Config 3 couches (CLI > conf > défaut)
-│   ├── claudeapi.*             # Client Anthropic SSE + Function Calling
-│   ├── weathermanager.*        # OpenWeatherMap + géolocalisation
-│   ├── aimemorymanager.*       # Mémoire 3 couches + bridge FAISS WebSocket
-│   ├── logmanager.*            # Logging catégorisé rotatif
-│   ├── stt_server.py           # Serveur STT dual backend (port 8766)
-│   ├── whisper_cpp.py          # Wrapper Python pour whisper-server.exe (Vulkan)
-│   ├── tts_server.py           # Serveur TTS XTTS v2 (port 8767)
-│   ├── vad_server.py           # Serveur VAD Silero (port 8768)
-│   ├── wakeword_server.py      # Serveur WakeWord OpenWakeWord (port 8770)
-│   ├── memory_server.py        # Serveur mémoire FAISS vectoriel (port 8771)
-│   ├── nlu_server.py           # Serveur NLU local (port 8772)
-│   ├── exo_server.py           # Serveur GUI/HA (port 8765)
-│   └── integrations/           # Python — modules Home Assistant
+│   ├── core/                   # Orchestrateur, Config, Logs, Pipeline, HealthCheck
+│   ├── audio/                  # VoicePipeline, TTS, DSP, AudioInput
+│   ├── llm/                    # ClaudeAPI, AIMemoryManager
+│   └── utils/                  # WeatherManager
+│
+├── python/                     # Microservices Python
+│   ├── orchestrator/           # exo_server.py + Home Assistant (port 8765)
+│   ├── stt/                    # stt_server.py + whisper_cpp.py (port 8766)
+│   ├── tts/                    # tts_server.py (port 8767)
+│   ├── vad/                    # vad_server.py (port 8768)
+│   ├── wakeword/               # wakeword_server.py (port 8770)
+│   ├── memory/                 # memory_server.py (port 8771)
+│   ├── nlu/                    # nlu_server.py (port 8772)
+│   └── shared/                 # Modules partagés (cache.py)
 │
 ├── qml/                        # Interface QML style VS Code
 │   ├── MainWindow.qml          # Fenêtre principale
@@ -157,7 +152,7 @@ EXO/
 |---------|------|------|
 | `exo_server.py` | 8765 | GUI WebSocket + bridge HA |
 | `stt_server.py` | 8766 | Whisper.cpp Vulkan GPU STT (large-v3) |
-| `tts_gpu_server.py` (WSL2) | 8767 | XTTS v2 TTS GPU AMD ROCm |
+| `tts_server.py` | 8767 | XTTS v2 TTS (DirectML/CUDA/CPU) |
 | `vad_server.py` | 8768 | Silero VAD neural |
 | `whisper-server` | 8769 | Whisper.cpp HTTP backend (interne) |
 | `wakeword_server.py` | 8770 | OpenWakeWord détection neurale |

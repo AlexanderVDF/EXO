@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 import "vscode"
 
 ApplicationWindow {
@@ -27,8 +27,8 @@ ApplicationWindow {
     Connections {
         target: typeof voiceManager !== 'undefined' ? voiceManager : null
 
-        function onListeningChanged(listening) {
-            if (listening) {
+        function onListeningChanged() {
+            if (voiceManager.isListening) {
                 mainWindow.appStatus = "Listening"
             } else if (mainWindow.appStatus === "Listening") {
                 mainWindow.appStatus = "Idle"
@@ -278,6 +278,5 @@ ApplicationWindow {
     // ══════════════════════════════════════════════
 
     Component.onCompleted: {
-        console.log("EXO MainWindow VS Code chargée")
     }
 }

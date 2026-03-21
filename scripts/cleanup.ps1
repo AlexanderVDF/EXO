@@ -42,7 +42,7 @@ if (Test-Path $qtCache) {
 
 # Vérification de l'intégrité des fichiers principaux
 $essentialFiles = @(
-    "$projectRoot\src\main.cpp",
+    "$projectRoot\app\main.cpp",
     "$projectRoot\CMakeLists.txt",
     "$projectRoot\docs\EXO_DOCUMENTATION.md",
     "$projectRoot\README.md"

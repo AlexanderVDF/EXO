@@ -1,5 +1,5 @@
-import QtQuick 2.15
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Layouts
 
 Rectangle {
     id: root
@@ -9,10 +9,16 @@ Rectangle {
     property real audioLevel: 0.0
     property bool isListening: false
     property bool isSpeaking: false
-    property string sttStatus: "disconnected"
-    property string ttsStatus: "ready"
     property string temperature: ""
     property string weatherDesc: ""
+
+    // Helper : couleur selon l'état du health check
+    function statusColor(status) {
+        if (status === "healthy")  return "#4EC9B0"   // vert
+        if (status === "degraded") return "#DCDCAA"   // jaune
+        if (status === "down")     return "#F44747"   // rouge
+        return "#808080"                               // gris (unknown)
+    }
 
     // Bordure supérieure
     Rectangle {
@@ -62,41 +68,31 @@ Rectangle {
                 color: "#3C3C3C"
             }
 
-            // STT status
-            Row {
-                spacing: 4
-                Rectangle {
-                    width: 6
-                    height: 6
-                    radius: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: root.sttStatus === "connected" ? "#4EC9B0"
-                         : root.sttStatus === "connecting" ? "#DCDCAA"
-                         : "#F44747"
-                }
-                Text {
-                    text: "STT"
-                    font.family: "Cascadia Code, Fira Code, Consolas"
-                    font.pixelSize: 11
-                    color: "#A0A0A0"
-                }
-            }
-
-            // TTS status
-            Row {
-                spacing: 4
-                Rectangle {
-                    width: 6
-                    height: 6
-                    radius: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: root.ttsStatus === "ready" ? "#4EC9B0" : "#DCDCAA"
-                }
-                Text {
-                    text: "TTS"
-                    font.family: "Cascadia Code, Fira Code, Consolas"
-                    font.pixelSize: 11
-                    color: "#A0A0A0"
+            // ── Health Check : 6 services ──
+            Repeater {
+                model: [
+                    { label: "STT", status: typeof healthCheck !== 'undefined' ? healthCheck.sttStatus : "unknown" },
+                    { label: "TTS", status: typeof healthCheck !== 'undefined' ? healthCheck.ttsStatus : "unknown" },
+                    { label: "VAD", status: typeof healthCheck !== 'undefined' ? healthCheck.vadStatus : "unknown" },
+                    { label: "WW",  status: typeof healthCheck !== 'undefined' ? healthCheck.wakewordStatus : "unknown" },
+                    { label: "MEM", status: typeof healthCheck !== 'undefined' ? healthCheck.memoryStatus : "unknown" },
+                    { label: "NLU", status: typeof healthCheck !== 'undefined' ? healthCheck.nluStatus : "unknown" }
+                ]
+                delegate: Row {
+                    spacing: 4
+                    Rectangle {
+                        width: 6
+                        height: 6
+                        radius: 3
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: statusColor(modelData.status)
+                    }
+                    Text {
+                        text: modelData.label
+                        font.family: "Cascadia Code, Fira Code, Consolas"
+                        font.pixelSize: 11
+                        color: "#A0A0A0"
+                    }
                 }
             }
 

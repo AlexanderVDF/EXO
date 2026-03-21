@@ -11,11 +11,11 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 Write-Host "`n=== VERIFICATION DES FICHIERS ESSENTIELS ===" -ForegroundColor Yellow
 
 $essentialFiles = @{
-    "src\main.cpp" = "Point d'entrée principal"
-    "src\assistantmanager.cpp" = "Gestionnaire principal"
-    "src\configmanager.cpp" = "Configuration hybride"
-    "src\weathermanager.cpp" = "Météo avec géolocalisation"
-    "src\voicemanager.cpp" = "Reconnaissance vocale"
+    "app\main.cpp" = "Point d'entrée principal"
+    "app\core\AssistantManager.cpp" = "Gestionnaire principal"
+    "app\core\ConfigManager.cpp" = "Configuration hybride"
+    "app\utils\WeatherManager.cpp" = "Météo avec géolocalisation"
+    "app\audio\VoicePipeline.cpp" = "Pipeline vocal"
     "CMakeLists.txt" = "Configuration build"
     "docs\EXO_DOCUMENTATION.md" = "Documentation unifiée"
     "README.md" = "Guide rapide"
@@ -39,7 +39,7 @@ $qmlFiles | ForEach-Object { Write-Host "  - $($_.Name)" -ForegroundColor Gray }
 # Statistiques du projet nettoyé
 Write-Host "`n=== STATISTIQUES PROJET ===" -ForegroundColor Yellow
 
-$sourceFiles = Get-ChildItem -Path "$projectRoot\src", "$projectRoot\qml", "$projectRoot\config" -Recurse -File
+$sourceFiles = Get-ChildItem -Path "$projectRoot\app", "$projectRoot\python", "$projectRoot\qml", "$projectRoot\config" -Recurse -File
 $totalLines = 0
 $sourceFiles | ForEach-Object { 
     $lines = (Get-Content $_.FullName | Measure-Object -Line).Lines

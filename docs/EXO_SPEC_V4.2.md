@@ -83,11 +83,11 @@ Audio → VoicePipeline (C++) → STT → NLU → LLM → TTS → DSP → AudioO
 - Function Calling : 8 outils Home Assistant
 
 ### 3.8 TTS
-- Backend principal : XTTS v2 (GPU AMD ROCm via WSL2 Ubuntu-22.04)
+- Backend principal : XTTS v2 (DirectML / CUDA natif Windows)
 - Voix : Claribel Dervla (58 voix disponibles)
 - Paramètres : voice, pitch, rate, style, langue
-- Chemin modèles : D:\EXO\models\xtts\ (copie dans WSL2 ~/exo_tts_models/)
-- Fallback : tts_server.py Windows (DirectML/CPU), puis Qt TextToSpeech
+- Chemin modèles : D:\EXO\models\xtts\
+- Fallback : Qt TextToSpeech
 
 ### 3.9 DSP sortie
 - EQ 3 kHz +3 dB

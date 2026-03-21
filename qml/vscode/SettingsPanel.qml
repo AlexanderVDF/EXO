@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 Rectangle {
     id: root
@@ -610,11 +610,106 @@ Rectangle {
                     spacing: 8
 
                     Text {
-                        text: "TTS Voice — XTTS v2"
+                        text: "TTS Engine — XTTS v2"
                         font.family: "Cascadia Code, Fira Code, Consolas"
                         font.pixelSize: 13
                         font.bold: true
                         color: "#E0E0E0"
+                    }
+
+                    // ── TTS Engine selector ──
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Text {
+                            text: "tts.engine"
+                            font.family: "Cascadia Code, Fira Code, Consolas"
+                            font.pixelSize: 12
+                            color: "#A0A0A0"
+                        }
+
+                        ComboBox {
+                            id: engineCombo
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 30
+                            model: ListModel {
+                                ListElement { text: "XTTS v2 (DirectML)";  value: "xtts_directml" }
+                                ListElement { text: "XTTS v2 (CUDA)";      value: "xtts_cuda" }
+                                ListElement { text: "XTTS v2 (Auto)";      value: "xtts_auto" }
+                                ListElement { text: "Qt TTS (fallback)";   value: "qt_fallback" }
+                            }
+                            textRole: "text"
+                            valueRole: "value"
+
+                            Component.onCompleted: {
+                                var engine = typeof configManager !== 'undefined'
+                                             ? configManager.getTTSEngine() : "xtts_directml"
+                                for (var i = 0; i < model.count; i++) {
+                                    if (model.get(i).value === engine) {
+                                        currentIndex = i
+                                        break
+                                    }
+                                }
+                            }
+
+                            onActivated: {
+                                var val = model.get(currentIndex).value
+                                if (typeof configManager !== 'undefined')
+                                    configManager.setTTSEngine(val)
+                                if (typeof voiceManager !== 'undefined')
+                                    voiceManager.setTTSEngine(val)
+                            }
+
+                            background: Rectangle {
+                                radius: 2
+                                color: "#3C3C3C"
+                                border.color: engineCombo.activeFocus ? "#007ACC" : "transparent"
+                            }
+
+                            contentItem: Text {
+                                leftPadding: 8
+                                text: engineCombo.displayText
+                                font.family: "Cascadia Code, Fira Code, Consolas"
+                                font.pixelSize: 12
+                                color: "#E0E0E0"
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+
+                            delegate: ItemDelegate {
+                                width: engineCombo.width
+                                contentItem: Text {
+                                    text: model.text
+                                    font.family: "Cascadia Code, Fira Code, Consolas"
+                                    font.pixelSize: 12
+                                    color: highlighted ? "#FFFFFF" : "#E0E0E0"
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                highlighted: engineCombo.highlightedIndex === index
+                                background: Rectangle {
+                                    color: highlighted ? "#094771" : "#2D2D2D"
+                                }
+                            }
+
+                            popup: Popup {
+                                y: engineCombo.height
+                                width: engineCombo.width
+                                implicitHeight: contentItem.implicitHeight + 2
+                                padding: 1
+                                contentItem: ListView {
+                                    clip: true
+                                    implicitHeight: contentHeight
+                                    model: engineCombo.popup.visible ? engineCombo.delegateModel : null
+                                    ScrollIndicator.vertical: ScrollIndicator {}
+                                }
+                                background: Rectangle {
+                                    color: "#2D2D2D"
+                                    border.color: "#007ACC"
+                                    radius: 2
+                                }
+                            }
+                        }
                     }
 
                     ColumnLayout {

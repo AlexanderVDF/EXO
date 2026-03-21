@@ -1,5 +1,5 @@
-import QtQuick 2.15
-import QtQuick.Layouts 1.15
+import QtQuick
+import QtQuick.Layouts
 
 Item {
     id: root
@@ -14,16 +14,6 @@ Item {
         case "Thinking":     return "#C586C0"
         case "Speaking":     return "#4EC9B0"
         default:             return "#5A5A5A"
-        }
-    }
-
-    readonly property string statusIcon: {
-        switch (currentStatus) {
-        case "Listening":    return "●"
-        case "Transcribing": return "⟳"
-        case "Thinking":     return "◌"
-        case "Speaking":     return "◉"
-        default:             return "○"
         }
     }
 
