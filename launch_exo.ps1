@@ -90,8 +90,8 @@ $sttServer = "$projectDir\python\stt\stt_server.py"
 $sttRunning = Get-NetTCPConnection -LocalPort 8766 -ErrorAction SilentlyContinue
 if (-not $sttRunning) {
     if (Test-Path $pythonSTT) {
-        Write-Host "Demarrage du serveur STT (whisper.cpp large-v3)..." -ForegroundColor Yellow
-        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model large-v3 --language fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
+        Write-Host "Demarrage du serveur STT (whisper.cpp medium)..." -ForegroundColor Yellow
+        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model medium --beam-size 3 --language fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
         Write-Host "STT server lance (PID: $($sttProc.Id)) - attente connexion..." -ForegroundColor Yellow
         # Attendre que le serveur soit pret (max 30s)
         $timeout = 30

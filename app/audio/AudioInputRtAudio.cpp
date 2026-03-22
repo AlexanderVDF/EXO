@@ -17,16 +17,20 @@ bool AudioInputRtAudio::open(int sampleRate, int channels)
     m_sampleRate = sampleRate;
     m_channels   = channels;
 
-    try {
+    // RtAudio 6.x: constructor doesn't throw — use error callback for diagnostics
 #ifdef _WIN32
-        m_rt = std::make_unique<RtAudio>(RtAudio::WINDOWS_WASAPI);
+    m_rt = std::make_unique<RtAudio>(RtAudio::WINDOWS_WASAPI,
+        [](RtAudioErrorType type, const std::string &msg) {
+            qWarning() << "AudioInputRtAudio [RtAudio]:" << type
+                       << QString::fromStdString(msg);
+        });
 #else
-        m_rt = std::make_unique<RtAudio>();
+    m_rt = std::make_unique<RtAudio>(RtAudio::Api::UNSPECIFIED,
+        [](RtAudioErrorType type, const std::string &msg) {
+            qWarning() << "AudioInputRtAudio [RtAudio]:" << type
+                       << QString::fromStdString(msg);
+        });
 #endif
-    } catch (const RtAudioErrorType &) {
-        emit error(QStringLiteral("AudioInputRtAudio: impossible de créer l'instance RtAudio"));
-        return false;
-    }
 
     if (m_rt->getDeviceCount() == 0) {
         emit error(QStringLiteral("AudioInputRtAudio: aucun périphérique audio détecté"));
@@ -35,8 +39,24 @@ bool AudioInputRtAudio::open(int sampleRate, int channels)
 
     unsigned int defaultDev = m_rt->getDefaultInputDevice();
     RtAudio::DeviceInfo info = m_rt->getDeviceInfo(defaultDev);
+
+    // Validate that the default input device is usable
+    if (info.inputChannels == 0) {
+        qWarning() << "AudioInputRtAudio: device" << defaultDev
+                   << "n'a pas de canaux d'entrée — liste des devices:";
+        auto ids = m_rt->getDeviceIds();
+        for (unsigned int id : ids) {
+            auto di = m_rt->getDeviceInfo(id);
+            qWarning() << "  device" << id << ":" << QString::fromStdString(di.name)
+                       << "in:" << di.inputChannels << "out:" << di.outputChannels;
+        }
+        emit error(QStringLiteral("AudioInputRtAudio: périphérique d'entrée par défaut invalide (0 canaux d'entrée)"));
+        return false;
+    }
+
     qDebug() << "AudioInputRtAudio: ouvert —" << QString::fromStdString(info.name)
-             << "rate:" << m_sampleRate << "ch:" << m_channels;
+             << "rate:" << m_sampleRate << "ch:" << m_channels
+             << "inputChannels:" << info.inputChannels;
     return true;
 }
 
@@ -55,16 +75,26 @@ bool AudioInputRtAudio::start()
 
     m_bufferFrames = 512;
 
-    try {
-        m_rt->openStream(nullptr, &params,
-                         RTAUDIO_SINT16,
-                         static_cast<unsigned int>(m_sampleRate),
-                         &m_bufferFrames,
-                         &AudioInputRtAudio::rtCallback,
-                         this);
-        m_rt->startStream();
-    } catch (const RtAudioErrorType &) {
-        emit error(QStringLiteral("AudioInputRtAudio: impossible de démarrer le stream"));
+    // RtAudio 6.x: openStream/startStream return error codes (no exceptions)
+    RtAudioErrorType err = m_rt->openStream(
+        nullptr, &params,
+        RTAUDIO_SINT16,
+        static_cast<unsigned int>(m_sampleRate),
+        &m_bufferFrames,
+        &AudioInputRtAudio::rtCallback,
+        this);
+
+    if (err != RTAUDIO_NO_ERROR) {
+        emit error(QStringLiteral("AudioInputRtAudio: openStream a échoué (code %1)")
+                       .arg(static_cast<int>(err)));
+        return false;
+    }
+
+    err = m_rt->startStream();
+    if (err != RTAUDIO_NO_ERROR) {
+        emit error(QStringLiteral("AudioInputRtAudio: startStream a échoué (code %1)")
+                       .arg(static_cast<int>(err)));
+        m_rt->closeStream();
         return false;
     }
 

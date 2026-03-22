@@ -5,6 +5,7 @@
 #include "HealthCheck.h"
 #include "llm/ClaudeAPI.h"
 #include "audio/VoicePipeline.h"
+#include "audio/AudioDeviceManager.h"
 #include "utils/WeatherManager.h"
 #include "PipelineEvent.h"
 #include "PipelineTracer.h"
@@ -314,6 +315,9 @@ void AssistantManager::exposeToQml()
     if (m_healthCheck) {
         m_qmlEngine->rootContext()->setContextProperty("healthCheck", m_healthCheck);
     }
+    if (m_voicePipeline && m_voicePipeline->audioDeviceManager()) {
+        m_qmlEngine->rootContext()->setContextProperty("audioDeviceManager", m_voicePipeline->audioDeviceManager());
+    }
 
     // Exposer le LogManager pour le panneau Logs QML
     m_qmlEngine->rootContext()->setContextProperty("logManager", LogManager::instance());
@@ -322,6 +326,11 @@ void AssistantManager::exposeToQml()
     m_qmlEngine->rootContext()->setContextProperty("pipelineEventBus", PipelineEventBus::instance());
     
     hAssistant() << "Composants exposés au QML avec succès";
+}
+
+AudioDeviceManager* AssistantManager::audioDeviceManager() const
+{
+    return m_voicePipeline ? m_voicePipeline->audioDeviceManager() : nullptr;
 }
 
 void AssistantManager::sendMessage(const QString &message)

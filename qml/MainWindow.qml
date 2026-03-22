@@ -19,6 +19,8 @@ ApplicationWindow {
     property string partialTranscript: ""
     property string currentResponse: ""
     property bool isStreaming: false
+    property bool servicesReady: typeof serviceManager !== 'undefined'
+                                 ? serviceManager.allReady : true
 
     // ══════════════════════════════════════════════
     //  Connexions aux context properties C++
@@ -155,6 +157,50 @@ ApplicationWindow {
             Layout.fillHeight: true
             spacing: 0
 
+            // ── Bannière erreur micro ──
+            Rectangle {
+                id: micErrorBanner
+                Layout.fillWidth: true
+                height: visible ? 36 : 0
+                visible: typeof audioDeviceManager !== 'undefined'
+                         && !audioDeviceManager.hasValidInputDevice
+                color: "#4B1E1E"
+                border.color: "#F44747"
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    spacing: 8
+
+                    Text {
+                        text: "⚠ Mode vocal indisponible — passage en mode clavier"
+                        font.family: "Cascadia Code, Fira Code, Consolas"
+                        font.pixelSize: 12
+                        color: "#F44747"
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text: "Ouvrir paramètres ›"
+                        font.family: "Cascadia Code, Fira Code, Consolas"
+                        font.pixelSize: 11
+                        color: "#569CD6"
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                centralStack.currentIndex = 1 // Settings panel
+                            }
+                        }
+                    }
+                }
+
+                Behavior on height { NumberAnimation { duration: 200 } }
+            }
+
             StackLayout {
                 id: centralStack
                 Layout.fillWidth: true
@@ -216,6 +262,92 @@ ApplicationWindow {
                 }
             }
 
+            // ── Fallback clavier (quand pas de micro) ──
+            Rectangle {
+                id: keyboardFallback
+                Layout.fillWidth: true
+                height: visible ? 44 : 0
+                visible: typeof audioDeviceManager !== 'undefined'
+                         && !audioDeviceManager.hasValidInputDevice
+                color: "#252526"
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    spacing: 8
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 30
+                        radius: 3
+                        color: "#1E1E1E"
+                        border.color: keyboardInput.activeFocus ? "#007ACC" : "#3C3C3C"
+
+                        TextInput {
+                            id: keyboardInput
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            verticalAlignment: TextInput.AlignVCenter
+                            font.family: "Cascadia Code, Fira Code, Consolas"
+                            font.pixelSize: 13
+                            color: "#D4D4D4"
+                            clip: true
+
+                            Text {
+                                anchors.fill: parent
+                                verticalAlignment: Text.AlignVCenter
+                                text: "Tapez votre message ici…"
+                                font.family: parent.font.family
+                                font.pixelSize: parent.font.pixelSize
+                                color: "#5A5A5A"
+                                visible: !keyboardInput.text && !keyboardInput.activeFocus
+                            }
+
+                            Keys.onReturnPressed: {
+                                if (text.trim().length > 0) {
+                                    if (typeof assistantManager !== 'undefined')
+                                        assistantManager.sendMessage(text.trim())
+                                    transcriptView.addMessage(text.trim(), true, false)
+                                    text = ""
+                                }
+                            }
+                        }
+                    }
+
+                    Button {
+                        text: "Envoyer"
+                        Layout.preferredWidth: 80
+                        Layout.preferredHeight: 30
+
+                        onClicked: {
+                            if (keyboardInput.text.trim().length > 0) {
+                                if (typeof assistantManager !== 'undefined')
+                                    assistantManager.sendMessage(keyboardInput.text.trim())
+                                transcriptView.addMessage(keyboardInput.text.trim(), true, false)
+                                keyboardInput.text = ""
+                            }
+                        }
+
+                        background: Rectangle {
+                            color: parent.hovered ? "#007ACC" : "#0E639C"
+                            radius: 3
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            font.family: "Cascadia Code, Fira Code, Consolas"
+                            font.pixelSize: 12
+                            color: "#FFFFFF"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+                }
+
+                Behavior on height { NumberAnimation { duration: 200 } }
+            }
+
             // ── Bottom bar ──
             BottomBar {
                 Layout.fillWidth: true
@@ -228,6 +360,23 @@ ApplicationWindow {
                              ? weatherManager.description : ""
             }
         }
+    }
+
+    // ══════════════════════════════════════════════
+    //  Splash Screen — démarrage des services
+    // ══════════════════════════════════════════════
+
+    SplashScreen {
+        id: splashScreen
+        anchors.fill: parent
+        z: 100
+        visible: !mainWindow.servicesReady
+        allReady: mainWindow.servicesReady
+        readyCount: typeof serviceManager !== 'undefined' ? serviceManager.readyCount : 0
+        totalServices: typeof serviceManager !== 'undefined' ? serviceManager.totalServices : 0
+        currentAction: typeof serviceManager !== 'undefined' ? serviceManager.currentAction : "Initialisation…"
+        serviceStatuses: typeof serviceManager !== 'undefined' ? serviceManager.serviceStatuses : []
+        onDismissed: splashScreen.visible = false
     }
 
     // ══════════════════════════════════════════════

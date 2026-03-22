@@ -10,6 +10,7 @@
 #ifdef ENABLE_RTAUDIO
 #include "AudioInputRtAudio.h"
 #endif
+#include "AudioDeviceManager.h"
 #include "TTSManager.h"
 #include <QThread>
 #include <QMutex>
@@ -269,6 +270,9 @@ public:
     Q_INVOKABLE void setTTSEngine(const QString &engine);
     Q_INVOKABLE void setAudioBackend(const QString &backend);
 
+    // ── AudioDeviceManager (QML exposure via AssistantManager) ──
+    AudioDeviceManager* audioDeviceManager() const { return m_audioDeviceManager; }
+
     // ── WebSocket bridge (for React GUI) ──
     void connectToServer(const QString &url);
     void sendWebSocketMessage(const QString &message);
@@ -288,6 +292,8 @@ signals:
     void statusChanged(const QString &status);
     void voiceError(const QString &error);
     void audioLevel(float rms, float vadScore);
+    void audioUnavailable();
+    void audioReady();
 
 private slots:
     void onVADSpeechStarted();
@@ -335,6 +341,10 @@ private:
     QAudioFormat m_format;
     std::unique_ptr<AudioInput> m_audioInput;
     QString m_audioBackend = "qt"; // "qt" or "rtaudio"
+
+    // ── device manager ──
+    AudioDeviceManager *m_audioDeviceManager = nullptr;
+    void onDeviceSwitchRequested(int rtAudioDeviceId);
 
     // ── preprocessing ──
     AudioPreprocessor m_preproc;

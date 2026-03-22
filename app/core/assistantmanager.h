@@ -12,6 +12,7 @@ class ClaudeAPI;
 class WeatherManager;
 class VoicePipeline;
 class AIMemoryManager;
+class AudioDeviceManager;
 
 Q_DECLARE_METATYPE(ConfigManager*)
 
@@ -27,6 +28,7 @@ class AssistantManager : public QObject
     Q_PROPERTY(bool isInitialized READ isInitialized NOTIFY initializationComplete)
     Q_PROPERTY(ConfigManager* configManager READ configManager CONSTANT)
     Q_PROPERTY(HealthCheck* healthCheck READ healthCheck CONSTANT)
+    Q_PROPERTY(AudioDeviceManager* audioDeviceManager READ audioDeviceManager CONSTANT)
 
 public:
     explicit AssistantManager(QObject *parent = nullptr);
@@ -54,6 +56,7 @@ public:
     ConfigManager* configManager() const { return m_configManager; }
     AIMemoryManager* memoryManager() const { return m_memoryManager; }
     HealthCheck* healthCheck() const { return m_healthCheck; }
+    AudioDeviceManager* audioDeviceManager() const;
 
 signals:
     void messageReceived(const QString &sender, const QString &message);

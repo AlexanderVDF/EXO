@@ -22,6 +22,7 @@ set(EXO_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackendQt.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackendXTTS.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/AudioInputQt.cpp
+    ${CMAKE_SOURCE_DIR}/app/audio/AudioDeviceManager.cpp
     ${CMAKE_SOURCE_DIR}/app/llm/ClaudeAPI.cpp
     ${CMAKE_SOURCE_DIR}/app/llm/AIMemoryManager.cpp
     ${CMAKE_SOURCE_DIR}/app/utils/WeatherManager.cpp
@@ -42,6 +43,7 @@ set(EXO_TEST_HEADERS
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackendXTTS.h
     ${CMAKE_SOURCE_DIR}/app/audio/AudioInput.h
     ${CMAKE_SOURCE_DIR}/app/audio/AudioInputQt.h
+    ${CMAKE_SOURCE_DIR}/app/audio/AudioDeviceManager.h
     ${CMAKE_SOURCE_DIR}/app/llm/ClaudeAPI.h
     ${CMAKE_SOURCE_DIR}/app/llm/AIMemoryManager.h
     ${CMAKE_SOURCE_DIR}/app/utils/WeatherManager.h

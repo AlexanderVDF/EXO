@@ -87,9 +87,9 @@ def _apply_noise_reduction(pcm16: np.ndarray, sr: int = 16000,
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8766
-DEFAULT_MODEL = "large-v3"      # small = fast, medium = better quality, large-v3 = best
+DEFAULT_MODEL = "medium"        # medium = 700MB RAM, good quality — was large-v3 (~2GB)
 DEFAULT_LANGUAGE = "fr"
-DEFAULT_BEAM_SIZE = 5
+DEFAULT_BEAM_SIZE = 3
 DEFAULT_DEVICE = "auto"          # "cpu", "cuda", "auto"
 DEFAULT_COMPUTE_TYPE = "int8"    # int8 = fast CPU, float16 = CUDA
 DEFAULT_BACKEND = "whispercpp"   # "whispercpp" (Vulkan GPU) or "faster_whisper" (CPU) or "whispercpp_cpu"
@@ -204,7 +204,9 @@ class STTEngine:
         self._engine.load()
         self._actual_device = "vulkan" if use_gpu else "cpu"
         self._active_backend = "whispercpp" if use_gpu else "whispercpp_cpu"
-        logger.info("Backend: whisper.cpp (%s)", self._actual_device.upper())
+        model_size_mb = os.path.getsize(model_path) / (1024 * 1024)
+        logger.info("STT model: %s (%.0fMB) — device: %s — beam_size: %d",
+                     self.model_size, model_size_mb, self._actual_device, self.beam_size)
 
     def _load_faster_whisper(self) -> None:
         """Load faster-whisper CPU backend."""
@@ -294,7 +296,7 @@ class STTEngine:
             word_timestamps=False,
             initial_prompt=prompt,
             condition_on_previous_text=False,
-            no_speech_threshold=0.7,
+            no_speech_threshold=0.4,
             log_prob_threshold=-1.0,
             vad_filter=True,
             vad_parameters={

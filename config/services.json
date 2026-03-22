@@ -1,0 +1,51 @@
+[
+  {
+    "name": "STT",
+    "port": 8766,
+    "venv": ".venv_stt_tts",
+    "script": "python/stt/stt_server.py",
+    "args": ["--backend", "whispercpp", "--model", "medium", "--beam-size", "3", "--language", "fr"]
+  },
+  {
+    "name": "TTS",
+    "port": 8767,
+    "venv": ".venv_stt_tts",
+    "script": "python/tts/tts_server_directml.py",
+    "args": ["--voice", "Claribel Dervla", "--lang", "fr"]
+  },
+  {
+    "name": "VAD",
+    "port": 8768,
+    "venv": ".venv_stt_tts",
+    "script": "python/vad/vad_server.py",
+    "args": []
+  },
+  {
+    "name": "Wakeword",
+    "port": 8770,
+    "venv": ".venv_stt_tts",
+    "script": "python/wakeword/wakeword_server.py",
+    "args": []
+  },
+  {
+    "name": "Memory",
+    "port": 8771,
+    "venv": ".venv_stt_tts",
+    "script": "python/memory/memory_server.py",
+    "args": []
+  },
+  {
+    "name": "NLU",
+    "port": 8772,
+    "venv": ".venv_stt_tts",
+    "script": "python/nlu/nlu_server.py",
+    "args": []
+  },
+  {
+    "name": "Orchestrator",
+    "port": 8765,
+    "venv": ".venv",
+    "script": "python/orchestrator/exo_server.py",
+    "args": []
+  }
+]

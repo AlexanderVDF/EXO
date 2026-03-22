@@ -613,6 +613,28 @@ bool VoicePipeline::initAudio()
     m_format.setChannelCount(1);
     m_format.setSampleFormat(QAudioFormat::Int16);
 
+    // ── AudioDeviceManager ──
+    if (!m_audioDeviceManager) {
+        m_audioDeviceManager = new AudioDeviceManager(this);
+        connect(m_audioDeviceManager, &AudioDeviceManager::deviceSwitchRequested,
+                this, &VoicePipeline::onDeviceSwitchRequested);
+        connect(m_audioDeviceManager, &AudioDeviceManager::audioUnavailable,
+                this, [this]() {
+                    emit voiceError("Aucun microphone détecté");
+                    emit audioUnavailable();
+                });
+        connect(m_audioDeviceManager, &AudioDeviceManager::audioReady,
+                this, [this]() { emit audioReady(); });
+    }
+
+    // Vérifier qu'un micro est disponible
+    if (!m_audioDeviceManager->hasValidInputDevice()) {
+        hVoice() << "Aucun microphone détecté — mode clavier activé";
+        emit voiceError("Aucun microphone détecté");
+        emit audioUnavailable();
+        return false;
+    }
+
     // Create backend based on config
     m_audioInput.reset();
 #ifdef ENABLE_RTAUDIO
@@ -630,20 +652,25 @@ bool VoicePipeline::initAudio()
                 emit voiceError(msg);
             });
 
-    // Set callback: preprocess + feed pipeline
-    // RtAudio calls from its own thread — marshal to Qt event loop
+    // Set callback: preprocess + feed pipeline + feed device manager RMS
     m_audioInput->setCallback([this](const int16_t *samples, int count) {
-        // Copy samples (RtAudio buffer is temporary)
         auto copy = std::make_shared<std::vector<int16_t>>(samples, samples + count);
         QMetaObject::invokeMethod(this, [this, copy]() {
             onAudioSamples(copy->data(), static_cast<int>(copy->size()));
         }, Qt::QueuedConnection);
+        // Feed RMS to device manager (thread-safe)
+        if (m_audioDeviceManager)
+            m_audioDeviceManager->feedRmsSamples(samples, count);
     });
 
     if (!m_audioInput->open(SAMPLE_RATE, 1)) {
         emit voiceError("Impossible d'ouvrir le backend audio");
         return false;
     }
+
+    // Notifier le device manager que le stream est prêt
+    m_audioDeviceManager->notifyStreamOpened();
+    m_audioDeviceManager->startHealthCheck(5000);
 
     hVoice() << "Audio initialisé — backend:" << m_audioInput->backendName()
              << "rate:" << m_format.sampleRate();
@@ -786,6 +813,9 @@ void VoicePipeline::stopListening()
     if (m_audioInput) {
         m_audioInput->stop();
     }
+    if (m_audioDeviceManager)
+        m_audioDeviceManager->notifyStreamClosed();
+
     m_audioRunning = false;
     m_utteranceTimer->stop();
     setState(PipelineState::Idle);
@@ -917,6 +947,27 @@ void VoicePipeline::setAudioBackend(const QString &backend)
     if (b != "qt" && b != "rtaudio") b = "qt";
     m_audioBackend = b;
     hVoice() << "Audio backend sélectionné:" << m_audioBackend;
+}
+
+void VoicePipeline::onDeviceSwitchRequested(int /*rtAudioDeviceId*/)
+{
+    hVoice() << "Changement de micro demandé — redémarrage du stream audio";
+
+    bool wasRunning = m_audioRunning.load();
+
+    // Fermer le stream actuel
+    if (m_audioInput) {
+        m_audioInput->stop();
+        if (m_audioDeviceManager)
+            m_audioDeviceManager->notifyStreamClosed();
+    }
+    m_audioInput.reset();
+
+    // Recréer le backend audio
+    if (initAudio() && wasRunning) {
+        startListening();
+        emit audioReady();
+    }
 }
 
 void VoicePipeline::setWakeWord(const QString &word)

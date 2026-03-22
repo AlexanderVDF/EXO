@@ -27,6 +27,7 @@
 
 #include "core/AssistantManager.h"
 #include "core/LogManager.h"
+#include "core/ServiceManager.h"
 
 // ═══════════════════════════════════════════════════════
 //  Crash handler — write minidump + log before dying
@@ -154,6 +155,9 @@ int main(int argc, char *argv[])
     
     qInfo() << "Démarrage EXO...";
     
+    // Créer le ServiceManager (auto-launch des services backend)
+    ServiceManager serviceManager;
+    
     // Créer l'AssistantManager réel
     AssistantManager assistantManager;
     
@@ -169,11 +173,9 @@ int main(int argc, char *argv[])
     engine.addImportPath("qrc:/qml");
     engine.addImportPath(":/");
     
-    // Exposer l'AssistantManager à QML
+    // Exposer l'AssistantManager et le ServiceManager à QML
     engine.rootContext()->setContextProperty("assistantManager", &assistantManager);
-    
-    // Initialiser l'assistant avec la configuration
-    assistantManager.initializeWithConfig();
+    engine.rootContext()->setContextProperty("serviceManager", &serviceManager);
 
     // Interface VS Code style - chemin relatif au répertoire de l'application
     QString appDir = QCoreApplication::applicationDirPath();
@@ -181,6 +183,16 @@ int main(int argc, char *argv[])
     QDir projectDir(appDir);
     projectDir.cdUp(); // Debug -> build
     projectDir.cdUp(); // build -> racine
+
+    // Lancer le ServiceManager (auto-launch des services backend)
+    QString servicesJson = projectDir.absoluteFilePath("config/services.json");
+    serviceManager.start(servicesJson);
+    
+    // Initialiser l'assistant quand tous les services sont prêts
+    QObject::connect(&serviceManager, &ServiceManager::allServicesReady, [&]() {
+        qInfo() << "[GUI] All services ready → initializing assistant";
+        assistantManager.initializeWithConfig();
+    });
 
     // Ajouter le dossier qml comme import path pour les sous-dossiers (vscode/)
     engine.addImportPath(projectDir.absoluteFilePath("qml"));
@@ -209,10 +221,11 @@ int main(int argc, char *argv[])
 
     qInfo() << "EXO Assistant démarré - Interface VS Code";
 
-    // Handler de fermeture propre — log avant que l'event loop ne se termine
+    // Handler de fermeture propre — log + arrêt des services lancés
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
         qWarning() << "=== aboutToQuit signal reçu — fermeture en cours ===";
         qWarning() << "  Uptime:" << QTime::currentTime().toString("HH:mm:ss");
+        serviceManager.shutdownAll();
     });
 
     // Lancement de la boucle d'événements

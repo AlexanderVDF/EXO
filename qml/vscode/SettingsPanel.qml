@@ -420,6 +420,208 @@ Rectangle {
                         color: "#E0E0E0"
                     }
 
+                    // ── Device selector ──
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Text {
+                            text: "audio.inputDevice"
+                            font.family: "Cascadia Code, Fira Code, Consolas"
+                            font.pixelSize: 12
+                            color: "#A0A0A0"
+                        }
+
+                        ComboBox {
+                            id: micDeviceCombo
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 30
+                            model: typeof audioDeviceManager !== 'undefined'
+                                   ? audioDeviceManager.inputDevices : []
+                            currentIndex: typeof audioDeviceManager !== 'undefined'
+                                          ? audioDeviceManager.selectedDeviceIndex : -1
+
+                            onActivated: function(index) {
+                                if (typeof audioDeviceManager !== 'undefined')
+                                    audioDeviceManager.setInputDevice(index)
+                            }
+
+                            Connections {
+                                target: typeof audioDeviceManager !== 'undefined' ? audioDeviceManager : null
+                                function onDevicesChanged() {
+                                    micDeviceCombo.currentIndex = audioDeviceManager.selectedDeviceIndex
+                                }
+                            }
+
+                            background: Rectangle {
+                                color: "#2D2D2D"
+                                border.color: micDeviceCombo.hovered ? "#007ACC" : "#3C3C3C"
+                                radius: 2
+                            }
+                            contentItem: Text {
+                                leftPadding: 8
+                                text: micDeviceCombo.displayText
+                                font.family: "Cascadia Code, Fira Code, Consolas"
+                                font.pixelSize: 12
+                                color: "#D4D4D4"
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    // ── Error message when no device ──
+                    Text {
+                        visible: typeof audioDeviceManager !== 'undefined'
+                                 && !audioDeviceManager.hasValidInputDevice
+                        text: "⚠ Aucun micro détecté — mode clavier activé"
+                        font.family: "Cascadia Code, Fira Code, Consolas"
+                        font.pixelSize: 11
+                        color: "#F44747"
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                    }
+
+                    // ── Audio status indicator ──
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Rectangle {
+                            width: 10; height: 10; radius: 5
+                            color: {
+                                if (typeof audioDeviceManager === 'undefined') return "#808080"
+                                switch (audioDeviceManager.audioStatus) {
+                                    case "healthy": return "#4EC9B0"
+                                    case "down":    return "#F44747"
+                                    default:        return "#808080"
+                                }
+                            }
+                        }
+                        Text {
+                            text: {
+                                if (typeof audioDeviceManager === 'undefined') return "Inconnu"
+                                switch (audioDeviceManager.audioStatus) {
+                                    case "healthy": return "Micro OK"
+                                    case "down":    return "Micro indisponible"
+                                    default:        return "En attente…"
+                                }
+                            }
+                            font.family: "Cascadia Code, Fira Code, Consolas"
+                            font.pixelSize: 11
+                            color: "#A0A0A0"
+                        }
+                    }
+
+                    // ── VU Meter ──
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            text: "Niveau micro"
+                            font.family: "Cascadia Code, Fira Code, Consolas"
+                            font.pixelSize: 11
+                            color: "#A0A0A0"
+                        }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 8
+                            radius: 4
+                            color: "#2D2D2D"
+
+                            Rectangle {
+                                width: {
+                                    var rms = typeof audioDeviceManager !== 'undefined'
+                                              ? audioDeviceManager.currentRmsLevel : 0
+                                    return Math.min(1.0, rms * 3.0) * parent.width
+                                }
+                                height: parent.height
+                                radius: 4
+                                color: {
+                                    var rms = typeof audioDeviceManager !== 'undefined'
+                                              ? audioDeviceManager.currentRmsLevel : 0
+                                    if (rms > 0.6) return "#F44747"
+                                    if (rms > 0.3) return "#DCDCAA"
+                                    return "#4EC9B0"
+                                }
+                                Behavior on width { NumberAnimation { duration: 60 } }
+                            }
+                        }
+                    }
+
+                    // ── Test micro + Windows settings buttons ──
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Button {
+                            text: typeof audioDeviceManager !== 'undefined'
+                                  && audioDeviceManager.audioTestRunning
+                                  ? "Arrêter test" : "🎙 Tester le micro"
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 28
+
+                            onClicked: {
+                                if (typeof audioDeviceManager === 'undefined') return
+                                if (audioDeviceManager.audioTestRunning)
+                                    audioDeviceManager.stopAudioTest()
+                                else
+                                    audioDeviceManager.startAudioTest()
+                            }
+
+                            background: Rectangle {
+                                color: parent.hovered ? "#3C3C3C" : "#2D2D2D"
+                                border.color: "#007ACC"
+                                border.width: 1
+                                radius: 3
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                font.family: "Cascadia Code, Fira Code, Consolas"
+                                font.pixelSize: 11
+                                color: "#D4D4D4"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+
+                        Button {
+                            text: "⚙ Son Windows"
+                            Layout.preferredHeight: 28
+                            Layout.preferredWidth: 120
+
+                            onClicked: {
+                                if (typeof audioDeviceManager !== 'undefined')
+                                    audioDeviceManager.openWindowsSoundSettings()
+                            }
+
+                            background: Rectangle {
+                                color: parent.hovered ? "#3C3C3C" : "#2D2D2D"
+                                border.color: "#3C3C3C"
+                                border.width: 1
+                                radius: 3
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                font.family: "Cascadia Code, Fira Code, Consolas"
+                                font.pixelSize: 11
+                                color: "#D4D4D4"
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                        }
+                    }
+
+                    // Séparateur interne
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: "#333333"
+                        Layout.topMargin: 4
+                        Layout.bottomMargin: 4
+                    }
+
                     // VAD Threshold slider
                     ColumnLayout {
                         Layout.fillWidth: true

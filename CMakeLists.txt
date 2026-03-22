@@ -39,11 +39,13 @@ set(SOURCES
     app/core/PipelineTracer.cpp
     app/core/WebSocketClient.cpp
     app/core/HealthCheck.cpp
+    app/core/ServiceManager.cpp
     app/audio/VoicePipeline.cpp
     app/audio/TTSManager.cpp
     app/audio/TTSBackendQt.cpp
     app/audio/TTSBackendXTTS.cpp
     app/audio/AudioInputQt.cpp
+    app/audio/AudioDeviceManager.cpp
     app/llm/ClaudeAPI.cpp
     app/llm/AIMemoryManager.cpp
     app/utils/WeatherManager.cpp
@@ -58,6 +60,7 @@ set(HEADERS
     app/core/PipelineTracer.h
     app/core/WebSocketClient.h
     app/core/HealthCheck.h
+    app/core/ServiceManager.h
     app/audio/VoicePipeline.h
     app/audio/TTSManager.h
     app/audio/TTSBackend.h
@@ -65,6 +68,7 @@ set(HEADERS
     app/audio/TTSBackendXTTS.h
     app/audio/AudioInput.h
     app/audio/AudioInputQt.h
+    app/audio/AudioDeviceManager.h
     app/llm/ClaudeAPI.h
     app/llm/AIMemoryManager.h
     app/utils/WeatherManager.h
@@ -104,6 +108,7 @@ qt_add_qml_module(RaspberryAssistant
         qml/vscode/HistoryPanel.qml
         qml/vscode/LogPanel.qml
         qml/vscode/PipelineMonitor.qml
+        qml/vscode/SplashScreen.qml
 )
 
 # Chemins d'inclusion — app/ comme racine + sous-dossiers
