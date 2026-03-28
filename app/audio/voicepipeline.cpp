@@ -7,7 +7,6 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QDataStream>
-#include <QtEndian>
 #include <cstring>
 #include <algorithm>
 #include <numeric>
@@ -708,6 +707,7 @@ bool VoicePipeline::initSTT(const QString &serverUrl)
 
 void VoicePipeline::initTTS(const QString &ttsServerUrl)
 {
+    m_ttsServerUrl = ttsServerUrl;
     m_ttsManager = new TTSManager(this);
     m_ttsManager->initTTS(ttsServerUrl);
     m_ttsManager->initDSP();
@@ -922,17 +922,25 @@ void VoicePipeline::setTTSStyle(const QString &style)
 void VoicePipeline::setTTSEngine(const QString &engine)
 {
     QString url;
-    if (engine == "xtts_directml")
-        url = QStringLiteral("ws://localhost:8767");
-    else if (engine == "xtts_cuda")
-        url = QStringLiteral("ws://localhost:8767");
-    else if (engine == "xtts_auto")
-        url = QStringLiteral("ws://localhost:8767");
+    if (engine == "xtts_directml" || engine == "xtts_cuda" || engine == "xtts_auto")
+        url = m_ttsServerUrl.isEmpty() ? QStringLiteral("ws://localhost:8767") : m_ttsServerUrl;
     else // qt_fallback or unknown
         url = QString();
 
     if (m_ttsManager) m_ttsManager->setPythonUrl(url);
     hVoice() << "TTS engine:" << engine << "-> URL:" << url;
+}
+
+void VoicePipeline::setTTSPitch(float p)
+{
+    if (m_ttsManager) m_ttsManager->setPitch(p);
+    hVoice() << "TTS pitch:" << p;
+}
+
+void VoicePipeline::setTTSRate(float r)
+{
+    if (m_ttsManager) m_ttsManager->setRate(r);
+    hVoice() << "TTS rate:" << r;
 }
 
 void VoicePipeline::setAudioBackend(const QString &backend)
@@ -1563,6 +1571,21 @@ void VoicePipeline::setState(PipelineState s)
     m_state = s;
     emit stateChanged(static_cast<int>(s));
     broadcastState();
+
+    // ── Speaking watchdog: force Idle if TTS never triggers finished() ──
+    if (s == PipelineState::Speaking) {
+        if (!m_speakingWatchdog) {
+            m_speakingWatchdog = new QTimer(this);
+            m_speakingWatchdog->setSingleShot(true);
+            connect(m_speakingWatchdog, &QTimer::timeout, this, [this]() {
+                hWarning(henriVoice) << "WATCHDOG: Speaking bloqué >" << SPEAKING_WATCHDOG_MS / 1000 << "s → force Idle";
+                setState(PipelineState::Idle);
+            });
+        }
+        m_speakingWatchdog->start(SPEAKING_WATCHDOG_MS);
+    } else if (m_speakingWatchdog && m_speakingWatchdog->isActive()) {
+        m_speakingWatchdog->stop();
+    }
 
     static const char *names[] = {"Idle", "DetectingSpeech", "Listening", "Transcribing", "Thinking", "Speaking"};
     hVoice() << "État:" << names[static_cast<int>(s)];

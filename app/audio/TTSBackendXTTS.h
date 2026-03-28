@@ -38,7 +38,7 @@ private:
     bool m_connected = false;
     bool m_readyReceived = false;
 
-    static constexpr int PY_TTS_TIMEOUT_MS = 12000;
+    static constexpr int PY_TTS_TIMEOUT_MS = 20000;
 };
 
 #endif // TTSBACKENDXTTS_H

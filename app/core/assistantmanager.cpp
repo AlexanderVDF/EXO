@@ -349,6 +349,7 @@ void AssistantManager::sendMessage(const QString &message)
     
     // Contexte système enrichi avec les capacités EXO
     QString systemContext = "Vous êtes EXO, un assistant domotique français intelligent. ";
+    systemContext += "L'utilisateur s'appelle Alex. Appelle-le toujours Alex, jamais autrement. ";
     systemContext += "Vous avez accès aux outils suivants via Function Calling: ";
     systemContext += "ha_turn_on, ha_turn_off, ha_toggle, ha_set_brightness, ha_set_temperature, ha_get_state (Home Assistant), ";
     systemContext += "get_weather (météo), get_datetime (date/heure). ";

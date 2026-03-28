@@ -75,9 +75,11 @@ class TTSNormalizer
 public:
     void setTargetDb(float dBFS) { m_targetDb = dBFS; }
     void process(float *samples, int count);
+    void reset() { m_currentGain = -1.0f; }
 
 private:
     float m_targetDb = -14.0f;
+    float m_currentGain = -1.0f;  // <0 means uninitialised
 };
 
 // ─────────────────────────────────────────────────────

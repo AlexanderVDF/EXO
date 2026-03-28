@@ -1,7 +1,10 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import "vscode"
+import "pages"
+import "panels"
+import "components"
+import "theme"
 
 ApplicationWindow {
     id: mainWindow
@@ -11,7 +14,7 @@ ApplicationWindow {
     minimumWidth: 900
     minimumHeight: 600
     title: "EXO Assistant"
-    color: "#1E1E1E"
+    color: Theme.bgPrimary
 
     // ── État global ──
     property string appStatus: "Idle"
@@ -48,7 +51,7 @@ ApplicationWindow {
         function onSpeechTranscribed(transcription) {
             mainWindow.appStatus = "Transcribing"
             mainWindow.partialTranscript = ""
-            transcriptView.addMessage(transcription, true, false)
+            homePage.transcriptView.addMessage(transcription, true, false)
         }
 
         function onCommandDetected(command) {
@@ -91,7 +94,7 @@ ApplicationWindow {
             mainWindow.currentResponse = fullText
             mainWindow.isStreaming = false
             mainWindow.appStatus = "Idle"
-            transcriptView.addMessage(fullText, false, false)
+            homePage.transcriptView.addMessage(fullText, false, false)
         }
 
         function onResponseReceived(response) {
@@ -165,28 +168,28 @@ ApplicationWindow {
                 visible: typeof audioDeviceManager !== 'undefined'
                          && !audioDeviceManager.hasValidInputDevice
                 color: "#4B1E1E"
-                border.color: "#F44747"
+                border.color: Theme.error
                 border.width: 1
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-                    spacing: 8
+                    anchors.leftMargin: Theme.spacing12
+                    anchors.rightMargin: Theme.spacing12
+                    spacing: Theme.spacing8
 
                     Text {
                         text: "⚠ Mode vocal indisponible — passage en mode clavier"
-                        font.family: "Cascadia Code, Fira Code, Consolas"
-                        font.pixelSize: 12
-                        color: "#F44747"
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontCaption
+                        color: Theme.error
                         Layout.fillWidth: true
                     }
 
                     Text {
                         text: "Ouvrir paramètres ›"
-                        font.family: "Cascadia Code, Fira Code, Consolas"
-                        font.pixelSize: 11
-                        color: "#569CD6"
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontMicro
+                        color: Theme.info
 
                         MouseArea {
                             anchors.fill: parent
@@ -201,6 +204,13 @@ ApplicationWindow {
                 Behavior on height { NumberAnimation { duration: 200 } }
             }
 
+            // ── Header Bar ──
+            HeaderBar {
+                Layout.fillWidth: true
+                currentPage: sidebar.activePanel
+                pipelineState: mainWindow.appStatus
+            }
+
             StackLayout {
                 id: centralStack
                 Layout.fillWidth: true
@@ -208,57 +218,31 @@ ApplicationWindow {
                 currentIndex: 0
 
                 // Index 0 : Chat (Transcript + Response)
-                SplitView {
-                    id: chatSplit
-                    orientation: Qt.Horizontal
-
-                    TranscriptView {
-                        id: transcriptView
-                        SplitView.fillWidth: true
-                        SplitView.minimumWidth: 300
-                        partialTranscript: mainWindow.partialTranscript
-                    }
-
-                    ResponseView {
-                        id: responseView
-                        SplitView.preferredWidth: parent.width * 0.45
-                        SplitView.minimumWidth: 250
-                        currentResponse: mainWindow.currentResponse
-                        isStreaming: mainWindow.isStreaming
-                    }
-
-                    handle: Rectangle {
-                        implicitWidth: 1
-                        color: "#3C3C3C"
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 1
-                            height: 30
-                            radius: 1
-                            color: "#5A5A5A"
-                        }
-                    }
+                HomePage {
+                    id: homePage
+                    partialTranscript: mainWindow.partialTranscript
+                    currentResponse: mainWindow.currentResponse
+                    isStreaming: mainWindow.isStreaming
                 }
 
                 // Index 1 : Settings
-                SettingsPanel {
-                    id: settingsPanel
+                SettingsPage {
+                    id: settingsPage
                 }
 
                 // Index 2 : History
-                HistoryPanel {
-                    id: historyPanel
+                HistoryPage {
+                    id: historyPage
                 }
 
                 // Index 3 : Logs
-                LogPanel {
-                    id: logPanel
+                LogsPage {
+                    id: logsPage
                 }
 
                 // Index 4 : Pipeline Monitor
-                PipelineMonitor {
-                    id: pipelineMonitor
+                PipelinePage {
+                    id: pipelinePage
                 }
             }
 
@@ -269,20 +253,20 @@ ApplicationWindow {
                 height: visible ? 44 : 0
                 visible: typeof audioDeviceManager !== 'undefined'
                          && !audioDeviceManager.hasValidInputDevice
-                color: "#252526"
+                color: Theme.bgSecondary
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-                    spacing: 8
+                    anchors.leftMargin: Theme.spacing12
+                    anchors.rightMargin: Theme.spacing12
+                    spacing: Theme.spacing8
 
                     Rectangle {
                         Layout.fillWidth: true
                         height: 30
-                        radius: 3
-                        color: "#1E1E1E"
-                        border.color: keyboardInput.activeFocus ? "#007ACC" : "#3C3C3C"
+                        radius: Theme.radiusSmall
+                        color: Theme.bgPrimary
+                        border.color: keyboardInput.activeFocus ? Theme.borderFocus : Theme.border
 
                         TextInput {
                             id: keyboardInput
@@ -290,8 +274,8 @@ ApplicationWindow {
                             anchors.leftMargin: 8
                             anchors.rightMargin: 8
                             verticalAlignment: TextInput.AlignVCenter
-                            font.family: "Cascadia Code, Fira Code, Consolas"
-                            font.pixelSize: 13
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.fontSmall
                             color: "#D4D4D4"
                             clip: true
 
@@ -301,7 +285,7 @@ ApplicationWindow {
                                 text: "Tapez votre message ici…"
                                 font.family: parent.font.family
                                 font.pixelSize: parent.font.pixelSize
-                                color: "#5A5A5A"
+                                color: Theme.textMuted
                                 visible: !keyboardInput.text && !keyboardInput.activeFocus
                             }
 
@@ -309,7 +293,7 @@ ApplicationWindow {
                                 if (text.trim().length > 0) {
                                     if (typeof assistantManager !== 'undefined')
                                         assistantManager.sendMessage(text.trim())
-                                    transcriptView.addMessage(text.trim(), true, false)
+                                    homePage.transcriptView.addMessage(text.trim(), true, false)
                                     text = ""
                                 }
                             }
@@ -325,19 +309,19 @@ ApplicationWindow {
                             if (keyboardInput.text.trim().length > 0) {
                                 if (typeof assistantManager !== 'undefined')
                                     assistantManager.sendMessage(keyboardInput.text.trim())
-                                transcriptView.addMessage(keyboardInput.text.trim(), true, false)
+                                homePage.transcriptView.addMessage(keyboardInput.text.trim(), true, false)
                                 keyboardInput.text = ""
                             }
                         }
 
                         background: Rectangle {
-                            color: parent.hovered ? "#007ACC" : "#0E639C"
-                            radius: 3
+                            color: parent.hovered ? Theme.accentHover : Theme.accent
+                            radius: Theme.radiusSmall
                         }
                         contentItem: Text {
                             text: parent.text
-                            font.family: "Cascadia Code, Fira Code, Consolas"
-                            font.pixelSize: 12
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.fontCaption
                             color: "#FFFFFF"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
@@ -352,12 +336,6 @@ ApplicationWindow {
             BottomBar {
                 Layout.fillWidth: true
                 audioLevel: mainWindow.micLevel
-                isListening: mainWindow.appStatus === "Listening"
-                isSpeaking: mainWindow.appStatus === "Speaking"
-                temperature: typeof weatherManager !== 'undefined'
-                             ? weatherManager.temperature + "°C" : ""
-                weatherDesc: typeof weatherManager !== 'undefined'
-                             ? weatherManager.description : ""
             }
         }
     }
@@ -366,7 +344,7 @@ ApplicationWindow {
     //  Splash Screen — démarrage des services
     // ══════════════════════════════════════════════
 
-    SplashScreen {
+    ExoSplashScreen {
         id: splashScreen
         anchors.fill: parent
         z: 100

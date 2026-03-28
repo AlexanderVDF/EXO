@@ -7,7 +7,6 @@
 #include <QJsonValue>
 #include <QDebug>
 #include <QLocale>
-#include <QTimeZone>
 
 WeatherManager::WeatherManager(QObject *parent)
     : QObject(parent)

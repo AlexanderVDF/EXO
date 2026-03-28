@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXO Assistant v4.2 — Rapport d'Audit Complet — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#archives">📦 Archives</a><span class="sep">›</span>EXO Assistant v4.2 — Rapport d'Audit Complet</div>
+<blockquote><p>🧭 <a href="README.html">Index</a> → <a href="README.html#-audits--audits">Audits</a> → audit_final.md</p></blockquote>
+<h1 id="exo-assistant-v42-rapport-daudit-complet">EXO Assistant v4.2 — Rapport d'Audit Complet</h1>
+<blockquote><p>Documentation EXO v4.2 — Section : Audits Dernière mise à jour : Juillet 2025</p></blockquote>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#1-compilation-gui-mode-release">1. Compilation GUI — Mode Release ✅</a></li>
+<li><a href="#2-validation-des-chemins-des-services">2. Validation des Chemins des Services ✅</a></li>
+<li><a href="#ports-vérifiés-77-concordants">Ports vérifiés (7/7 concordants)</a></li>
+<li><a href="#chaîne-de-priorité-des-configurations">Chaîne de priorité des configurations</a></li>
+<li><a href="#3-test-tts-xtts-v2-directml-bug-critique-corrigé">3. Test TTS (XTTS v2 + DirectML) ✅ — Bug Critique Corrigé</a></li>
+<li><a href="#bug-découvert">Bug découvert</a></li>
+<li><a href="#correctif-1-monkey-patch-5-_patched_gpt_generate">Correctif 1 — Monkey-patch #5 : <code>_patched_gpt_generate()</code></a></li>
+<li><a href="#correctif-2-validation-dinférence-au-chargement-filet-de-sécurité">Correctif 2 — Validation d'inférence au chargement (filet de sécurité)</a></li>
+<li><a href="#résultats-après-correction">Résultats après correction</a></li>
+<li><a href="#4-test-stt">4. Test STT ✅</a></li>
+<li><a href="#5-test-pipeline-complet">5. Test Pipeline Complet ✅</a></li>
+<li><a href="#résultats-par-service-77-fonctionnels">Résultats par service (7/7 fonctionnels)</a></li>
+<li><a href="#note-protocole-nlu">Note protocole NLU</a></li>
+<li><a href="#6-audit-de-stabilité">6. Audit de Stabilité</a></li>
+<li><a href="#résumé-27-constats-3-critical-7-high-8-medium-5-low-4-info">Résumé : 27 constats (3 CRITICAL, 7 HIGH, 8 MEDIUM, 5 LOW, 4 INFO)</a></li>
+<li><a href="#critical-1-processevents-bloquant-dans-ttsbackendxttscpp">CRITICAL-1 : <code>processEvents()</code> bloquant dans TTSBackendXTTS.cpp</a></li>
+<li><a href="#critical-2-processevents-dans-ttsbackendqtcpp-sta-threading">CRITICAL-2 : <code>processEvents()</code> dans TTSBackendQt.cpp + STA threading</a></li>
+<li><a href="#critical-3-race-condition-m_speaking-m_draining-m_pcmbuffer">CRITICAL-3 : Race condition <code>m_speaking</code> / <code>m_draining</code> / <code>m_pcmBuffer</code></a></li>
+<li><a href="#high-4-qwebsocket-thread-affinity-dans-ttsbackendxtts">HIGH-4 : QWebSocket thread affinity dans TTSBackendXTTS</a></li>
+<li><a href="#high-5-m_pcmbuffer-sans-limite-de-taille">HIGH-5 : <code>m_pcmBuffer</code> sans limite de taille</a></li>
+<li><a href="#high-6-reconnexion-websocket-sans-backoff-exponentiel-silero-vad-wakeword">HIGH-6 : Reconnexion WebSocket sans backoff exponentiel (Silero VAD, WakeWord)</a></li>
+<li><a href="#high-7-feedrmssamples-appel-cross-thread">HIGH-7 : <code>feedRmsSamples()</code> appel cross-thread</a></li>
+<li><a href="#high-8-m_utterancebuf-sans-mutex">HIGH-8 : <code>m_utteranceBuf</code> sans mutex</a></li>
+<li><a href="#high-9-m_processingguard-release-prématuré">HIGH-9 : <code>m_processingGuard</code> release prématuré</a></li>
+<li><a href="#high-10-python-tts-run_in_executornone-pool-par-défaut">HIGH-10 : Python TTS <code>run_in_executor(None, ...)</code> — pool par défaut</a></li>
+<li><a href="#medium-11-qaudiosink-recréé-à-chaque-utterance">MEDIUM-11 : QAudioSink recréé à chaque utterance</a></li>
+<li><a href="#medium-12-vadengine-latence-de-score-async">MEDIUM-12 : VADEngine latence de score async</a></li>
+<li><a href="#medium-13-healthcheck-6-websocketclients-avec-reconnexion-infinie">MEDIUM-13 : HealthCheck 6 WebSocketClients avec reconnexion infinie</a></li>
+<li><a href="#medium-14-circularaudiobuffer-commentaire-trompeur-lock-free-ish">MEDIUM-14 : CircularAudioBuffer commentaire trompeur "lock-free-ish"</a></li>
+<li><a href="#medium-15-stt-python-run_in_executornone-même-risque-que-high-10">MEDIUM-15 : STT Python <code>run_in_executor(None, ...)</code> même risque que HIGH-10</a></li>
+<li><a href="#medium-16-ttsmanagerbroadcastwaveform-pointeur-m_ws-potentiellement-dangling">MEDIUM-16 : <code>TTSManager::broadcastWaveform()</code> pointeur <code>m_ws</code> potentiellement dangling</a></li>
+<li><a href="#medium-17-drainandstop-safety-timer-persiste-après-cancel">MEDIUM-17 : <code>drainAndStop()</code> safety timer persiste après cancel</a></li>
+<li><a href="#medium-18-ttsworkerrequeststop-thread-safe-ok">MEDIUM-18 : <code>TTSWorker::requestStop()</code> — thread-safe OK</a></li>
+<li><a href="#low-5-constats">LOW (5 constats)</a></li>
+<li><a href="#ℹ-info-4-constats">ℹ️ INFO (4 constats)</a></li>
+<li><a href="#7-synthèse-et-plan-daction">7. Synthèse et Plan D'action</a></li>
+<li><a href="#erreurs-corrigées-pendant-cet-audit">Erreurs corrigées pendant cet audit</a></li>
+<li><a href="#correctifs-recommandés-non-appliqués-à-planifier">Correctifs recommandés (non appliqués — à planifier)</a></li>
+<li><a href="#tests-à-refaire-après-corrections">Tests à refaire après corrections</a></li>
+<li><a href="#fichiers-modifiés-pendant-cet-audit">Fichiers modifiés pendant cet audit</a></li>
+<li><a href="#scripts-de-test-créés">Scripts de test créés</a></li>
+<li><a href="#benchmarks-de-performance">Benchmarks de performance</a></li>
+</ul>
+<p><strong>Date :</strong> Juillet 2025 <strong>Périmètre :</strong> 7 sections — Compilation, Chemins, TTS, STT, Pipeline, Stabilité, Rapport</p>
+<h2 id="1-compilation-gui-mode-release">1. Compilation GUI — Mode Release ✅</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Élément</th><th style="text-align:left">Résultat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">CMake configure</td><td style="text-align:left"><code>cmake -B build -DCMAKE_BUILD_TYPE=Release</code> — OK</td></tr>
+<tr><td style="text-align:left">Compilateur</td><td style="text-align:left">MSVC (C++17)</td></tr>
+<tr><td style="text-align:left">Qt</td><td style="text-align:left">6.5+ (Core, Quick, QuickControls2, Widgets, Network, Multimedia, WebSockets, Sql)</td></tr>
+<tr><td style="text-align:left">Targets compilés</td><td style="text-align:left">Tous (RaspberryAssistant + 7 tests + QML modules)</td></tr>
+<tr><td style="text-align:left">Exécutable</td><td style="text-align:left"><code>build/Release/RaspberryAssistant.exe</code> — <strong>1.44 MB</strong></td></tr>
+<tr><td style="text-align:left">Config copiée</td><td style="text-align:left"><code>build/Release/config/assistant.conf</code> — présent</td></tr>
+<tr><td style="text-align:left">12 fichiers QML</td><td style="text-align:left">Copiés dans <code>build/Release/qml/</code></td></tr>
+</tbody></table></div>
+<p><strong>Anomalies :</strong> Aucune.</p>
+<hr>
+<h2 id="2-validation-des-chemins-des-services">2. Validation des Chemins des Services ✅</h2>
+<h3 id="ports-vérifiés-77-concordants">Ports vérifiés (7/7 concordants)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Service</th><th style="text-align:left">Port</th><th style="text-align:left">Source config</th><th style="text-align:left">Vérifié</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Orchestrator/GUI</td><td style="text-align:left">8765</td><td style="text-align:left">Hardcodé C++</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">STT</td><td style="text-align:left">8766</td><td style="text-align:left">assistant.conf <code>server_url</code></td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">TTS</td><td style="text-align:left">8767</td><td style="text-align:left">assistant.conf <code>server_url</code></td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">VAD</td><td style="text-align:left">8768</td><td style="text-align:left">assistant.conf <code>silero_url</code></td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">WakeWord</td><td style="text-align:left">8770</td><td style="text-align:left">assistant.conf <code>server_url</code></td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Memory</td><td style="text-align:left">8771</td><td style="text-align:left">assistant.conf <code>memory_url</code></td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">NLU</td><td style="text-align:left">8772</td><td style="text-align:left">assistant.conf <code>nlu_url</code></td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h3 id="chaîne-de-priorité-des-configurations">Chaîne de priorité des configurations</h3>
+<pre><code>.env  →  config/user_config.ini  →  config/assistant.conf  →  C++ DEFAULT_* constants</code></pre>
+<p><strong>Anomalies mineures :</strong></p>
+<ul>
+<li>Le port 8765 (orchestrator GUI) est hardcodé dans le C++ et non présent dans <code>assistant.conf</code>. Fonctionnel mais non</li>
+</ul>
+<p>configurable par l'utilisateur.</p>
+<hr>
+<h2 id="3-test-tts-xtts-v2-directml-bug-critique-corrigé">3. Test TTS (XTTS v2 + DirectML) ✅ — Bug Critique Corrigé</h2>
+<h3 id="bug-découvert">Bug découvert</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Champ</th><th style="text-align:left">Détail</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><strong>Symptôme</strong></td><td style="text-align:left">Handshake TTS OK mais synthèse retourne 0 bytes PCM (durée = 0)</td></tr>
+<tr><td style="text-align:left"><strong>Erreur serveur</strong></td><td style="text-align:left"><code>'int' object has no attribute 'device'</code> dans <code>GPT.generate()</code></td></tr>
+<tr><td style="text-align:left"><strong>Cause racine</strong></td><td style="text-align:left"><code>GPT.generate()</code> passe <code>bos_token_id=self.start_audio_token</code> (type <code>int</code>) à <code>transformers</code>. Les versions récentes de transformers appellent <code>.device</code> sur ces token IDs → crash. Le monkey-patch existant (#4) ne corrigeait que <code>GPT.get_generator()</code> (chemin streaming), pas <code>GPT.generate()</code> (chemin non-streaming via <code>model.inference()</code>)</td></tr>
+<tr><td style="text-align:left"><strong>Erreur secondaire</strong></td><td style="text-align:left"><code>RuntimeError: Expected all tensors to be on the same device, but found at least two devices, privateuseone:0 and cpu!</code> — <code>StoppingCriteria</code> crée un tenseur CPU alors que le modèle est sur DirectML</td></tr>
+</tbody></table></div>
+<h3 id="correctif-1-monkey-patch-5-patchedgptgenerate">Correctif 1 — Monkey-patch #5 : <code>_patched_gpt_generate()</code></h3>
+<p><strong>Fichier :</strong> <code>python/tts/tts_server.py</code> — lignes 171-189</p>
+<pre><code class="language-python"># on them → &quot;&#x27;int&#x27; object has no attribute &#x27;device&#x27;&quot;
+_orig_gpt_generate = _GPT.generate
+
+def _patched_gpt_generate(self, cond_latents, text_inputs, **hf_generate_kwargs):
+    gpt_inputs = self.compute_embeddings(cond_latents, text_inputs)
+    device = gpt_inputs.device
+    gen = self.gpt_inference.generate(
+        gpt_inputs,
+        bos_token_id=torch.tensor(self.start_audio_token, device=device),
+        pad_token_id=torch.tensor(self.stop_audio_token, device=device),
+        eos_token_id=torch.tensor([self.stop_audio_token], device=device),
+        max_length=self.max_gen_mel_tokens + gpt_inputs.shape[-1],
+        **hf_generate_kwargs,
+    )
+    if &quot;return_dict_in_generate&quot; in hf_generate_kwargs:
+        return gen.sequences[:, gpt_inputs.shape[1]:], gen
+    return gen[:, gpt_inputs.shape[1]:]
+
+_GPT.generate = _patched_gpt_generate</code></pre>
+<h3 id="correctif-2-validation-dinférence-au-chargement-filet-de-sécurité">Correctif 2 — Validation d'inférence au chargement (filet de sécurité)</h3>
+<p><strong>Fichier :</strong> <code>python/tts/tts_server.py</code> — dans <code>load()</code></p>
+<p>Ajout d'un test d'inférence juste après le chargement du modèle sur DirectML. Si <code>model.inference("test")</code> échoue (RuntimeError), le modèle est automatiquement migré sur CPU.</p>
+<h3 id="résultats-après-correction">Résultats après correction</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Test</th><th style="text-align:left">Résultat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Synthèse DirectML "Bonjour"</td><td style="text-align:left"><strong>66 560 bytes, 1.39s audio en 1.61s</strong> (RTF 0.86)</td></tr>
+<tr><td style="text-align:left">Multi-phrases (3 phrases)</td><td style="text-align:left">3/3 réussies (1.11s—1.48s chacune)</td></tr>
+<tr><td style="text-align:left">Vérification serveur relancé</td><td style="text-align:left"><strong>73 216 bytes, synth_ms=1531</strong> ✅</td></tr>
+</tbody></table></div>
+<p><strong>Le TTS fonctionne désormais sur GPU DirectML en temps réel (RTF &lt; 1.0).</strong></p>
+<hr>
+<h2 id="4-test-stt">4. Test STT ✅</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Test</th><th style="text-align:left">Résultat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Backend</td><td style="text-align:left">whispercpp (Vulkan GPU)</td></tr>
+<tr><td style="text-align:left">Modèle</td><td style="text-align:left">medium</td></tr>
+<tr><td style="text-align:left">Handshake</td><td style="text-align:left"><code>model=medium, device=vulkan, backend=whispercpp</code></td></tr>
+<tr><td style="text-align:left">Transcription (2s audio)</td><td style="text-align:left">641ms (latence totale 672ms)</td></tr>
+<tr><td style="text-align:left">Annulation</td><td style="text-align:left">OK — serveur confirme <code>cancelled</code></td></tr>
+<tr><td style="text-align:left">Ping/Pong</td><td style="text-align:left">OK</td></tr>
+<tr><td style="text-align:left">Config dynamique</td><td style="text-align:left">OK (<code>beam_size</code>, <code>temperature</code> modifiables)</td></tr>
+<tr><td style="text-align:left">whisper-server.exe</td><td style="text-align:left">Port 8769 accessible, HTTP 200</td></tr>
+</tbody></table></div>
+<p><strong>Latence mesurée :</strong> 625ms pour ~2s d'audio (test dédié <code>test_stt_latency.py</code>). <strong>Anomalies :</strong> Aucune.</p>
+<hr>
+<h2 id="5-test-pipeline-complet">5. Test Pipeline Complet ✅</h2>
+<h3 id="résultats-par-service-77-fonctionnels">Résultats par service (7/7 fonctionnels)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Service</th><th style="text-align:left">Port</th><th style="text-align:left">Protocole</th><th style="text-align:left">Résultat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Orchestrator</td><td style="text-align:left">8765</td><td style="text-align:left">WebSocket JSON</td><td style="text-align:left">✅ Connecté</td></tr>
+<tr><td style="text-align:left">STT</td><td style="text-align:left">8766</td><td style="text-align:left">WebSocket JSON + binaire</td><td style="text-align:left">✅ Handshake OK, transcription OK</td></tr>
+<tr><td style="text-align:left">TTS</td><td style="text-align:left">8767</td><td style="text-align:left">WebSocket JSON + binaire</td><td style="text-align:left">✅ 73 216 bytes PCM</td></tr>
+<tr><td style="text-align:left">VAD</td><td style="text-align:left">8768</td><td style="text-align:left">WebSocket JSON</td><td style="text-align:left">✅ Status <code>ready</code></td></tr>
+<tr><td style="text-align:left">WakeWord</td><td style="text-align:left">8770</td><td style="text-align:left">WebSocket JSON + binaire</td><td style="text-align:left">✅ Handshake OK</td></tr>
+<tr><td style="text-align:left">Memory</td><td style="text-align:left">8771</td><td style="text-align:left">WebSocket JSON</td><td style="text-align:left">✅ search/store OK</td></tr>
+<tr><td style="text-align:left">NLU</td><td style="text-align:left">8772</td><td style="text-align:left">WebSocket JSON</td><td style="text-align:left">✅ classify OK</td></tr>
+</tbody></table></div>
+<h3 id="note-protocole-nlu">Note protocole NLU</h3>
+<p>Le serveur NLU utilise <code>{"action": "classify"}</code> (et non <code>{"type": "analyze"}</code>). Il ne renvoie PAS de message <code>ready</code> à la connexion — il attend directement des commandes.</p>
+<p><strong>Test NLU :</strong> <code>"allume la lumière du salon"</code> → <code>intent=home_control, entities={room:salon, action:on}, confidence=0.692</code>.</p>
+<hr>
+<h2 id="6-audit-de-stabilité">6. Audit de Stabilité</h2>
+<p>Audit complet du threading, des race conditions, des risques de deadlock et de saturation sur l'ensemble du code C++ et Python.</p>
+<h3 id="résumé-27-constats-3-critical-7-high-8-medium-5-low-4-info">Résumé : 27 constats (3 CRITICAL, 7 HIGH, 8 MEDIUM, 5 LOW, 4 INFO)</h3>
+<hr>
+<h3 id="critical-1-processevents-bloquant-dans-ttsbackendxttscpp">🔴 CRITICAL-1 : <code>processEvents()</code> bloquant dans TTSBackendXTTS.cpp</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSBackendXTTS.cpp</code> — <code>ensureConnected()</code> (lignes 69-107) et <code>synthesize()</code> (lignes 152-210)</p>
+<p><strong>Risque :</strong> Les boucles <code>while + processEvents()</code> tournent sur le thread worker, créant un risque de réentrance (les signaux Qt sont dispatchés pendant <code>processEvents()</code>). Les lambdas capturent des variables locales par référence (<code>&amp;gotReady</code>, <code>&amp;done</code>, <code>&amp;gotStart</code>) — si la connexion est détruite pendant <code>processEvents()</code>, ces captures deviennent des dangling references.</p>
+<p><strong>Correctif recommandé :</strong> Remplacer les boucles <code>processEvents()</code> par un <code>QEventLoop</code> local avec timer :</p>
+<pre><code class="language-cpp">// Dans ensureConnected() — remplacer la boucle de connexion :
+bool TTSBackendXTTS::ensureConnected()
+{
+    if (m_ws &amp;&amp; m_connected)
+        return true;
+
+    if (m_ws)
+        resetConnection();
+
+    m_ws = new QWebSocket();
+    qWarning() &lt;&lt; &quot;[TTS] tryPythonTTS: connexion à&quot; &lt;&lt; m_url;
+    m_ws-&gt;open(QUrl(m_url));
+
+    // Event loop local au lieu de processEvents()
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.setInterval(5000);
+
+    connect(m_ws, &amp;QWebSocket::connected, &amp;loop, &amp;QEventLoop::quit);
+    connect(m_ws, QOverload&lt;QAbstractSocket::SocketError&gt;::of(&amp;QWebSocket::errorOccurred),
+            &amp;loop, &amp;QEventLoop::quit);
+    connect(&amp;timeout, &amp;QTimer::timeout, &amp;loop, &amp;QEventLoop::quit);
+    timeout.start();
+    loop.exec();
+
+    m_connected = (m_ws-&gt;state() == QAbstractSocket::ConnectedState);
+    qWarning() &lt;&lt; &quot;[TTS] tryPythonTTS: connected =&quot; &lt;&lt; m_connected;
+
+    if (!m_connected) {
+        qWarning() &lt;&lt; &quot;[TTS] Python TTS unavailable — fallback Qt TTS&quot;;
+        return false;
+    }
+
+    // Attente du message &quot;ready&quot;
+    if (!m_readyReceived) {
+        QEventLoop readyLoop;
+        QTimer readyTimeout;
+        readyTimeout.setSingleShot(true);
+        readyTimeout.setInterval(3000);
+
+        QMetaObject::Connection readyConn = connect(m_ws, &amp;QWebSocket::textMessageReceived,
+            &amp;readyLoop, [&amp;readyLoop, this](const QString &amp;txt) {
+                QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
+                if (d.isObject() &amp;&amp; d.object()[&quot;type&quot;].toString() == &quot;ready&quot;) {
+                    m_readyReceived = true;
+                    readyLoop.quit();
+                }
+            });
+        connect(&amp;readyTimeout, &amp;QTimer::timeout, &amp;readyLoop, &amp;QEventLoop::quit);
+        readyTimeout.start();
+        readyLoop.exec();
+        disconnect(readyConn);
+    }
+
+    return true;
+}</code></pre>
+<p>Même pattern pour <code>synthesize()</code> — remplacer la boucle <code>processEvents()</code> par un <code>QEventLoop</code> local.</p>
+<hr>
+<h3 id="critical-2-processevents-dans-ttsbackendqtcpp-sta-threading">🔴 CRITICAL-2 : <code>processEvents()</code> dans TTSBackendQt.cpp + STA threading</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSBackendQt.cpp</code> — <code>synthesize()</code> (lignes 47-82)</p>
+<p><strong>Risque :</strong> <code>QTextToSpeech</code> utilise COM/SAPI sur Windows, qui nécessite un thread STA (Single-Threaded Apartment). Le worker thread ne fait pas de <code>CoInitializeEx(NULL, COINIT_APARTMENTTHREADED)</code>. De plus, même pattern <code>processEvents()</code> que CRIT-1.</p>
+<p><strong>Correctif recommandé :</strong> Même pattern <code>QEventLoop</code> local, et utiliser la version signal-slot de QTextToSpeech::stateChanged :</p>
+<pre><code class="language-cpp">bool TTSBackendQt::synthesize(const TTSRequest &amp;req)
+{
+    if (!m_tts) return false;
+
+    m_tts-&gt;setPitch(static_cast&lt;double&gt;(req.prosody.pitch));
+    m_tts-&gt;setRate(static_cast&lt;double&gt;(req.prosody.rate));
+    m_tts-&gt;setVolume(static_cast&lt;double&gt;(req.prosody.volume));
+
+    emit started(req.text);
+    m_tts-&gt;say(req.text);
+
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    timeout.setInterval(QT_TTS_TIMEOUT_MS);
+
+    connect(m_tts, &amp;QTextToSpeech::stateChanged, &amp;loop,
+        [&amp;loop](QTextToSpeech::State state) {
+            if (state == QTextToSpeech::Ready || state == QTextToSpeech::Error)
+                loop.quit();
+        });
+    connect(&amp;timeout, &amp;QTimer::timeout, &amp;loop, &amp;QEventLoop::quit);
+    timeout.start();
+    loop.exec();
+
+    if (isCancelled()) {
+        m_tts-&gt;stop();
+        emit finished();
+        return true;
+    }
+
+    if (m_tts-&gt;state() == QTextToSpeech::Ready) {
+        emit finished();
+        return true;
+    }
+
+    m_tts-&gt;stop();
+    return false;
+}</code></pre>
+<hr>
+<h3 id="critical-3-race-condition-mspeaking-mdraining-mpcmbuffer">🔴 CRITICAL-3 : Race condition <code>m_speaking</code> / <code>m_draining</code> / <code>m_pcmBuffer</code></h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSManager.h</code> (lignes 278-280) et <code>TTSManager.cpp</code></p>
+<p><strong>Risque :</strong> <code>m_speaking</code> est <code>std::atomic&lt;bool&gt;</code> mais <code>m_draining</code> (plain <code>bool</code>), <code>m_pcmBuffer</code> (<code>QByteArray</code>) et <code>m_queue</code> (<code>QQueue</code>) ne sont pas protégés par le même verrou. Scénario : <code>cancelSpeech()</code> met <code>m_speaking=false</code> et <code>stopSink()</code> fait <code>m_pcmBuffer.clear()</code> pendant que <code>pumpBuffer()</code> lit <code>m_pcmBuffer</code> dans le même tick de timer.</p>
+<p><strong>Analyse :</strong> En pratique, <code>cancelSpeech()</code>, <code>pumpBuffer()</code>, <code>feedSink()</code>, et <code>drainAndStop()</code> sont tous appelés depuis le thread principal (main thread). <code>m_pumpTimer</code> poste sur le thread principal. Donc <strong>ce n'est PAS une race condition inter-thread</strong> tant que l'architecture reste mono-thread côté TTSManager. Cependant, <code>m_speaking</code> étant atomic donne une fausse impression de sécurité cross-thread.</p>
+<p><strong>Correctif minimal recommandé :</strong> Changer <code>m_speaking</code> de <code>std::atomic&lt;bool&gt;</code> en plain <code>bool</code> pour refléter la réalité (accès uniquement en main thread), ou bien documenter clairement que TTSManager est main-thread-only :</p>
+<pre><code class="language-cpp">// TTSManager.h — changer :
+std::atomic&lt;bool&gt; m_speaking{false};
+// en :
+bool m_speaking = false;  // main-thread only — see thread layout comment above</code></pre>
+<p>Alternativement, garder atomic mais ajouter un commentaire explicite.</p>
+<hr>
+<h3 id="high-4-qwebsocket-thread-affinity-dans-ttsbackendxtts">🟠 HIGH-4 : QWebSocket thread affinity dans TTSBackendXTTS</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSBackendXTTS.cpp</code> — <code>ensureConnected()</code> (ligne 74)</p>
+<p><strong>Risque :</strong> <code>new QWebSocket()</code> sans parent — le QWebSocket est créé sur le worker thread, ce qui est correct, mais sa destruction dans <code>resetConnection()</code> utilise <code>deleteLater()</code> qui dépend de l'event loop du thread courant.</p>
+<p><strong>Impact :</strong> Faible dans l'implémentation actuelle. À surveiller si l'architecture threading change.</p>
+<hr>
+<h3 id="high-5-mpcmbuffer-sans-limite-de-taille">🟠 HIGH-5 : <code>m_pcmBuffer</code> sans limite de taille</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSManager.cpp</code> — <code>feedSink()</code> (ligne 741)</p>
+<pre><code class="language-cpp">void TTSManager::feedSink(const QByteArray &amp;pcm)
+{
+    if (!pcm.isEmpty())
+        m_pcmBuffer.append(pcm);  // aucune borne !
+}</code></pre>
+<p><strong>Risque :</strong> Si le sink est bloqué/lent et le TTS produit rapidement, <code>m_pcmBuffer</code> peut croître sans limite (p.ex. texte long → 500KB+).</p>
+<p><strong>Correctif recommandé :</strong></p>
+<pre><code class="language-cpp">void TTSManager::feedSink(const QByteArray &amp;pcm)
+{
+    if (pcm.isEmpty()) return;
+    // Cap buffer at ~5s of audio (24kHz 16-bit mono = 240 000 bytes)
+    constexpr int MAX_BUFFER_BYTES = 240000;
+    if (m_pcmBuffer.size() + pcm.size() &gt; MAX_BUFFER_BYTES) {
+        hWarning(henriVoice) &lt;&lt; &quot;PCM buffer overflow — dropping&quot;
+                             &lt;&lt; pcm.size() &lt;&lt; &quot;bytes&quot;;
+        return;
+    }
+    m_pcmBuffer.append(pcm);
+}</code></pre>
+<hr>
+<h3 id="high-6-reconnexion-websocket-sans-backoff-exponentiel-silero-vad-wakeword">🟠 HIGH-6 : Reconnexion WebSocket sans backoff exponentiel (Silero VAD, WakeWord)</h3>
+<p><strong>Fichier :</strong> <code>app/audio/VoicePipeline.cpp</code></p>
+<pre><code>ligne 214: m_sileroWs-&gt;setReconnectParams(3000, 0, false);  // 3s fixed, infinite
+ligne 739: m_wakewordWs-&gt;setReconnectParams(5000, 0, false);  // 5s fixed, infinite</code></pre>
+<p><strong>Risque :</strong> Reconnexion infinie à intervalle fixe → surcharge réseau/CPU si le serveur est down longtemps.</p>
+<p><strong>Correctif recommandé :</strong></p>
+<pre><code class="language-cpp">m_sileroWs-&gt;setReconnectParams(3000, 30, true);   // exponential backoff, max 30 attempts
+m_wakewordWs-&gt;setReconnectParams(5000, 20, true);  // exponential backoff, max 20 attempts</code></pre>
+<hr>
+<h3 id="high-7-feedrmssamples-appel-cross-thread">🟠 HIGH-7 : <code>feedRmsSamples()</code> appel cross-thread</h3>
+<p><strong>Fichier :</strong> <code>app/audio/VoicePipeline.cpp</code> — ligne 663</p>
+<pre><code class="language-cpp">m_audioDeviceManager-&gt;feedRmsSamples(samples, count);</code></pre>
+<p><strong>Analyse :</strong> Appelé directement depuis le callback audio (thread audio OS). Cependant, <code>feedRmsSamples()</code> dans <code>AudioDeviceManager.cpp</code> utilise <code>m_currentRms.store()</code> (atomic) + <code>QueuedConnection</code> pour le signal. <strong>L'implémentation est thread-safe</strong> dans son état actuel.</p>
+<p><strong>Risque résiduel :</strong> Faible. Si <code>feedRmsSamples()</code> est modifié dans le futur pour accéder à des membres non-atomics.</p>
+<hr>
+<h3 id="high-8-mutterancebuf-sans-mutex">🟠 HIGH-8 : <code>m_utteranceBuf</code> sans mutex</h3>
+<p><strong>Fichier :</strong> <code>app/audio/VoicePipeline.h/cpp</code> — <code>std::vector&lt;int16_t&gt; m_utteranceBuf</code></p>
+<p><strong>Analyse :</strong> Accédé uniquement depuis le main thread (via <code>QueuedConnection</code> dans le callback audio). <strong>Thread-safe dans l'implémentation actuelle</strong> puisque les accès sont sérialisés par la boucle d'événements Qt.</p>
+<hr>
+<h3 id="high-9-mprocessingguard-release-prématuré">🟠 HIGH-9 : <code>m_processingGuard</code> release prématuré</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSManager.cpp</code> — <code>processQueue()</code> (ligne 603)</p>
+<pre><code class="language-cpp">m_processingGuard = false;
+// Sink will be started lazily on first audio chunk
+emit _doRequest(req);</code></pre>
+<p><strong>Risque :</strong> Le garde est relâché AVANT l'émission de <code>_doRequest</code>. Si un signal <code>processQueue()</code> arrive entre les deux (via <code>finalizeSpeech()</code> → <code>QTimer::singleShot(30, processQueue)</code>), il pourra passer le CAS et déclencher un double dispatch.</p>
+<p><strong>Correctif recommandé :</strong> Émettre le signal d'abord, relâcher le guard ensuite :</p>
+<pre><code class="language-cpp">emit _doRequest(req);
+m_processingGuard = false;</code></pre>
+<p>Ou mieux : conserver le guard actif pendant toute la durée de la synthèse et le relâcher dans <code>finalizeSpeech()</code>.</p>
+<hr>
+<h3 id="high-10-python-tts-runinexecutornone-pool-par-défaut">🟠 HIGH-10 : Python TTS <code>run_in_executor(None, ...)</code> — pool par défaut</h3>
+<p><strong>Fichier :</strong> <code>python/tts/tts_server.py</code></p>
+<p><strong>Risque :</strong> <code>asyncio.get_event_loop().run_in_executor(None, fn)</code> utilise le ThreadPoolExecutor par défaut (~5 threads). Si plusieurs connexions WebSocket arrivent simultanément, la pool peut être saturée.</p>
+<p><strong>Correctif recommandé :</strong></p>
+<pre><code class="language-python"># En haut du fichier :
+_synth_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix=&quot;synth&quot;)
+
+# Dans le handler :
+await asyncio.get_event_loop().run_in_executor(_synth_executor, synth_func)</code></pre>
+<hr>
+<h3 id="medium-11-qaudiosink-recréé-à-chaque-utterance">🟡 MEDIUM-11 : QAudioSink recréé à chaque utterance</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSManager.cpp</code> — <code>startSink()</code> / <code>stopSink()</code></p>
+<p><strong>Impact :</strong> Risque de pops/clicks entre phrases. Acceptable pour la version actuelle.</p>
+<h3 id="medium-12-vadengine-latence-de-score-async">🟡 MEDIUM-12 : VADEngine latence de score async</h3>
+<p><strong>Impact :</strong> Latence logique, pas un bug. Le score Silero arrive ~30ms après le chunk audio.</p>
+<h3 id="medium-13-healthcheck-6-websocketclients-avec-reconnexion-infinie">🟡 MEDIUM-13 : HealthCheck 6 WebSocketClients avec reconnexion infinie</h3>
+<p><strong>Impact :</strong> Mineur. 6 connexions permanentes consomment des file descriptors.</p>
+<h3 id="medium-14-circularaudiobuffer-commentaire-trompeur-lock-free-ish">🟡 MEDIUM-14 : CircularAudioBuffer commentaire trompeur "lock-free-ish"</h3>
+<p><strong>Impact :</strong> Le code utilise un QMutex, le commentaire est incorrect mais le code est correct.</p>
+<h3 id="medium-15-stt-python-runinexecutornone-même-risque-que-high-10">🟡 MEDIUM-15 : STT Python <code>run_in_executor(None, ...)</code> même risque que HIGH-10</h3>
+<p><strong>Correctif :</strong> Même approche — <code>ThreadPoolExecutor(max_workers=1)</code> dédié.</p>
+<h3 id="medium-16-ttsmanagerbroadcastwaveform-pointeur-mws-potentiellement-dangling">🟡 MEDIUM-16 : <code>TTSManager::broadcastWaveform()</code> pointeur <code>m_ws</code> potentiellement dangling</h3>
+<p><strong>Fichier :</strong> <code>app/audio/TTSManager.cpp</code> — ligne 873-874</p>
+<p><strong>Analyse :</strong> <code>m_ws</code> est un raw pointer défini par <code>setWebSocket()</code>. Il y a un guard <code>if (!m_ws || m_ws-&gt;state() != Connected)</code>. Le risque existe si <code>VoicePipeline</code> détruit et recrée le WebSocket sans appeler <code>setWebSocket(nullptr)</code> d'abord.</p>
+<p><strong>Correctif recommandé :</strong> Utiliser <code>QPointer&lt;QWebSocket&gt;</code> au lieu de <code>QWebSocket *m_ws</code>.</p>
+<h3 id="medium-17-drainandstop-safety-timer-persiste-après-cancel">🟡 MEDIUM-17 : <code>drainAndStop()</code> safety timer persiste après cancel</h3>
+<p><strong>Impact :</strong> Le <code>QTimer::singleShot(8000)</code> dans <code>drainAndStop()</code> continue même après <code>cancelSpeech()</code> qui appelle <code>stopSink()</code>. Le timer fire et trouve <code>m_draining=false</code> → pas d'action. Gaspillage mineur.</p>
+<h3 id="medium-18-ttsworkerrequeststop-thread-safe-ok">🟡 MEDIUM-18 : <code>TTSWorker::requestStop()</code> — thread-safe OK</h3>
+<p><strong>Impact :</strong> Aucun bug, implémentation correcte via <code>std::atomic&lt;bool&gt;</code>.</p>
+<hr>
+<h3 id="low-5-constats">🟢 LOW (5 constats)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Constat</th><th style="text-align:left">Impact</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">19</td><td style="text-align:left"><code>std::vector&lt;float&gt; fbuf</code> alloué par chunk dans <code>DSPProcessor::process()</code></td><td style="text-align:left">Micro-optimisation, ~1KB/chunk</td></tr>
+<tr><td style="text-align:left">20</td><td style="text-align:left">HealthCheck garde 6 WebSocketClients permanents</td><td style="text-align:left">Coût file descriptors, acceptable</td></tr>
+<tr><td style="text-align:left">21</td><td style="text-align:left">STT <code>_audio_buffer</code> borné naturellement par timeout 15s (~480KB)</td><td style="text-align:left">OK</td></tr>
+<tr><td style="text-align:left">22</td><td style="text-align:left"><code>QElapsedTimer</code> non thread-safe mais accédé uniquement thread principal</td><td style="text-align:left">OK</td></tr>
+<tr><td style="text-align:left">23</td><td style="text-align:left"><code>TTSBackendXTTS</code> double retry connexion hardcodé (5s + 3s)</td><td style="text-align:left">Acceptable</td></tr>
+</tbody></table></div>
+<hr>
+<h3 id="ℹ-info-4-constats">ℹ️ INFO (4 constats)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Constat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">24</td><td style="text-align:left">Carte complète des affinités thread documentée (main thread, worker "EXO-TTS", audio OS, WebSocket)</td></tr>
+<tr><td style="text-align:left">25</td><td style="text-align:left">Connexions signal/slot auditées — types correctement assignés (Queued pour cross-thread)</td></tr>
+<tr><td style="text-align:left">26</td><td style="text-align:left">Python GIL interactions — acceptables pour usage mono-client</td></tr>
+<tr><td style="text-align:left">27</td><td style="text-align:left">Architecture fondamentalement saine pour le design mono-client</td></tr>
+</tbody></table></div>
+<hr>
+<h2 id="7-synthèse-et-plan-daction">7. Synthèse et Plan D'action</h2>
+<h3 id="erreurs-corrigées-pendant-cet-audit">Erreurs corrigées pendant cet audit</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Sévérité</th><th style="text-align:left">Description</th><th style="text-align:left">Fichier modifié</th><th style="text-align:left">Lignes</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">1</td><td style="text-align:left"><strong>CRITIQUE</strong></td><td style="text-align:left"><code>GPT.generate()</code> passe des <code>int</code> au lieu de <code>torch.Tensor</code> pour bos/pad/eos_token_id → <code>'int' object has no attribute 'device'</code> → TTS 0 bytes</td><td style="text-align:left"><code>python/tts/tts_server.py</code></td><td style="text-align:left">171-189</td></tr>
+<tr><td style="text-align:left">2</td><td style="text-align:left">Sécurité</td><td style="text-align:left">Validation d'inférence au chargement + fallback CPU si DirectML échoue</td><td style="text-align:left"><code>python/tts/tts_server.py</code></td><td style="text-align:left">dans <code>load()</code></td></tr>
+</tbody></table></div>
+<h3 id="correctifs-recommandés-non-appliqués-à-planifier">Correctifs recommandés (non appliqués — à planifier)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Priorité</th><th style="text-align:left"># Constat</th><th style="text-align:left">Correctif</th><th style="text-align:left">Fichier</th><th style="text-align:left">Effort</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><strong>P0</strong></td><td style="text-align:left">CRIT-1</td><td style="text-align:left">Remplacer <code>processEvents()</code> par <code>QEventLoop</code> local dans <code>ensureConnected()</code> et <code>synthesize()</code></td><td style="text-align:left"><code>TTSBackendXTTS.cpp</code></td><td style="text-align:left">1-2h</td></tr>
+<tr><td style="text-align:left"><strong>P0</strong></td><td style="text-align:left">CRIT-2</td><td style="text-align:left">Même refactoring <code>QEventLoop</code> pour <code>TTSBackendQt::synthesize()</code></td><td style="text-align:left"><code>TTSBackendQt.cpp</code></td><td style="text-align:left">30min</td></tr>
+<tr><td style="text-align:left"><strong>P1</strong></td><td style="text-align:left">HIGH-5</td><td style="text-align:left">Borner <code>m_pcmBuffer</code> à ~5s (240KB)</td><td style="text-align:left"><code>TTSManager.cpp</code></td><td style="text-align:left">15min</td></tr>
+<tr><td style="text-align:left"><strong>P1</strong></td><td style="text-align:left">HIGH-6</td><td style="text-align:left">Backoff exponentiel + max retries pour Silero/WakeWord WebSocket</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">15min</td></tr>
+<tr><td style="text-align:left"><strong>P1</strong></td><td style="text-align:left">HIGH-9</td><td style="text-align:left">Déplacer <code>emit _doRequest()</code> avant <code>m_processingGuard = false</code></td><td style="text-align:left"><code>TTSManager.cpp</code></td><td style="text-align:left">5min</td></tr>
+<tr><td style="text-align:left"><strong>P1</strong></td><td style="text-align:left">HIGH-10</td><td style="text-align:left"><code>ThreadPoolExecutor(max_workers=1)</code> dédié pour synthèse Python</td><td style="text-align:left"><code>tts_server.py</code></td><td style="text-align:left">10min</td></tr>
+<tr><td style="text-align:left"><strong>P2</strong></td><td style="text-align:left">MED-15</td><td style="text-align:left">Idem pour STT Python</td><td style="text-align:left"><code>stt_server.py</code></td><td style="text-align:left">10min</td></tr>
+<tr><td style="text-align:left"><strong>P2</strong></td><td style="text-align:left">MED-16</td><td style="text-align:left"><code>QPointer&lt;QWebSocket&gt;</code> pour <code>m_ws</code> dans TTSManager</td><td style="text-align:left"><code>TTSManager.h</code></td><td style="text-align:left">10min</td></tr>
+<tr><td style="text-align:left"><strong>P2</strong></td><td style="text-align:left">CRIT-3</td><td style="text-align:left">Changer <code>m_speaking</code> en plain <code>bool</code> ou documenter main-thread-only</td><td style="text-align:left"><code>TTSManager.h</code></td><td style="text-align:left">5min</td></tr>
+</tbody></table></div>
+<h3 id="tests-à-refaire-après-corrections">Tests à refaire après corrections</h3>
+<ol>
+<li><strong>Après CRIT-1/CRIT-2 :</strong> Relancer le GUI, synthétiser 10 phrases enchaînées, vérifier pas de freeze UI</li>
+<li><strong>Après HIGH-5 :</strong> Synthétiser un texte long (500+ caractères), vérifier que le buffer ne dépasse pas 240KB</li>
+<li><strong>Après HIGH-6 :</strong> Couper un serveur Python, vérifier le backoff exponentiel dans les logs, vérifier la reconnexion</li>
+</ol>
+<p>après redémarrage du serveur</p>
+<ol>
+<li><strong>Après HIGH-9 :</strong> Tester l'enchaînement rapide de phrases (<code>enqueueSentence</code> × 5), vérifier qu'il n'y a pas de</li>
+</ol>
+<p>double dispatch</p>
+<ol>
+<li><strong>Après HIGH-10/MED-15 :</strong> Test de charge (3 connexions WebSocket simultanées), vérifier pas de thread pool</li>
+</ol>
+<p>starvation</p>
+<h3 id="fichiers-modifiés-pendant-cet-audit">Fichiers modifiés pendant cet audit</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Fichier</th><th style="text-align:left">Type de modification</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>python/tts/tts_server.py</code></td><td style="text-align:left">Monkey-patch #5 (<code>_patched_gpt_generate</code>) + validation inference <code>load()</code></td></tr>
+</tbody></table></div>
+<h3 id="scripts-de-test-créés">Scripts de test créés</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Script</th><th style="text-align:left">Usage</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>scripts/test_tts_audit.py</code></td><td style="text-align:left">Test WebSocket TTS (handshake + synthèse)</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_verbose.py</code></td><td style="text-align:left">Test multi-phrases TTS</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_diag.py</code></td><td style="text-align:left">Diagnostic TTS avec listing voix</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_direct.py</code></td><td style="text-align:left">Test modèle direct CPU (bypass serveur)</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_directml.py</code></td><td style="text-align:left">Test modèle direct DirectML</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_fix_verify.py</code></td><td style="text-align:left">Vérification fallback CPU dans load()</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_patch5.py</code></td><td style="text-align:left">Vérification monkey-patch #5 sur DirectML</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_stt_audit.py</code></td><td style="text-align:left">Audit STT 6 sous-tests</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_pipeline_audit.py</code></td><td style="text-align:left">Test intégration 7 services</td></tr>
+</tbody></table></div>
+<h3 id="benchmarks-de-performance">Benchmarks de performance</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Composant</th><th style="text-align:left">Métrique</th><th style="text-align:left">Valeur</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">TTS (XTTS v2 DirectML)</td><td style="text-align:left">RTF</td><td style="text-align:left"><strong>0.86</strong> (plus rapide que temps réel)</td></tr>
+<tr><td style="text-align:left">TTS (XTTS v2 DirectML)</td><td style="text-align:left">Latence synthèse</td><td style="text-align:left">1100—2000 ms</td></tr>
+<tr><td style="text-align:left">STT (whispercpp Vulkan)</td><td style="text-align:left">Latence transcription</td><td style="text-align:left"><strong>625 ms</strong> pour ~2s audio</td></tr>
+<tr><td style="text-align:left">Build Release</td><td style="text-align:left">Compilation</td><td style="text-align:left">Tous targets OK</td></tr>
+</tbody></table></div>
+<hr>
+<p><strong>Conclusion :</strong> L'assistant EXO v4.2 est <strong>fonctionnel et performant</strong>. Le bug critique TTS (0 bytes) a été identifié, diagnostiqué et corrigé. Les 7 services Python communiquent correctement. L'architecture est saine pour un usage mono-client. Les correctifs de stabilité recommandés (principalement le remplacement de <code>processEvents()</code> par <code>QEventLoop</code>) renforceront la robustesse à long terme.</p>
+<hr>
+<p><em>Retour à l'index : <a href="README.html">docs/README.md</a></em></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

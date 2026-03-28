@@ -49,6 +49,7 @@ public:
     static LogLevel stringToLogLevel(const QString &levelName);
 
     Q_INVOKABLE QStringList getRecentLogs() const { return m_recentLogs; }
+    Q_INVOKABLE QStringList getLogsByFilter(const QString &filter) const;
     Q_INVOKABLE void clearLogs() { m_recentLogs.clear(); }
     Q_INVOKABLE void copyToClipboard(const QString &text);
 

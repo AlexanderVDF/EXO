@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auditcomplet Prompt — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#archives">📦 Archives</a><span class="sep">›</span>Auditcomplet Prompt</div>
+<p>Tu es chargé d’exécuter un audit complet d’EXO Assistant. Tu dois effectuer les tâches suivantes dans cet ordre, sans en sauter une seule :</p>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>COMPILATION GUI EN MODE RELEASE</li>
+</ol>
+<p>────────────────────────────────────────</p>
+<ul>
+<li>Vérifie que le preset CMake "Release" existe.</li>
+<li>Vérifie que les chemins Qt, QML, include et libs sont corrects.</li>
+<li>Compile la GUI en mode Release.</li>
+<li>Vérifie que l’exécutable final est bien généré dans build/Release.</li>
+</ul>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>VALIDATION DES CHEMINS DES SERVICES</li>
+</ol>
+<p>──────────────────────────────────────── Pour chaque service (STT, TTS, VAD, Wakeword, Memory, NLU, Orchestrator) :</p>
+<ul>
+<li>Vérifie que les chemins configurés dans la GUI sont corrects.</li>
+<li>Vérifie que les ports WebSocket correspondent à ceux des scripts Python.</li>
+<li>Vérifie que les exécutables existent réellement.</li>
+<li>Vérifie que les .env sont chargés correctement.</li>
+</ul>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>TEST DU TTS (XTTS v2 + DirectML)</li>
+</ol>
+<p>────────────────────────────────────────</p>
+<ul>
+<li>Vérifie que le serveur XTTS v2 répond sur ws://localhost:8767.</li>
+<li>Vérifie que le handshake “OK” est reçu.</li>
+<li>Vérifie que la GUI envoie bien les messages TTS.</li>
+<li>Vérifie que le pipeline audio reçoit des PCM &gt; 0 bytes.</li>
+<li>Vérifie que drainAndStop ne renvoie pas systématiquement 0 bytes.</li>
+<li>Vérifie que l’audio sort bien sur QAudioSink.</li>
+</ul>
+<p>Si un problème est détecté : → Identifie la cause (socket, buffer, format audio, DSP, thread TTS, etc.) → Propose une correction.</p>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>TEST DU STT</li>
+</ol>
+<p>────────────────────────────────────────</p>
+<ul>
+<li>Vérifie que Silero, Builtin et Hybride fonctionnent.</li>
+<li>Vérifie que le VAD déclenche correctement.</li>
+<li>Vérifie que le STT ne time‑out pas.</li>
+<li>Vérifie que les transcripts arrivent bien dans la GUI.</li>
+</ul>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>TEST DU PIPELINE COMPLET</li>
+</ol>
+<p>────────────────────────────────────────</p>
+<ul>
+<li>Wakeword → VAD → STT → Claude → TTS → Audio Output</li>
+<li>Vérifie que chaque transition d’état est cohérente.</li>
+<li>Vérifie qu’aucun état ne reste bloqué (ex: Transcribing).</li>
+<li>Vérifie que les buffers ne se réinitialisent pas en boucle.</li>
+</ul>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>AUDIT DE STABILITÉ</li>
+</ol>
+<p>────────────────────────────────────────</p>
+<ul>
+<li>Analyse les risques de deadlocks Qt.</li>
+<li>Analyse les risques de freeze GUI (thread UI bloqué).</li>
+<li>Analyse les risques de saturation audio (buffer overflow).</li>
+<li>Analyse les risques de websocket bloqué.</li>
+<li>Analyse les risques de race conditions dans VoicePipeline.</li>
+</ul>
+<p>────────────────────────────────────────</p>
+<ol>
+<li>RAPPORT FINAL</li>
+</ol>
+<p>──────────────────────────────────────── À la fin, génère un rapport structuré contenant :</p>
+<ul>
+<li>Les erreurs détectées</li>
+<li>Les causes probables</li>
+<li>Les correctifs recommandés</li>
+<li>Les fichiers à modifier</li>
+<li>Les lignes de code concernées</li>
+<li>Les tests à refaire après correction</li>
+</ul>
+<p>────────────────────────────────────────</p>
+<p>IMPORTANT :</p>
+<ul>
+<li>Ne propose pas de solutions vagues.</li>
+<li>Donne des corrections précises, avec code exact.</li>
+<li>Ne saute aucune étape.</li>
+<li>Ne réponds pas tant que l’analyse n’est pas complète.</li>
+</ul>
+<hr>
+<p>Retour à l'index : <a href="README.html">docs/README.md</a></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

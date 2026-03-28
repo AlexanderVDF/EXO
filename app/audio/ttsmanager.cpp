@@ -120,12 +120,20 @@ void TTSNormalizer::process(float *samples, int count)
     if (peak < 1e-6f) return; // silence
 
     float targetLin = std::pow(10.0f, m_targetDb / 20.0f);
-    float gain = targetLin / peak;
+    float desiredGain = targetLin / peak;
     // Don't amplify more than 20 dB
-    gain = std::min(gain, 10.0f);
+    desiredGain = std::min(desiredGain, 10.0f);
+
+    // Smooth gain across chunks to prevent crackling at boundaries
+    if (m_currentGain < 0.0f) {
+        m_currentGain = desiredGain;       // first chunk: apply directly
+    } else {
+        constexpr float kSmooth = 0.3f;    // exponential smoothing factor
+        m_currentGain += kSmooth * (desiredGain - m_currentGain);
+    }
 
     for (int i = 0; i < count; ++i)
-        samples[i] *= gain;
+        samples[i] *= m_currentGain;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -217,6 +225,7 @@ void TTSDSPProcessor::reset()
 {
     m_eq.reset();
     m_comp.reset();
+    m_norm.reset();
     m_firstChunk = true;
 }
 
@@ -481,6 +490,19 @@ ProsodyProfile TTSManager::analyzeProsody(const QString &text) const
 QString TTSManager::preprocessText(const QString &raw) const
 {
     QString t = raw;
+    // Remove emojis and pictographic symbols (PCRE2 Unicode escapes)
+    t.remove(QRegularExpression(
+        "[\\x{1F000}-\\x{1FFFF}"
+        "\\x{2600}-\\x{27BF}"
+        "\\x{2300}-\\x{23FF}"
+        "\\x{200D}\\x{FE0F}\\x{FE0E}"
+        "\\x{20E3}"
+        "\\x{25A0}-\\x{25FF}"
+        "\\x{2B05}-\\x{2B55}]+"
+    ));
+    // Remove bullet markers at start of lines
+    t.replace(QRegularExpression("^\\s*[-\\x{2022}\\x{2013}\\x{2014}]\\s*",
+                                 QRegularExpression::MultilineOption), QStringLiteral(""));
     // Collapse multiple newlines to spaces
     t.replace(QRegularExpression("\\n+"), " ");
     // Remove markdown-like formatting
@@ -600,9 +622,12 @@ void TTSManager::processQueue()
     lk.unlock();
 
     m_totalPcmBytes = 0;
-    m_dsp.reset();
+    // Only reset DSP when starting fresh (no active sink).
+    // When chaining sentences, keep DSP state to avoid fade-in on each sentence.
+    if (!m_sink)
+        m_dsp.reset();
     m_processingGuard = false;
-    // Sink will be started lazily on first audio chunk
+    // Sink will be started lazily on first audio chunk (or kept alive if chaining)
     emit _doRequest(req);
 }
 
@@ -622,17 +647,13 @@ void TTSManager::onWorkerStarted(const QString &text)
 
 void TTSManager::onWorkerChunk(const QByteArray &pcm)
 {
+    if (pcm.isEmpty()) {
+        hWarning(henriVoice) << "TTS chunk 0 bytes — synthèse possiblement échouée";
+        return;
+    }
+
     PIPELINE_EVENT(PipelineModule::AudioOutput, EventType::PcmChunk,
                    {{"bytes", pcm.size()}});
-    // Lazy start sink on first chunk
-    if (!m_sink) {
-        startSink();
-        if (!m_sink || !m_sinkIO) {
-            hWarning(henriVoice) << "onWorkerChunk: startSink failed — audio lost ("
-                                << pcm.size() << "bytes)";
-            return;
-        }
-    }
 
     // Apply DSP to chunk
     QByteArray processed = pcm;
@@ -641,8 +662,22 @@ void TTSManager::onWorkerChunk(const QByteArray &pcm)
                   false);
 
     m_totalPcmBytes += processed.size();
-    hVoice() << "feedSink chunk" << processed.size() << "bytes — total" << m_totalPcmBytes;
     feedSink(processed);
+
+    // Streaming pre-buffer: don't start the audio sink until we have
+    // at least ~200ms of audio to avoid underruns with streaming TTS.
+    // 200ms @ 24kHz 16-bit mono = 9600 bytes
+    constexpr int PREBUFFER_BYTES = 9600;
+    if (!m_sink && m_pcmBuffer.size() >= PREBUFFER_BYTES) {
+        startSink();
+        if (!m_sink || !m_sinkIO) {
+            hWarning(henriVoice) << "onWorkerChunk: startSink failed — audio lost ("
+                                << pcm.size() << "bytes)";
+            return;
+        }
+        hVoice() << "Sink started after prebuffer:" << m_pcmBuffer.size() << "bytes";
+    }
+
     broadcastWaveform(processed);
     emit ttsChunk(processed);
 }
@@ -763,16 +798,37 @@ void TTSManager::stopSink()
 
 void TTSManager::drainAndStop()
 {
+    if (m_draining) return;  // Already draining — skip duplicate calls
     hVoice() << "drainAndStop — buffer:" << m_pcmBuffer.size() << "bytes, totalPcm:" << m_totalPcmBytes;
     m_draining = true;
+
+    // Apply fade-out to the tail of the PCM buffer to prevent end-of-speech click
+    if (!m_pcmBuffer.isEmpty()) {
+        const int fadeSamples = m_sinkFormat.sampleRate() * 20 / 1000; // 20ms
+        auto *data = reinterpret_cast<int16_t *>(m_pcmBuffer.data());
+        int totalSamples = m_pcmBuffer.size() / static_cast<int>(sizeof(int16_t));
+        int n = std::min(totalSamples, fadeSamples);
+        int offset = totalSamples - n;
+        for (int i = 0; i < n; ++i) {
+            float t = static_cast<float>(i) / static_cast<float>(n);
+            float gain = 0.5f * (1.0f + std::cos(3.14159265f * t));
+            data[offset + i] = static_cast<int16_t>(data[offset + i] * gain);
+        }
+    }
+
+    // If sink not started but we have buffered data, start it now to play out
+    if (!m_sink && !m_pcmBuffer.isEmpty()) {
+        startSink();
+    }
+
     // If no pending data and sink idle (or absent), finalize now
     if (m_pcmBuffer.isEmpty() && (!m_sink || m_sink->state() == QAudio::IdleState)) {
         finalizeSpeech();
         return;
     }
     // pumpBuffer() will continue feeding; onSinkStateChanged handles finalization
-    // Safety timer: force stop after 30 seconds
-    QTimer::singleShot(30000, this, [this]() {
+    // Safety timer: force stop after 8 seconds (reduced from 30s for streaming pipeline)
+    QTimer::singleShot(8000, this, [this]() {
         if (m_draining) {
             hVoice() << "Drain timeout — forçage arrêt audio";
             finalizeSpeech();
@@ -792,19 +848,34 @@ void TTSManager::finalizeSpeech()
     hVoice() << "finalizeSpeech — remaining buffer:" << m_pcmBuffer.size() << "bytes";
     PIPELINE_EVENT(PipelineModule::TTS, EventType::SpeechFinalized,
                    {{"total_pcm_bytes", m_totalPcmBytes}});
-    PIPELINE_STATE(PipelineModule::TTS, ModuleState::Idle);
-    PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Idle);
-    stopSink();
-    m_speaking = false;
-    m_lastSpeechEnd.restart();
-    emit ttsFinished();
-    emit speakingChanged();
-    emit statusChanged("Prêt");
-    broadcastState("idle");
-    hVoice() << "TTS terminé";
 
-    // Process next in queue
-    QTimer::singleShot(100, this, &TTSManager::processQueue);
+    // Check if more sentences are queued
+    bool hasMore = false;
+    {
+        QMutexLocker lk(&m_queueMutex);
+        hasMore = !m_queue.isEmpty();
+    }
+
+    if (hasMore) {
+        // Seamless sentence chaining — keep sink alive to avoid gaps
+        m_draining = false;
+        m_speaking = false;
+        m_lastSpeechEnd.restart();
+        hVoice() << "TTS phrase terminée — enchaînement suivante (sink maintenu)";
+        processQueue();
+    } else {
+        // Truly done — stop sink and notify VoicePipeline
+        stopSink();
+        m_speaking = false;
+        m_lastSpeechEnd.restart();
+        PIPELINE_STATE(PipelineModule::TTS, ModuleState::Idle);
+        PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Idle);
+        emit ttsFinished();
+        emit speakingChanged();
+        emit statusChanged("Prêt");
+        broadcastState("idle");
+        hVoice() << "TTS terminé";
+    }
 }
 
 // ── tuning ───────────────────────────────────────────

@@ -35,7 +35,7 @@
 
 static QString crashLogDir()
 {
-    QString dir = QStringLiteral("D:/EXO/logs");
+    QString dir = qEnvironmentVariable("EXO_LOGS_DIR", QStringLiteral("D:/EXO/logs"));
     QDir().mkpath(dir);
     return dir;
 }

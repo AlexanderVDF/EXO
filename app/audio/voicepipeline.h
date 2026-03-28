@@ -268,6 +268,8 @@ public:
     Q_INVOKABLE void setTTSLanguage(const QString &lang);
     Q_INVOKABLE void setTTSStyle(const QString &style);
     Q_INVOKABLE void setTTSEngine(const QString &engine);
+    Q_INVOKABLE void setTTSPitch(float p);
+    Q_INVOKABLE void setTTSRate(float r);
     Q_INVOKABLE void setAudioBackend(const QString &backend);
 
     // ── AudioDeviceManager (QML exposure via AssistantManager) ──
@@ -363,11 +365,13 @@ private:
 
     // ── TTS ──
     TTSManager *m_ttsManager = nullptr;
+    QString m_ttsServerUrl;  // saved at initTTS() for setTTSEngine()
 
     // ── Timers ──
     QTimer *m_utteranceTimer = nullptr;
     QTimer *m_conversationTimer = nullptr;
     QTimer *m_transcribeTimer = nullptr;
+    QTimer *m_speakingWatchdog = nullptr;
     QElapsedTimer m_ttsEndClock;
     QElapsedTimer m_lastWakeWordClock;
     static constexpr int TTS_GUARD_MS           = 1500;
@@ -376,6 +380,7 @@ private:
     static constexpr int POST_WAKE_GRACE_MS     = 500;
     static constexpr int CONVERSATION_TIMEOUT_MS = 15000; // 15 s conversation mode after TTS
     static constexpr int TRANSCRIBE_TIMEOUT_MS  = 20000; // 20 s max for STT transcription
+    static constexpr int SPEAKING_WATCHDOG_MS    = 30000; // 30 s safety net if TTS never finishes
 
     // ── Conversation mode (no wake-word needed after TTS response) ──
     bool m_conversationActive = false;

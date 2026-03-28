@@ -34,7 +34,7 @@ language=fr
 
 [TTS]
 server_url=ws://localhost:8767
-backend=xtts
+engine=xtts_directml
 voice=Claribel Dervla
 language=fr
 pitch=1.0

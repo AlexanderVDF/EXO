@@ -201,7 +201,7 @@ void ServiceManager::launchService(int index)
 
     // Injecter les variables d'environnement EXO
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    const QString ssd = QStringLiteral("D:/EXO");
+    const QString ssd = qEnvironmentVariable("EXO_SSD_ROOT", QStringLiteral("D:/EXO"));
     env.insert(QStringLiteral("EXO_WHISPER_MODELS"),  ssd + "/models/whisper");
     env.insert(QStringLiteral("EXO_WHISPERCPP_BIN"),  ssd + "/whispercpp/build_vk/bin/Release");
     env.insert(QStringLiteral("EXO_XTTS_MODELS"),     ssd + "/models/xtts");

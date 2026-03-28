@@ -18,15 +18,13 @@ void HealthCheck::configure(ConfigManager *config)
 {
     if (!config) return;
 
-    // Services avec URL connues via ConfigManager
+    // Services — toutes les URL proviennent de ConfigManager
     setupService("stt",      QUrl(config->getSTTServerUrl()));
     setupService("tts",      QUrl(config->getTTSServerUrl()));
-
-    // Services sans accesseur dédié dans ConfigManager : URL par défaut
-    setupService("vad",      QUrl(QStringLiteral("ws://localhost:8768")));
-    setupService("wakeword", QUrl(QStringLiteral("ws://localhost:8770")));
-    setupService("memory",   QUrl(QStringLiteral("ws://localhost:8771")));
-    setupService("nlu",      QUrl(QStringLiteral("ws://localhost:8772")));
+    setupService("vad",      QUrl(config->getString("VAD",      "server_url",          "ws://localhost:8768")));
+    setupService("wakeword", QUrl(config->getString("WakeWord", "server_url",          "ws://localhost:8770")));
+    setupService("memory",   QUrl(config->getString("Memory",   "semantic_server_url", "ws://localhost:8771")));
+    setupService("nlu",      QUrl(config->getString("NLU",      "server_url",          "ws://localhost:8772")));
 }
 
 void HealthCheck::start(int intervalMs)

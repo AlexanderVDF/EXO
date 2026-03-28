@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité) — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#core">🏗 Architecture & Spécifications</a><span class="sep">›</span>EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)</div>
+<blockquote><p>🧭 <a href="README.html">Index</a> → <a href="README.html#-architecture--spécifications--core">Architecture</a> → EXO_SPEC.md</p></blockquote>
+<h1 id="exospecv42md-spécification-officielle-source-de-vérité">EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)</h1>
+<blockquote><p>Documentation EXO v4.2 — Section : Architecture Dernière mise à jour : Mars 2026</p></blockquote>
+<hr>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#1-objectif">1. Objectif</a></li>
+<li><a href="#2-architecture-générale">2. Architecture générale</a></li>
+<li><a href="#21-c-moteur">2.1 C++ (moteur)</a></li>
+<li><a href="#22-serveurs-python-websocket">2.2 Serveurs Python (WebSocket)</a></li>
+<li><a href="#23-interface-qml">2.3 Interface QML</a></li>
+<li><a href="#3-pipeline-audio">3. Pipeline audio</a></li>
+<li><a href="#31-capture">3.1 Capture</a></li>
+<li><a href="#32-dsp-entrée">3.2 DSP entrée</a></li>
+<li><a href="#33-vad">3.3 VAD</a></li>
+<li><a href="#34-wakeword">3.4 WakeWord</a></li>
+<li><a href="#35-stt">3.5 STT</a></li>
+<li><a href="#36-nlu">3.6 NLU</a></li>
+<li><a href="#37-llm">3.7 LLM</a></li>
+<li><a href="#38-tts">3.8 TTS</a></li>
+<li><a href="#39-dsp-sortie">3.9 DSP sortie</a></li>
+<li><a href="#310-sortie-audio">3.10 Sortie audio</a></li>
+<li><a href="#4-serveurs-python-spécification">4. Serveurs Python (spécification)</a></li>
+<li><a href="#41-stt_serverpy">4.1 stt_server.py</a></li>
+<li><a href="#42-tts_serverpy">4.2 tts_server.py</a></li>
+<li><a href="#43-vad_serverpy">4.3 vad_server.py</a></li>
+<li><a href="#44-wakeword_serverpy">4.4 wakeword_server.py</a></li>
+<li><a href="#45-memory_serverpy">4.5 memory_server.py</a></li>
+<li><a href="#46-nlu_serverpy">4.6 nlu_server.py</a></li>
+<li><a href="#47-exo_serverpy">4.7 exo_server.py</a></li>
+<li><a href="#5-interface-qml">5. Interface QML</a></li>
+<li><a href="#51-composants-obligatoires">5.1 Composants obligatoires</a></li>
+<li><a href="#52-visualizer">5.2 Visualizer</a></li>
+<li><a href="#53-settingspanel">5.3 SettingsPanel</a></li>
+<li><a href="#6-configuration-source-de-vérité">6. Configuration (source de vérité)</a></li>
+<li><a href="#61-fichiers-de-configuration">6.1 Fichiers de configuration</a></li>
+<li><a href="#62-chemins-de-données-ssd-dexo">6.2 Chemins de données (SSD D:\EXO\)</a></li>
+<li><a href="#63-variables-denvironnement-tasksjson-launch_exops1">6.3 Variables d'environnement (tasks.json / launch_exo.ps1)</a></li>
+</ul>
+<h2 id="1-objectif">1. Objectif</h2>
+<p>EXO v4.2 est un assistant vocal local, temps réel, modulaire, basé sur :</p>
+<ul>
+<li>un moteur C++/Qt 6.9.3</li>
+<li>un pipeline audio temps réel</li>
+<li>des serveurs IA Python spécialisés</li>
+<li>une interface QML style VS Code</li>
+<li>une intégration Home Assistant complète</li>
+<li>une architecture micro‑services via WebSocket</li>
+</ul>
+<p>EXO doit être stable, déterministe et cohérent.</p>
+<hr>
+<h2 id="2-architecture-générale">2. Architecture générale</h2>
+<p>Audio → VoicePipeline (C++) → STT → NLU → LLM → TTS → DSP → AudioOut</p>
+<h3 id="21-c-moteur">2.1 C++ (moteur)</h3>
+<ul>
+<li>VoicePipeline : capture micro, DSP entrée, VAD, wakeword, STT streaming, FSM</li>
+<li>TTSManager : cascade XTTS v2 → Qt TTS</li>
+<li>ClaudeAPI : SSE + Function Calling</li>
+<li>AIMemoryManager : mémoire 3 couches + FAISS</li>
+<li>WeatherManager : météo + géoloc</li>
+<li>AssistantManager : orchestrateur global</li>
+<li>ConfigManager : configuration 3 couches</li>
+<li>LogManager : logs catégorisés</li>
+</ul>
+<h3 id="22-serveurs-python-websocket">2.2 Serveurs Python (WebSocket)</h3>
+<ul>
+<li>stt_server.py : Whisper.cpp Vulkan GPU</li>
+<li>tts_server.py : XTTS v2</li>
+<li>vad_server.py : Silero VAD</li>
+<li>wakeword_server.py : OpenWakeWord</li>
+<li>memory_server.py : FAISS vectoriel</li>
+<li>nlu_server.py : NLU local</li>
+<li>exo_server.py : GUI + Home Assistant</li>
+</ul>
+<h3 id="23-interface-qml">2.3 Interface QML</h3>
+<ul>
+<li>MainWindow.qml</li>
+<li>9 composants VS Code : Sidebar, Transcript, Response, Visualizer, SettingsPanel, etc.</li>
+</ul>
+<hr>
+<h2 id="3-pipeline-audio">3. Pipeline audio</h2>
+<h3 id="31-capture">3.1 Capture</h3>
+<ul>
+<li>Backend : QAudioSource</li>
+<li>Format : 16 kHz, mono, Int16</li>
+<li>Buffer : circulaire borné</li>
+</ul>
+<h3 id="32-dsp-entrée">3.2 DSP entrée</h3>
+<ul>
+<li>High‑pass 150 Hz</li>
+<li>Noise gate</li>
+<li>AGC</li>
+<li>Normalisation RMS</li>
+</ul>
+<h3 id="33-vad">3.3 VAD</h3>
+<ul>
+<li>Backend : Silero VAD via WebSocket</li>
+<li>Modes : builtin | silero | hybrid</li>
+<li>Seuil configurable</li>
+</ul>
+<h3 id="34-wakeword">3.4 WakeWord</h3>
+<ul>
+<li>Backend principal : OpenWakeWord</li>
+<li>Fallback : transcript Whisper</li>
+<li>Wakewords : EXO, EXO!, EXO?</li>
+<li>Phonétique : ɛɡ.zɔ, ɛk.so</li>
+</ul>
+<h3 id="35-stt">3.5 STT</h3>
+<ul>
+<li>Backend unique : Whisper.cpp Vulkan GPU</li>
+<li>Modèle : ggml-large-v3.bin (recommandé), fallback ggml-small.bin</li>
+<li>Chemin modèles : D:\EXO\models\whisper\</li>
+<li>Protocole : start → PCM → partial → final</li>
+</ul>
+<h3 id="36-nlu">3.6 NLU</h3>
+<ul>
+<li>Backend : nlu_server.py</li>
+<li>Rôle : classification d’intentions simples</li>
+<li>Fallback : ClaudeAPI</li>
+</ul>
+<h3 id="37-llm">3.7 LLM</h3>
+<ul>
+<li>Backend : Claude Sonnet 4</li>
+<li>Mode : SSE streaming</li>
+<li>Function Calling : 8 outils Home Assistant</li>
+</ul>
+<h3 id="38-tts">3.8 TTS</h3>
+<ul>
+<li>Backend principal : XTTS v2 (DirectML / CUDA natif Windows)</li>
+<li>Voix : Claribel Dervla (58 voix disponibles)</li>
+<li>Paramètres : voice, pitch, rate, style, langue</li>
+<li>Chemin modèles : D:\EXO\models\xtts\</li>
+<li>Fallback : Qt TextToSpeech</li>
+</ul>
+<h3 id="39-dsp-sortie">3.9 DSP sortie</h3>
+<ul>
+<li>EQ 3 kHz +3 dB</li>
+<li>Compresseur -12 dBFS</li>
+<li>Normalisation -16 dBFS</li>
+<li>Fade 15–20 ms</li>
+<li>Anti‑clip</li>
+</ul>
+<h3 id="310-sortie-audio">3.10 Sortie audio</h3>
+<ul>
+<li>Backend : QAudioSink</li>
+<li>Format : 16 kHz mono Int16</li>
+</ul>
+<hr>
+<h2 id="4-serveurs-python-spécification">4. Serveurs Python (spécification)</h2>
+<h3 id="41-sttserverpy">4.1 stt_server.py</h3>
+<ul>
+<li>Backend : Whisper.cpp Vulkan</li>
+<li>Protocole : start, PCM16, partial, final</li>
+<li>Fallback CPU : faster-whisper small/int8</li>
+</ul>
+<h3 id="42-ttsserverpy">4.2 tts_server.py</h3>
+<ul>
+<li>Backend : XTTS v2</li>
+<li>Paramètres : voice, lang, pitch, rate, style</li>
+<li>Streaming PCM16</li>
+</ul>
+<h3 id="43-vadserverpy">4.3 vad_server.py</h3>
+<ul>
+<li>Backend : Silero VAD</li>
+<li>Retour : score ∈ [0,1], is_speech</li>
+</ul>
+<h3 id="44-wakewordserverpy">4.4 wakeword_server.py</h3>
+<ul>
+<li>Backend : OpenWakeWord</li>
+<li>Retour : word, score</li>
+</ul>
+<h3 id="45-memoryserverpy">4.5 memory_server.py</h3>
+<ul>
+<li>Backend : FAISS + SentenceTransformers</li>
+<li>Opérations : add, search</li>
+</ul>
+<h3 id="46-nluserverpy">4.6 nlu_server.py</h3>
+<ul>
+<li>Backend : regex + transformers</li>
+<li>Intents : météo, heure, domotique, musique, etc.</li>
+</ul>
+<h3 id="47-exoserverpy">4.7 exo_server.py</h3>
+<ul>
+<li>WebSocket GUI</li>
+<li>Bridge Home Assistant</li>
+<li>Sync entités/appareils/pièces</li>
+</ul>
+<hr>
+<h2 id="5-interface-qml">5. Interface QML</h2>
+<h3 id="51-composants-obligatoires">5.1 Composants obligatoires</h3>
+<ul>
+<li>MainWindow.qml</li>
+<li>Sidebar.qml</li>
+<li>StatusIndicator.qml</li>
+<li>MicrophoneLevel.qml</li>
+<li>TranscriptView.qml</li>
+<li>ResponseView.qml</li>
+<li>Visualizer.qml (ShaderEffect)</li>
+<li>BottomBar.qml</li>
+<li>SettingsPanel.qml</li>
+<li>HistoryPanel.qml</li>
+</ul>
+<h3 id="52-visualizer">5.2 Visualizer</h3>
+<ul>
+<li>ShaderEffect GPU</li>
+<li>60 FPS</li>
+<li>Couleur #007ACC</li>
+<li>Amplitude = RMS</li>
+</ul>
+<h3 id="53-settingspanel">5.3 SettingsPanel</h3>
+<p>Doit exposer :</p>
+<ul>
+<li>Voix XTTS</li>
+<li>Langue TTS</li>
+<li>Pitch / Rate / Style</li>
+<li>Wakewords multiples</li>
+<li>Sensibilité wakeword</li>
+<li>Backend VAD</li>
+<li>Seuil VAD</li>
+<li>Gain micro</li>
+<li>AGC</li>
+<li>Noise gate</li>
+<li>Langue STT</li>
+<li>Backend STT</li>
+<li>Mémoire sémantique</li>
+<li>NLU local</li>
+</ul>
+<hr>
+<h2 id="6-configuration-source-de-vérité">6. Configuration (source de vérité)</h2>
+<h3 id="61-fichiers-de-configuration">6.1 Fichiers de configuration</h3>
+<ul>
+<li><code>.env</code> : secrets (CLAUDE_API_KEY, OWM_API_KEY, HA_URL, HA_TOKEN)</li>
+<li><code>config/assistant.conf</code> : paramètres par défaut (lecture seule)</li>
+<li><code>%APPDATA%\EXOAssistant\user_config.ini</code> : préférences utilisateur (prioritaire)</li>
+</ul>
+<h3 id="62-chemins-de-données-ssd-dexo">6.2 Chemins de données (SSD D:\EXO\)</h3>
+<ul>
+<li>STT : <code>D:\EXO\models\whisper\</code></li>
+<li>TTS : <code>D:\EXO\models\xtts\</code></li>
+<li>WakeWord : <code>D:\EXO\models\wakeword\</code></li>
+<li>FAISS : <code>D:\EXO\faiss\</code></li>
+<li>Logs : <code>D:\EXO\logs\</code></li>
+<li>Whisper.cpp : <code>D:\EXO\whispercpp\</code></li>
+<li>Cache HF : <code>D:\EXO\cache\huggingface\</code></li>
+</ul>
+<blockquote><p>Ancien chemin <code>J:\EXO\</code> obsolète — migré vers <code>D:\EXO\</code>.</p></blockquote>
+<h3 id="63-variables-denvironnement-tasksjson-launchexops1">6.3 Variables d'environnement (tasks.json / launch_exo.ps1)</h3>
+<ul>
+<li><code>EXO_WHISPER_MODELS</code> = <code>D:\EXO\models\whisper</code></li>
+<li><code>EXO_WHISPERCPP_BIN</code> = <code>D:\EXO\whispercpp\build_vk\bin\Release</code></li>
+<li><code>EXO_XTTS_MODELS</code> = <code>D:\EXO\models\xtts</code></li>
+<li><code>EXO_FAISS_DIR</code> = <code>D:\EXO\faiss\semantic_memory</code></li>
+<li><code>EXO_WAKEWORD_MODELS</code> = <code>D:\EXO\models\wakeword</code></li>
+<li><code>HF_HOME</code> = <code>D:\EXO\cache\huggingface</code></li>
+<li><code>TRANSFORMERS_CACHE</code> = <code>D:\EXO\cache\huggingface\hub</code></li>
+</ul>
+<hr>
+<p><em>Retour à l'index : <a href="README.html">docs/README.md</a></em></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

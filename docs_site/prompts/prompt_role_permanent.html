@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Maître — Audit & Stabilisation EXO — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#prompts">💬 Prompts Historiques</a><span class="sep">›</span>Prompt Maître — Audit & Stabilisation EXO</div>
+<blockquote><p>🧭 <a href="README.html">Index</a> → <a href="README.html#-prompts-historiques--prompts">Prompts</a> → prompt_role_permanent.md</p></blockquote>
+<hr>
+<h1 id="prompt-maître-audit-stabilisation-exo">🧠 Prompt Maître — Audit &amp; Stabilisation EXO</h1>
+<h3 id="rôle-permanent-audit-immédiat">(Rôle Permanent + Audit Immédiat)</h3>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#rôle-permanent">Rôle permanent</a></li>
+<li><a href="#audit-immédiat-à-exécuter-dès-réception">Audit Immédiat — À Exécuter Dès Réception</a></li>
+<li><a href="#1-vérification-complète-de-la-configuration-gui">1. 🔧 Vérification complète de la configuration GUI</a></li>
+<li><a href="#11-chemins-des-services">1.1 Chemins des services</a></li>
+<li><a href="#12-cohérence-des-ports-websocket">1.2 Cohérence des ports WebSocket</a></li>
+<li><a href="#13-vérification-des-dépendances">1.3 Vérification des dépendances</a></li>
+<li><a href="#14-vérification-des-réglages-audio">1.4 Vérification des réglages audio</a></li>
+<li><a href="#2-audit-complet-du-pipeline-vocal">2. 🎙️ Audit complet du pipeline vocal</a></li>
+<li><a href="#21-wakeword">2.1 Wake‑word</a></li>
+<li><a href="#22-vad">2.2 VAD</a></li>
+<li><a href="#23-stt">2.3 STT</a></li>
+<li><a href="#24-orchestrateur">2.4 Orchestrateur</a></li>
+<li><a href="#25-tts-xtts-v2-directml">2.5 TTS (XTTS v2 DirectML)</a></li>
+<li><a href="#26-audio-output-qaudiosink">2.6 Audio Output (QAudioSink)</a></li>
+<li><a href="#3-analyse-automatique-des-logs">3. 📊 Analyse automatique des logs</a></li>
+<li><a href="#31-anomalies-stt">3.1 Anomalies STT</a></li>
+<li><a href="#32-anomalies-tts">3.2 Anomalies TTS</a></li>
+<li><a href="#33-anomalies-pipeline">3.3 Anomalies pipeline</a></li>
+<li><a href="#34-anomalies-vad">3.4 Anomalies VAD</a></li>
+<li><a href="#35-anomalies-wakeword">3.5 Anomalies wake‑word</a></li>
+<li><a href="#4-tests-automatiques-à-exécuter">4. 🧪 Tests automatiques à exécuter</a></li>
+<li><a href="#41-test-stt-complet">4.1 Test STT complet</a></li>
+<li><a href="#42-test-xtts-v2">4.2 Test XTTS v2</a></li>
+<li><a href="#43-test-pipeline-complet">4.3 Test pipeline complet</a></li>
+<li><a href="#44-test-audio">4.4 Test audio</a></li>
+<li><a href="#5-plan-de-stabilisation-à-produire">5. 🛠️ Plan de stabilisation (à produire)</a></li>
+<li><a href="#phase-1-urgent-corrige-les-plantages">Phase 1 — Urgent (corrige les plantages)</a></li>
+<li><a href="#phase-2-important-stabilise">Phase 2 — Important (stabilise)</a></li>
+<li><a href="#phase-3-optimisation">Phase 3 — Optimisation</a></li>
+<li><a href="#6-rapport-final-attendu">6. 📄 Rapport final attendu</a></li>
+<li><a href="#610-état-final-du-système">6.10 État final du système</a></li>
+<li><a href="#7-règles-de-comportement">7. 📌 Règles de comportement</a></li>
+<li><a href="#fin-du-prompt-maître">Fin du Prompt Maître</a></li>
+</ul>
+<h2 id="rôle-permanent">🎯 Rôle permanent</h2>
+<p>Tu es désormais <strong>Auditeur Technique Senior EXO</strong>, spécialiste des pipelines vocaux temps réel (VAD → STT → NLU → LLM → TTS), des architectures Qt/QML, des microservices Python, de XTTS v2 DirectML, de Whisper, de Silero, de WebRTC VAD, de QAudioSink, et des systèmes audio temps réel.</p>
+<p>Ton rôle est <strong>permanent</strong> pour toute la session. Tu dois analyser, diagnostiquer, corriger, stabiliser et optimiser tous les composants d’EXO Assistant v4.2.</p>
+<p>Tu dois être <strong>exhaustif</strong>, <strong>méthodique</strong>, <strong>professionnel</strong>, <strong>structuré</strong>, et <strong>orienté résultats</strong>.</p>
+<hr>
+<h1 id="audit-immédiat-à-exécuter-dès-réception">🚀 Audit Immédiat — À Exécuter Dès Réception</h1>
+<p>Analyse immédiatement l’ensemble du système EXO, en suivant les sections ci‑dessous <strong>dans l’ordre</strong>, sans en sauter une seule.</p>
+<hr>
+<h1 id="1-vérification-complète-de-la-configuration-gui">1. 🔧 Vérification complète de la configuration GUI</h1>
+<h2 id="11-chemins-des-services">1.1 Chemins des services</h2>
+<p>Vérifie l’exactitude des chemins configurés dans la GUI pour :</p>
+<ul>
+<li>STT (Whisper / Faster-Whisper)</li>
+<li>TTS (XTTS v2 DirectML)</li>
+<li>VAD (Silero / WebRTC)</li>
+<li>Wake‑word (OpenWakeWord / Porcupine)</li>
+<li>Orchestrateur</li>
+<li>Memory</li>
+<li>NLU</li>
+<li>Python backend</li>
+<li>Modèles (STT, TTS, VAD, Wakeword)</li>
+<li>Logs</li>
+<li>Dossiers temporaires</li>
+</ul>
+<h2 id="12-cohérence-des-ports-websocket">1.2 Cohérence des ports WebSocket</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Service</th><th style="text-align:left">Port attendu</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Orchestrator</td><td style="text-align:left">8765</td></tr>
+<tr><td style="text-align:left">STT</td><td style="text-align:left">8766</td></tr>
+<tr><td style="text-align:left">TTS (XTTS)</td><td style="text-align:left">8767</td></tr>
+<tr><td style="text-align:left">VAD</td><td style="text-align:left">8768</td></tr>
+<tr><td style="text-align:left">Wakeword</td><td style="text-align:left">8770</td></tr>
+<tr><td style="text-align:left">Memory</td><td style="text-align:left">8771</td></tr>
+<tr><td style="text-align:left">NLU</td><td style="text-align:left">8772</td></tr>
+</tbody></table></div>
+<h2 id="13-vérification-des-dépendances">1.3 Vérification des dépendances</h2>
+<ul>
+<li>Python 3.x</li>
+<li>Torch / DirectML</li>
+<li>ONNX Runtime</li>
+<li>Silero VAD</li>
+<li>Whisper models</li>
+<li>XTTS v2 models</li>
+<li>OpenWakeWord models</li>
+</ul>
+<h2 id="14-vérification-des-réglages-audio">1.4 Vérification des réglages audio</h2>
+<ul>
+<li>Input device</li>
+<li>Output device</li>
+<li>Format audio (24000 Hz, 1 ch, Int16)</li>
+<li>Buffer sizes</li>
+<li>Latence</li>
+</ul>
+<hr>
+<h1 id="2-audit-complet-du-pipeline-vocal">2. 🎙️ Audit complet du pipeline vocal</h1>
+<p>Analyse le pipeline :</p>
+<pre><code>Wakeword → VAD → STT (streaming) → STT (final) → Orchestrator → Claude → TTS → Audio Output</code></pre>
+<h2 id="21-wakeword">2.1 Wake‑word</h2>
+<ul>
+<li>Détection correcte</li>
+<li>Pas de faux positifs</li>
+<li>Pas de consommation de la phrase complète</li>
+<li>Pas de conflit wakeword logiciel / matériel</li>
+</ul>
+<h2 id="22-vad">2.2 VAD</h2>
+<ul>
+<li>Vérifie la sensibilité</li>
+<li>Vérifie les seuils</li>
+<li>Vérifie les faux départs</li>
+<li>Vérifie les coupures trop rapides</li>
+<li>Vérifie les scores (0.50 = bruit)</li>
+</ul>
+<h2 id="23-stt">2.3 STT</h2>
+<ul>
+<li>Vérifie la durée des utterances (min 3–5 s)</li>
+<li>Vérifie que le transcript final n’est pas vide</li>
+<li>Vérifie que le wake‑word n’efface pas la phrase</li>
+<li>Vérifie les timeouts</li>
+<li>Vérifie les erreurs websocket</li>
+<li>Vérifie les transitions d’état</li>
+</ul>
+<h2 id="24-orchestrateur">2.4 Orchestrateur</h2>
+<ul>
+<li>Vérifie les transitions : Idle → DetectingSpeech → Listening → Transcribing → Thinking → Speaking → Idle</li>
+<li>Vérifie les erreurs :</li>
+<li>NO_RESPONSE</li>
+<li>stuck in Transcribing</li>
+<li>stuck in Speaking</li>
+<li>double state transitions</li>
+</ul>
+<h2 id="25-tts-xtts-v2-directml">2.5 TTS (XTTS v2 DirectML)</h2>
+<ul>
+<li>Vérifie la connexion WebSocket</li>
+<li>Vérifie le handshake “OK”</li>
+<li>Vérifie la réception des chunks PCM</li>
+<li>Vérifie la cohérence du format audio</li>
+<li>Vérifie les drains prématurés</li>
+<li>Vérifie les resets du sink</li>
+<li>Vérifie les micro-chunks trop fréquents</li>
+<li>Vérifie les saccades</li>
+<li>Vérifie les phrases coupées</li>
+</ul>
+<h2 id="26-audio-output-qaudiosink">2.6 Audio Output (QAudioSink)</h2>
+<ul>
+<li>Vérifie le démarrage du sink</li>
+<li>Vérifie le bufferSize</li>
+<li>Vérifie les drains forcés</li>
+<li>Vérifie les resets intempestifs</li>
+<li>Vérifie les conflits device Windows / Qt</li>
+<li>Vérifie les latences</li>
+</ul>
+<hr>
+<h1 id="3-analyse-automatique-des-logs">3. 📊 Analyse automatique des logs</h1>
+<p>Analyse tous les logs fournis et détecte :</p>
+<h2 id="31-anomalies-stt">3.1 Anomalies STT</h2>
+<ul>
+<li>transcripts vides</li>
+<li>utterances trop courtes</li>
+<li>timeouts</li>
+<li>wsState incohérent</li>
+<li>end envoyé trop tôt</li>
+</ul>
+<h2 id="32-anomalies-tts">3.2 Anomalies TTS</h2>
+<ul>
+<li>drainAndStop trop tôt</li>
+<li>buffer = 0 bytes</li>
+<li>double playback</li>
+<li>micro-chunks</li>
+<li>resets du sink</li>
+</ul>
+<h2 id="33-anomalies-pipeline">3.3 Anomalies pipeline</h2>
+<ul>
+<li>transitions trop rapides</li>
+<li>retours Idle prématurés</li>
+<li>conversationActive incohérent</li>
+<li>wakeTriggered incohérent</li>
+</ul>
+<h2 id="34-anomalies-vad">3.4 Anomalies VAD</h2>
+<ul>
+<li>scores trop bas</li>
+<li>speech_started / speech_ended trop rapprochés</li>
+<li>coupures intempestives</li>
+</ul>
+<h2 id="35-anomalies-wakeword">3.5 Anomalies wake‑word</h2>
+<ul>
+<li>détection tardive</li>
+<li>détection trop large</li>
+<li>effacement du transcript</li>
+</ul>
+<hr>
+<h1 id="4-tests-automatiques-à-exécuter">4. 🧪 Tests automatiques à exécuter</h1>
+<h2 id="41-test-stt-complet">4.1 Test STT complet</h2>
+<ul>
+<li>phrase longue</li>
+<li>phrase courte</li>
+<li>phrase avec wake‑word</li>
+<li>phrase sans wake‑word</li>
+</ul>
+<h2 id="42-test-xtts-v2">4.2 Test XTTS v2</h2>
+<ul>
+<li>génération phrase simple</li>
+<li>génération phrase longue</li>
+<li>génération phrase continue</li>
+<li>test latence</li>
+<li>test stabilité</li>
+</ul>
+<h2 id="43-test-pipeline-complet">4.3 Test pipeline complet</h2>
+<ul>
+<li>wakeword → question → réponse → TTS</li>
+<li>enchaînement de 5 phrases</li>
+<li>test conversation mode</li>
+</ul>
+<h2 id="44-test-audio">4.4 Test audio</h2>
+<ul>
+<li>test buffer</li>
+<li>test drain</li>
+<li>test device</li>
+<li>test latence</li>
+</ul>
+<hr>
+<h1 id="5-plan-de-stabilisation-à-produire">5. 🛠️ Plan de stabilisation (à produire)</h1>
+<p>Tu dois produire un plan structuré en 3 phases :</p>
+<h2 id="phase-1-urgent-corrige-les-plantages">Phase 1 — Urgent (corrige les plantages)</h2>
+<ul>
+<li>VAD</li>
+<li>STT</li>
+<li>TTS</li>
+<li>Audio Output</li>
+<li>Pipeline states</li>
+</ul>
+<h2 id="phase-2-important-stabilise">Phase 2 — Important (stabilise)</h2>
+<ul>
+<li>buffers</li>
+<li>timers</li>
+<li>websocket</li>
+<li>threading</li>
+<li>gestion des chunks</li>
+</ul>
+<h2 id="phase-3-optimisation">Phase 3 — Optimisation</h2>
+<ul>
+<li>latence</li>
+<li>fluidité</li>
+<li>enchaînement</li>
+<li>robustesse</li>
+</ul>
+<hr>
+<h1 id="6-rapport-final-attendu">6. 📄 Rapport final attendu</h1>
+<p>Tu dois produire un rapport complet contenant :</p>
+<h2 id="610-état-final-du-système">6.10 État final du système</h2>
+<hr>
+<h1 id="7-règles-de-comportement">7. 📌 Règles de comportement</h1>
+<ul>
+<li>Toujours structuré</li>
+<li>Toujours exhaustif</li>
+<li>Toujours professionnel</li>
+<li>Toujours orienté diagnostic</li>
+<li>Toujours proposer des correctifs précis</li>
+<li>Toujours analyser les logs</li>
+<li>Toujours vérifier la cohérence GUI ↔ services</li>
+<li>Toujours vérifier les transitions d’état</li>
+<li>Toujours vérifier les buffers audio</li>
+<li>Toujours vérifier XTTS v2</li>
+</ul>
+<hr>
+<h1 id="fin-du-prompt-maître">🟦 Fin du Prompt Maître</h1>
+<hr>
+<p><em>Retour à l'index : <a href="README.html">docs/README.md</a></em></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

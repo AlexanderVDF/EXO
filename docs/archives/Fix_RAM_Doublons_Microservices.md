@@ -1,4 +1,5 @@
-Je veux que tu réalises une stabilisation complète de l’environnement EXO pour éliminer l’utilisation excessive de RAM et empêcher les doublons de microservices. Voici les tâches à effectuer :
+Je veux que tu réalises une stabilisation complète de l’environnement EXO pour éliminer l’utilisation excessive de RAM
+et empêcher les doublons de microservices. Voici les tâches à effectuer :
 
 ====================================================================
 🎯 OBJECTIF GLOBAL
@@ -38,7 +39,8 @@ Et identifier :
 
 Tu vas modifier :
 - launch_all
-- chaque script microservice (exo_server, stt_server, tts_server, vad_server, wakeword_server, memory_server, nlu_server)
+- chaque script microservice (exo_server, stt_server, tts_server, vad_server, wakeword_server, memory_server,
+nlu_server)
 - whisper-server interne
 
 Pour ajouter :
@@ -97,5 +99,9 @@ Tu vas générer un rapport contenant :
 - l’état final des microservices
 
 ====================================================================
-Commence maintenant par analyser les risques de doublons dans launch_all et les scripts microservices, puis propose les patchs.
+Commence maintenant par analyser les risques de doublons dans launch_all et les scripts microservices, puis propose les
+patchs.
 ====================================================================
+
+---
+Retour à l'index : [docs/README.md](../README.md)

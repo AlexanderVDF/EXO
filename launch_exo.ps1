@@ -6,8 +6,8 @@
 Write-Host "Lancement d'EXO Assistant..." -ForegroundColor Cyan
 
 # --- Racines projet ---
-$projectDir = "C:\Users\aalou\Exo"
-$ssdRoot    = "D:\EXO"
+$projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ssdRoot    = if ($env:EXO_ROOT) { $env:EXO_ROOT } else { "D:\EXO" }
 $pythonSTT  = "$projectDir\.venv_stt_tts\Scripts\python.exe"
 
 # --- Dossier logs ---

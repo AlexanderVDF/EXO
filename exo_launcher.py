@@ -13,7 +13,7 @@ from pathlib import Path
 
 # ── Chemins projet ───────────────────────────────────────────────
 PROJECT_DIR = Path(__file__).resolve().parent
-SSD_ROOT = Path("D:/EXO")
+SSD_ROOT = Path(os.environ.get("EXO_ROOT", "D:/EXO"))
 LOG_DIR = SSD_ROOT / "logs"
 
 VENV_MAIN = PROJECT_DIR / ".venv" / "Scripts" / "python.exe"
@@ -65,7 +65,7 @@ def build_env() -> dict[str, str]:
                 env[key.strip()] = value.strip()
 
     # Qt dans le PATH
-    qt_bin = r"C:\Qt\6.9.3\msvc2022_64\bin"
+    qt_bin = os.environ.get("QT_BIN_PATH", r"C:\Qt\6.9.3\msvc2022_64\bin")
     if qt_bin not in env.get("PATH", ""):
         env["PATH"] = qt_bin + ";" + env.get("PATH", "")
 

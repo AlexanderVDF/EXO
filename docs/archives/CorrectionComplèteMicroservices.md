@@ -1,6 +1,6 @@
-Je veux que tu corriges entièrement la configuration des microservices EXO suite au refactoring. 
-Actuellement, la tâche launch_all démarre 7 services, dont un service obsolète : tts_gpu_wsl2. 
-Ce service n’existe plus, ne doit plus être lancé, et bloque le port 8767. 
+Je veux que tu corriges entièrement la configuration des microservices EXO suite au refactoring.
+Actuellement, la tâche launch_all démarre 7 services, dont un service obsolète : tts_gpu_wsl2.
+Ce service n’existe plus, ne doit plus être lancé, et bloque le port 8767.
 Il provoque des erreurs HealthCheck ("down", "connexion refusée") et empêche EXO de fonctionner.
 
 Voici les objectifs précis :
@@ -79,3 +79,6 @@ Pour chaque étape :
 ====================================================================
 Commence maintenant par analyser launch_all, détecter les incohérences, et proposer un plan de correction complet.
 ====================================================================
+
+---
+Retour à l'index : [docs/README.md](../README.md)

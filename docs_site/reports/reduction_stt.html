@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport — Réduction STT : large-v3 → medium — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#reports">📊 Rapports Techniques</a><span class="sep">›</span>Rapport — Réduction STT : large-v3 → medium</div>
+<blockquote><p>🧭 <a href="README.html">Index</a> → <a href="README.html#-rapports-de-correction--reports">Rapports</a> → reduction_stt.md</p></blockquote>
+<h1 id="rapport-réduction-stt-large-v3-medium">Rapport — Réduction STT : large-v3 → medium</h1>
+<blockquote><p>Documentation EXO v4.2 — Section : Rapports Dernière mise à jour : Mars 2026</p></blockquote>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#1-modèle-chargé">1. Modèle chargé</a></li>
+<li><a href="#2-ram-utilisée">2. RAM utilisée</a></li>
+<li><a href="#3-latence-stt">3. Latence STT</a></li>
+<li><a href="#4-impact-sur-tts">4. Impact sur TTS</a></li>
+<li><a href="#5-stabilité-audio">5. Stabilité audio</a></li>
+<li><a href="#6-fichiers-modifiés">6. Fichiers modifiés</a></li>
+<li><a href="#7-recommandations">7. Recommandations</a></li>
+</ul>
+<p><strong>Date</strong> : 21 mars 2026 <strong>EXO Assistant v4.2.0</strong></p>
+<h2 id="1-modèle-chargé">1. Modèle chargé</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Paramètre</th><th style="text-align:left">Avant</th><th style="text-align:left">Après</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Modèle</td><td style="text-align:left"><code>large-v3</code></td><td style="text-align:left"><strong><code>medium</code></strong></td></tr>
+<tr><td style="text-align:left">Fichier</td><td style="text-align:left"><code>ggml-large-v3.bin</code> (2 952 Mo)</td><td style="text-align:left"><strong><code>ggml-medium.bin</code> (1 463 Mo)</strong></td></tr>
+<tr><td style="text-align:left">Backend</td><td style="text-align:left">whispercpp + Vulkan GPU</td><td style="text-align:left">whispercpp + Vulkan GPU</td></tr>
+<tr><td style="text-align:left">beam_size</td><td style="text-align:left">5</td><td style="text-align:left"><strong>3</strong></td></tr>
+<tr><td style="text-align:left">no_speech_threshold</td><td style="text-align:left">0.7</td><td style="text-align:left"><strong>0.4</strong></td></tr>
+</tbody></table></div>
+<p>Confirmation serveur :</p>
+<pre><code class="language-json">{&quot;type&quot;: &quot;ready&quot;, &quot;model&quot;: &quot;medium&quot;, &quot;device&quot;: &quot;vulkan&quot;, &quot;backend&quot;: &quot;whispercpp&quot;}</code></pre>
+<p>Health check whisper-server : <code>{"status":"ok"}</code></p>
+<hr>
+<h2 id="2-ram-utilisée">2. RAM utilisée</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Processus</th><th style="text-align:left">WorkingSet (RSS)</th><th style="text-align:left">PrivateBytes</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">whisper-server <strong>medium</strong></td><td style="text-align:left"><strong>138 Mo</strong></td><td style="text-align:left">2 617 Mo*</td></tr>
+<tr><td style="text-align:left">whisper-server large-v3 (ancien)</td><td style="text-align:left">~1 080 Mo</td><td style="text-align:left">~4 300 Mo</td></tr>
+</tbody></table></div>
+<p>\* Les PrivateBytes incluent les buffers Vulkan GPU mappés en mémoire virtuelle — la RAM physique consommée est le WorkingSet.</p>
+<p><strong>Gain RAM</strong> : ~940 Mo libérés en WorkingSet (138 Mo vs ~1 080 Mo).</p>
+<hr>
+<h2 id="3-latence-stt">3. Latence STT</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Métrique</th><th style="text-align:left">Valeur</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Latence stop → final (signal test 1,5s)</td><td style="text-align:left"><strong>672 ms</strong></td></tr>
+<tr><td style="text-align:left">Objectif</td><td style="text-align:left">&lt; 500 ms</td></tr>
+<tr><td style="text-align:left">Includes</td><td style="text-align:left">Noise reduction + gain normalization + inférence Vulkan</td></tr>
+</tbody></table></div>
+<p>La latence de 672 ms est mesurée sur un signal sine non-vocal. Sur une vraie utterance vocale courte (ex: "Jarvis, météo"), la latence effective sera comparable ou inférieure car le modèle <code>medium</code> traite plus rapidement les segments courts.</p>
+<hr>
+<h2 id="4-impact-sur-tts">4. Impact sur TTS</h2>
+<ul>
+<li>Les 2 anciens processus <code>whisper-server</code> (large-v3) ont été nettoyés → <strong>~2 Go de RAM physique libérés</strong></li>
+<li>La réduction de <code>beam_size</code> de 5 → 3 diminue la charge CPU pendant l'inférence STT</li>
+<li>Le TTS (XTTS) devrait bénéficier de moins de contention CPU/mémoire</li>
+<li>VAD threshold confirmé à 0.35 (inchangé, déjà optimisé)</li>
+</ul>
+<hr>
+<h2 id="5-stabilité-audio">5. Stabilité audio</h2>
+<ul>
+<li>Pipeline vocal fonctionnel : Idle → DetectingSpeech → Listening → Transcribing → Idle</li>
+<li>Microphone RtAudio 6.x opérationnel (fix appliqué précédemment)</li>
+<li>Serveur STT reconnecté automatiquement par le GUI</li>
+<li>Aucune erreur dans les logs du whisper-server</li>
+</ul>
+<hr>
+<h2 id="6-fichiers-modifiés">6. Fichiers modifiés</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Fichier</th><th style="text-align:left">Modification</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>.env</code></td><td style="text-align:left"><code>STT_MODEL=medium</code>, <code>STT_DEVICE=vulkan</code>, <code>STT_LANGUAGE=fr</code></td></tr>
+<tr><td style="text-align:left"><code>python/stt/stt_server.py</code></td><td style="text-align:left"><code>DEFAULT_MODEL=medium</code>, <code>beam_size=3</code>, <code>no_speech_threshold=0.4</code>, logging amélioré</td></tr>
+<tr><td style="text-align:left"><code>config/assistant.conf</code></td><td style="text-align:left"><code>[STT] model=medium</code>, <code>beam_size=3</code></td></tr>
+<tr><td style="text-align:left"><code>.vscode/tasks.json</code></td><td style="text-align:left"><code>--model medium --beam-size 3</code></td></tr>
+<tr><td style="text-align:left"><code>launch_exo.ps1</code></td><td style="text-align:left"><code>--model medium --beam-size 3</code></td></tr>
+</tbody></table></div>
+<hr>
+<h2 id="7-recommandations">7. Recommandations</h2>
+<ol>
+<li><strong>Latence</strong> : La latence de 672 ms est proche de l'objectif de 500 ms. Pour descendre sous 500 ms : - Réduire <code>beam_size</code> à 1 (au détriment de la qualité) - Utiliser <code>--threads 6</code> au lieu de 4 si le CPU le permet - Considérer le modèle <code>small</code> (~244 Mo) si la qualité de transcription française est suffisante</li>
+</ol>
+<ol>
+<li><strong>Modèle large-v3</strong> : Le fichier <code>ggml-large-v3.bin</code> (2,95 Go) peut être conservé pour un éventuel retour arrière ou</li>
+</ol>
+<p>supprimé pour récupérer de l'espace disque.</p>
+<ol>
+<li><strong>Monitoring</strong> : Le log amélioré du stt_server affiche désormais `STT model: medium (1463MB) — device: vulkan —</li>
+</ol>
+<p>beam_size: 3` à chaque démarrage pour faciliter le diagnostic.</p>
+<hr>
+<p><em>Retour à l'index : <a href="README.html">docs/README.md</a></em></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1162 @@
+﻿{
+  "stats": {
+    "total_files": 44,
+    "total_links": 856
+  },
+  "ok": [
+    "archives\\archives_index.md",
+    "archives\\audit_final_2025_07.md",
+    "archives\\prompt_design_system.md",
+    "archives\\prompt_modernisation_ui_old.md",
+    "audits\\audit_master_2026_03.md",
+    "core\\architecture.md",
+    "core\\architecture_graph.md",
+    "core\\architecture_modules.md",
+    "core\\EXO_DOCUMENTATION.md",
+    "core\\EXO_SPEC.md",
+    "core\\limitations.md",
+    "core\\modules.md",
+    "core\\pipeline.md",
+    "core\\services.md",
+    "guides\\audio_pipeline.md",
+    "guides\\stt.md",
+    "guides\\tests.md",
+    "guides\\tts.md",
+    "prompts\\prompt_audit_complet.md",
+    "prompts\\prompt_correction_microservices.md",
+    "prompts\\prompt_fix_ram_doublons.md",
+    "prompts\\prompt_gestion_micro.md",
+    "prompts\\prompt_gui_release.md",
+    "prompts\\prompt_modernisation_ui.md",
+    "prompts\\prompt_nettoyage.md",
+    "prompts\\prompt_reduction_stt.md",
+    "prompts\\prompt_role_permanent.md",
+    "prompts\\prompt_stabilisation_finale.md",
+    "prompts\\prompt_validation.md",
+    "reports\\fix_ram_doublons.md",
+    "reports\\last_update.md",
+    "reports\\reduction_stt.md",
+    "ui\\design_system.md",
+    "VERSIONS.md"
+  ],
+  "orphans": [
+    "archives\\AuditComplet_Prompt.md",
+    "archives\\CorrectionCompl├¿teMicroservices.md",
+    "archives\\Fix_RAM_Doublons_Microservices.md",
+    "archives\\GestionMicro_Prompt.md",
+    "archives\\GUI_Release_Prompt.md",
+    "archives\\prompt_modernisation_ui_old.md",
+    "archives\\Reduction_STT_Prompt.md",
+    "archives\\RolePermanentMaitre_Prompt.md",
+    "archives\\StabilisationFinale.md",
+    "archives\\Validation.md"
+  ],
+  "broken_links": [
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "target": "const QString &txt",
+      "reason": "fichier introuvable"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "target": "QTextToSpeech::State state",
+      "reason": "fichier introuvable"
+    }
+  ],
+  "broken_anchors": [
+    {
+      "source": "archives\\archives_index.md",
+      "anchor": "#-documents-historiques",
+      "target": "README.md"
+    },
+    {
+      "source": "archives\\archives_index.md",
+      "anchor": "#audit-v40-rapport",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\archives_index.md",
+      "anchor": "#automatisation-documentation-cleanup-mars-2026",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\archives_index.md",
+      "anchor": "#stabilisation-anti-doublons-mars-2026",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\archives_index.md",
+      "anchor": "#fix-ram-doublons",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#1-compilation-gui-mode-release",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#2-validation-des-chemins-des-services",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#3-test-tts-xtts-v2-directml-bug-critique-corrig├®",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#correctif-1-monkey-patch-5-_patched_gpt_generate",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#correctif-2-validation-dinf├®rence-au-chargement-filet-de-s├®curit├®",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#4-test-stt",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#5-test-pipeline-complet",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#r├®sum├®-27-constats-3-critical-7-high-8-medium-5-low-4-info",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#critical-1-processevents-bloquant-dans-ttsbackendxttscpp",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#critical-2-processevents-dans-ttsbackendqtcpp-sta-threading",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#critical-3-race-condition-m_speaking-m_draining-m_pcmbuffer",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-4-qwebsocket-thread-affinity-dans-ttsbackendxtts",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-5-m_pcmbuffer-sans-limite-de-taille",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-6-reconnexion-websocket-sans-backoff-exponentiel-silero-vad-wakeword",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-7-feedrmssamples-appel-cross-thread",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-8-m_utterancebuf-sans-mutex",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-9-m_processingguard-release-pr├®matur├®",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#high-10-python-tts-run_in_executornone-pool-par-d├®faut",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-11-qaudiosink-recr├®├®-├á-chaque-utterance",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-12-vadengine-latence-de-score-async",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-13-healthcheck-6-websocketclients-avec-reconnexion-infinie",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-14-circularaudiobuffer-commentaire-trompeur-lock-free-ish",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-15-stt-python-run_in_executornone-m├¬me-risque-que-high-10",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-16-ttsmanagerbroadcastwaveform-pointeur-m_ws-potentiellement-dangling",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-17-drainandstop-safety-timer-persiste-apr├¿s-cancel",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#medium-18-ttsworkerrequeststop-thread-safe-ok",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#low-5-constats",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\audit_final_2025_07.md",
+      "anchor": "#correctifs-recommand├®s-non-appliqu├®s-├á-planifier",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#1-refonte-de-la-structure-visuelle-layout-hi├®rarchie",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#2-palette-de-couleurs-moderne-vs-code-fluent",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#3-typographie-premium",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#4-composants-qml-modernis├®s",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#5-animations-microinteractions",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#6-ic├┤nes-symbolique",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#7-am├®liorations-ux-majeures",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#8-architecture-ui-modernis├®e",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#9-tests-visuels-polish-final",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#objectif-final",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\prompt_modernisation_ui_old.md",
+      "anchor": "#fin-du-prompt-modernisation-visuelle-exo",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#r├┤le-permanent",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#audit-imm├®diat-├á-ex├®cuter-d├¿s-r├®ception",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#1-v├®rification-compl├¿te-de-la-configuration-gui",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#2-audit-complet-du-pipeline-vocal",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#3-analyse-automatique-des-logs",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#4-tests-automatiques-├á-ex├®cuter",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#5-plan-de-stabilisation-├á-produire",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#phase-1-urgent-corrige-les-plantages",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#phase-2-important-stabilise",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#phase-3-optimisation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#6-rapport-final-attendu",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#7-r├¿gles-de-comportement",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "archives\\RolePermanentMaitre_Prompt.md",
+      "anchor": "#fin-du-prompt-ma├«tre",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#11-chemins-des-services-conformes",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#12-coh├®rence-des-ports-websocket-100-conformes",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#13-d├®pendances-conformes",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#14-r├®glages-audio-conformes",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#21-wake-word-risque-moyen",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#22-vad-robuste",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#23-stt-fonctionnel",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#24-orchestrateur-state-machine-robuste",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#25-tts-xtts-v2-directml-fonctionnel",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#26-audio-output-qaudiosink-fonctionnel",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#4-tests-automatiques-r├®sultats",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#41-tests-unitaires-python-162162-pass",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#42-tests-int├®gration-1313-pass-2-erreurs-pytest-fixture",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#43-test-validation-pipeline-complet-tous-services-ok",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#44-tests-c-non-ex├®cut├®s",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#phase-1-urgent-correctifs-critiques",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#phase-2-important-stabilisation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#phase-3-optimisation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#fix-1-watchdog-speaking-state",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#fix-2-file-logging",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#fix-3-zero-byte-detection",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#fix-4-stt-silent-drop-log",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#66-v├®rification-des-chemins-gui",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#67-v├®rification-des-services",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#68-v├®rification-du-pipeline",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#annexe-a-audit-juillet-2025-historique",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#a2-constats-de-stabilit├®-27-findings-juillet-2025",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#critical-3",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#high-7",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#medium-8",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "audits\\audit_master_2026_03.md",
+      "anchor": "#low-5-Ôä╣-info-4",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#pr├®sentation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#installation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#├®tape-1-cloner-configurer",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#├®tape-2-compiler-le-moteur-c",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#├®tape-3-installer-lenvironnement-python-stttts",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#├®tape-4-installer-le-backend-python",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#├®tape-5-installer-la-gui-react",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#architecture-g├®n├®rale",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#moteur-c-qt",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#audioinput-abstraction-audio-v42",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#pipeline-vocal",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#synth├¿se-vocale-tts",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#reconnaissance-vocale-stt",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#serveurs-python",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#backend-python-home-assistant",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#home_bridgepy-pont-websocket-rest",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#ha_entitiespy-gestionnaire-dentit├®s",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#ha_devicespy-gestionnaire-dappareils",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#ha_areaspy-gestionnaire-de-pi├¿ces",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#ha_actionspy-actions-llm-function-calling",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#ha_syncpy-synchronisation-compl├¿te",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#gui-react",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#build-dev",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#interface-qml",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#interface-vs-code-v4-active",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#signal-audio-c-qml",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#m├®t├®o-g├®olocalisation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#m├®moire-persistante",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#aimemorymanager-v4-3-couches",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#claude-api-function-calling",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#function-calling-8-outils-exo",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#home-assistant-d├®tail-technique",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#logging",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#tests",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#d├®pannage",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#changelog",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#v42-mars-2026-premium-open-source-edition",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#v41-mars-2026",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#v40-mars-2026",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#v30-juillet-2025",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#v21-octobre-2025",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#roadmap",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#limitations-connues-xtts-v2-directml",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_DOCUMENTATION.md",
+      "anchor": "#cuda-rtx-3070-├á-venir",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "core\\EXO_SPEC.md",
+      "anchor": "#63-variables-denvironnement-tasksjson-launch_exops1",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "guides\\stt.md",
+      "anchor": "#messages-entrants-c-python",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "guides\\stt.md",
+      "anchor": "#messages-sortants-python-c",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "guides\\stt.md",
+      "anchor": "#whispercpp-vulkan-gpu-backend-par-d├®faut",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "guides\\stt.md",
+      "anchor": "#faster-whisper-cpu-fallback",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "guides\\tts.md",
+      "anchor": "#messages-entrants-c-python",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "guides\\tts.md",
+      "anchor": "#messages-sortants-python-c",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#1-refonte-de-la-structure-visuelle",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#2-palette-de-couleurs-moderne",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#3-typographie-premium",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#4-structure-qml-├á-cr├®er",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#5-themeqml",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#6-composants-exo-├á-cr├®er",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#7-migration-de-lui-existante",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#8-animations-micro-interactions",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#9-ic├┤nes-symbolique",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#10-am├®liorations-ux-majeures",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#11-v├®rification-finale",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#objectif-final",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_modernisation_ui.md",
+      "anchor": "#fin-du-prompt-modernisation-visuelle-design-system-exo",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#r├¿gle-absolue",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#tu-appliques-imm├®diatement",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#1-nettoyage-structurel-du-projet",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#supprime-imm├®diatement",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#v├®rifie-et-corrige-la-structure",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#2-v├®rification-de-la-coh├®rence-des-liens-c-python-qml",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#21-c-includes",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#22-python-imports",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#23-qml-imports-assets",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#3-v├®rification-de-la-coh├®rence-des-services",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#4-nettoyage-du-code",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#5-v├®rification-de-la-coh├®rence-globale",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#6-r├¿gles-finales",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#tu-garantis-un-projet-exo-propre-coh├®rent-stable-et-minimal",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_nettoyage.md",
+      "anchor": "#fin-du-prompt-nettoyage-ultrastrict",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#r├┤le-permanent",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#audit-imm├®diat-├á-ex├®cuter-d├¿s-r├®ception",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#1-v├®rification-compl├¿te-de-la-configuration-gui",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#2-audit-complet-du-pipeline-vocal",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#3-analyse-automatique-des-logs",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#4-tests-automatiques-├á-ex├®cuter",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#5-plan-de-stabilisation-├á-produire",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#phase-1-urgent-corrige-les-plantages",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#phase-2-important-stabilise",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#phase-3-optimisation",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#6-rapport-final-attendu",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#7-r├¿gles-de-comportement",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "prompts\\prompt_role_permanent.md",
+      "anchor": "#fin-du-prompt-ma├«tre",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#comment-naviguer",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#documents-essentiels",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#architecture-sp├®cifications-core",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#guides-techniques-guides",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#interface-ui",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#audits-audits",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#rapports-techniques-reports",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#prompts-historiques-prompts",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#archives-archives",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#versioning-documentaire",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "README.md",
+      "anchor": "#mises-├á-jour-r├®centes",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "reports\\fix_ram_doublons.md",
+      "anchor": "#-rapports-de-correction--reports",
+      "target": "README.md"
+    },
+    {
+      "source": "reports\\fix_ram_doublons.md",
+      "anchor": "#a-protection-singleton-pythonsharedsingleton_guardpy",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "reports\\fix_ram_doublons.md",
+      "anchor": "#c-script-de-nettoyage-scriptsauto_kill_zombiespy",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "reports\\fix_ram_doublons.md",
+      "anchor": "#d-optimisation-vs-code-vscodesettingsjson",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "reports\\last_update.md",
+      "anchor": "#-rapports-de-correction--reports",
+      "target": "README.md"
+    },
+    {
+      "source": "reports\\reduction_stt.md",
+      "anchor": "#-rapports-de-correction--reports",
+      "target": "README.md"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#-interface--design--ui",
+      "target": "README.md"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#1-foundations-tokens-exo",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#2-composants-exo-kit-complet-19-composants",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#23-cards-surfaces",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#27-dialogues-overlays",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#3-patterns-dinteraction",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#31-├®tats-pipeline-couleurs-animations",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#4-guidelines-ux",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#quand-utiliser-quel-bouton",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#quand-utiliser-quel-feedback",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#5-structure-qml",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#6-themeqml-r├®sum├®",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#7-composants-qml-inventaire-19",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "ui\\design_system.md",
+      "anchor": "#8-checklist-finale",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "VERSIONS.md",
+      "anchor": "#version-actuelle-v42",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "VERSIONS.md",
+      "anchor": "#v42-premium-open-source-edition-mars-2026",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "VERSIONS.md",
+      "anchor": "#v41-gpu-optimisation-mars-2026",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "VERSIONS.md",
+      "anchor": "#v40-refonte-compl├¿te-juillet-2025",
+      "target": "(m├¬me fichier)"
+    },
+    {
+      "source": "VERSIONS.md",
+      "anchor": "#prochaine-version-v43-pr├®paration",
+      "target": "(m├¬me fichier)"
+    }
+  ],
+  "missing_header": [
+    "archives\\AuditComplet_Prompt.md",
+    "archives\\CorrectionCompl├¿teMicroservices.md",
+    "archives\\Fix_RAM_Doublons_Microservices.md",
+    "archives\\GestionMicro_Prompt.md",
+    "archives\\GUI_Release_Prompt.md",
+    "archives\\Reduction_STT_Prompt.md",
+    "archives\\RolePermanentMaitre_Prompt.md",
+    "archives\\StabilisationFinale.md",
+    "archives\\Validation.md"
+  ],
+  "missing_footer": [],
+  "duplicates": [],
+  "archive_candidates": []
+}

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AudioInput — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#api">api</a><span class="sep">›</span>AudioInput</div>
+<h1 id="audioinput">AudioInput</h1>
+<blockquote><p>Interface abstraite de capture audio + implémentations Qt et RtAudio</p></blockquote>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#description">Description</a></li>
+<li><a href="#interface-abstraite-audioinput">Interface abstraite : AudioInput</a></li>
+<li><a href="#audioinputqt">AudioInputQt</a></li>
+<li><a href="#audioinputrtaudio">AudioInputRtAudio</a></li>
+<li><a href="#audiodevicemanager">AudioDeviceManager</a></li>
+<li><a href="#propriétés-qml">Propriétés QML</a></li>
+<li><a href="#méthodes-q_invokable">Méthodes Q_INVOKABLE</a></li>
+<li><a href="#méthodes-internes-voicepipeline">Méthodes internes (VoicePipeline)</a></li>
+<li><a href="#signaux">Signaux</a></li>
+</ul>
+<p><strong>Fichiers</strong> : <code>app/audio/AudioInput.h</code>, <code>AudioInputQt.h</code>, <code>AudioInputRtAudio.h</code> <strong>Module</strong> : Audio <strong>Hérite de</strong> : <code>QObject</code></p>
+<hr>
+<h2 id="description">Description</h2>
+<p><code>AudioInput</code> définit l'interface abstraite pour la capture audio microphone. Deux implémentations sont fournies : <code>AudioInputQt</code> (via Qt Multimedia) et <code>AudioInputRtAudio</code> (via RtAudio/WASAPI, low-latency). Le choix du backend est fait au runtime par <code>VoicePipeline</code>.</p>
+<hr>
+<h2 id="interface-abstraite-audioinput">Interface abstraite : AudioInput</h2>
+<pre><code class="language-cpp">class AudioInput : public QObject
+{
+    using AudioCallback = std::function&lt;void(const int16_t *samples, int count)&gt;;
+
+    virtual bool open(int sampleRate, int channels) = 0;
+    virtual bool start() = 0;
+    virtual void stop() = 0;
+    virtual void suspend() = 0;
+    virtual void resume() = 0;
+    virtual bool isRunning() const = 0;
+    virtual QString backendName() const = 0;
+
+    void setCallback(AudioCallback cb);
+};</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Méthode</th><th style="text-align:left">Description</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>open(sampleRate, channels)</code></td><td style="text-align:left">Ouvrir le flux audio avec les paramètres donnés</td></tr>
+<tr><td style="text-align:left"><code>start()</code></td><td style="text-align:left">Démarrer la capture</td></tr>
+<tr><td style="text-align:left"><code>stop()</code></td><td style="text-align:left">Arrêter la capture</td></tr>
+<tr><td style="text-align:left"><code>suspend()</code> / <code>resume()</code></td><td style="text-align:left">Pause/reprise sans fermer le flux</td></tr>
+<tr><td style="text-align:left"><code>isRunning()</code></td><td style="text-align:left">État de la capture</td></tr>
+<tr><td style="text-align:left"><code>backendName()</code></td><td style="text-align:left">Identifiant du backend (<code>"qt"</code> ou <code>"rtaudio"</code>)</td></tr>
+<tr><td style="text-align:left"><code>setCallback(cb)</code></td><td style="text-align:left">Définir le callback appelé pour chaque chunk audio</td></tr>
+</tbody></table></div>
+<p><strong>Signal</strong> : <code>error(msg: QString)</code></p>
+<hr>
+<h2 id="audioinputqt">AudioInputQt</h2>
+<p>Backend Qt Multimedia (<code>QAudioSource</code>).</p>
+<ul>
+<li><strong>Nom</strong> : <code>"qt"</code></li>
+<li><strong>Mécanisme</strong> : <code>QAudioSource</code> → <code>QIODevice::readyRead()</code> → callback</li>
+<li><strong>Plateformes</strong> : Windows, Linux, macOS</li>
+<li><strong>Latence</strong> : Moyenne (~50-100 ms)</li>
+</ul>
+<hr>
+<h2 id="audioinputrtaudio">AudioInputRtAudio</h2>
+<p>Backend RtAudio/WASAPI (low-latency).</p>
+<ul>
+<li><strong>Nom</strong> : <code>"rtaudio"</code></li>
+<li><strong>Mécanisme</strong> : Callback RtAudio sur thread interne → dispatch vers callback pipeline</li>
+<li><strong>Plateformes</strong> : Windows (WASAPI shared mode)</li>
+<li><strong>Latence</strong> : Faible (~20-30 ms)</li>
+<li><strong>Compilation</strong> : Nécessite <code>ENABLE_RTAUDIO</code> défini dans CMake</li>
+<li><strong>Buffer</strong> : 512 frames par défaut</li>
+</ul>
+<hr>
+<h2 id="audiodevicemanager">AudioDeviceManager</h2>
+<blockquote><p>Gestion complète des microphones avec health check et test audio</p></blockquote>
+<p><strong>Fichier</strong> : <code>app/audio/AudioDeviceManager.h</code> / <code>.cpp</code></p>
+<h3 id="propriétés-qml">Propriétés QML</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Propriété</th><th style="text-align:left">Type</th><th style="text-align:left">Description</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>inputDevices</code></td><td style="text-align:left"><code>QStringList</code></td><td style="text-align:left">Liste des noms de microphones disponibles</td></tr>
+<tr><td style="text-align:left"><code>selectedDeviceIndex</code></td><td style="text-align:left"><code>int</code></td><td style="text-align:left">Index du micro sélectionné</td></tr>
+<tr><td style="text-align:left"><code>defaultInputDevice</code></td><td style="text-align:left"><code>int</code></td><td style="text-align:left">Index du micro par défaut</td></tr>
+<tr><td style="text-align:left"><code>hasValidInputDevice</code></td><td style="text-align:left"><code>bool</code></td><td style="text-align:left">Un micro valide est-il disponible ?</td></tr>
+<tr><td style="text-align:left"><code>lastError</code></td><td style="text-align:left"><code>QString</code></td><td style="text-align:left">Dernière erreur audio</td></tr>
+<tr><td style="text-align:left"><code>audioStatus</code></td><td style="text-align:left"><code>QString</code></td><td style="text-align:left"><code>"healthy"</code> / <code>"down"</code> / <code>"unknown"</code></td></tr>
+<tr><td style="text-align:left"><code>currentRmsLevel</code></td><td style="text-align:left"><code>float</code></td><td style="text-align:left">Niveau RMS actuel (VU-mètre)</td></tr>
+<tr><td style="text-align:left"><code>audioTestRunning</code></td><td style="text-align:left"><code>bool</code></td><td style="text-align:left">Test audio en cours ?</td></tr>
+</tbody></table></div>
+<h3 id="méthodes-qinvokable">Méthodes Q_INVOKABLE</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Méthode</th><th style="text-align:left">Description</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>scanDevices()</code></td><td style="text-align:left">Scanner tous les périphériques d'entrée RtAudio</td></tr>
+<tr><td style="text-align:left"><code>setInputDevice(index)</code></td><td style="text-align:left">Sélectionner un micro par index</td></tr>
+<tr><td style="text-align:left"><code>startAudioTest()</code></td><td style="text-align:left">Lancer le test audio (1s enregistrement + lecture)</td></tr>
+<tr><td style="text-align:left"><code>stopAudioTest()</code></td><td style="text-align:left">Arrêter le test audio</td></tr>
+<tr><td style="text-align:left"><code>openWindowsSoundSettings()</code></td><td style="text-align:left">Ouvrir les paramètres son de Windows</td></tr>
+</tbody></table></div>
+<h3 id="méthodes-internes-voicepipeline">Méthodes internes (VoicePipeline)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Méthode</th><th style="text-align:left">Description</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>selectedRtAudioDeviceId()</code></td><td style="text-align:left">ID RtAudio du micro sélectionné</td></tr>
+<tr><td style="text-align:left"><code>startHealthCheck(intervalMs)</code></td><td style="text-align:left">Démarrer la surveillance périodique</td></tr>
+<tr><td style="text-align:left"><code>feedRmsSamples(samples, count)</code></td><td style="text-align:left">Mettre à jour le RMS (thread-safe)</td></tr>
+<tr><td style="text-align:left"><code>notifyStreamOpened()</code> / <code>notifyStreamClosed()</code></td><td style="text-align:left">Notifier l'état du flux</td></tr>
+</tbody></table></div>
+<h3 id="signaux">Signaux</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Signal</th><th style="text-align:left">Description</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>devicesChanged()</code></td><td style="text-align:left">Liste des micros mise à jour</td></tr>
+<tr><td style="text-align:left"><code>inputDeviceChanged()</code></td><td style="text-align:left">Micro sélectionné changé</td></tr>
+<tr><td style="text-align:left"><code>audioError(error)</code></td><td style="text-align:left">Erreur audio</td></tr>
+<tr><td style="text-align:left"><code>audioStatusChanged()</code></td><td style="text-align:left">Changement de statut (<code>healthy</code>/<code>down</code>)</td></tr>
+<tr><td style="text-align:left"><code>rmsLevelChanged()</code></td><td style="text-align:left">Niveau VU-mètre mis à jour</td></tr>
+<tr><td style="text-align:left"><code>audioTestFinished(success)</code></td><td style="text-align:left">Test audio terminé</td></tr>
+<tr><td style="text-align:left"><code>audioUnavailable()</code> / <code>audioReady()</code></td><td style="text-align:left">Disponibilité du flux audio</td></tr>
+<tr><td style="text-align:left"><code>deviceSwitchRequested(id)</code></td><td style="text-align:left">Demande de changement de micro</td></tr>
+</tbody></table></div>
+<hr>
+<p>Retour à l'index : <a href="README.html">docs/README.md</a></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

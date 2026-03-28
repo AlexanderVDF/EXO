@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Maître — Plan Complet de Modernisation Visuelle EXO — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#archives">📦 Archives</a><span class="sep">›</span>Prompt Maître — Plan Complet de Modernisation Visuelle EXO</div>
+<blockquote><p>🧭 <a href="README.html">Index</a> → <a href="README.html#-prompts-historiques--prompts">Prompts</a> → prompt_modernisation_ui.md</p></blockquote>
+<hr>
+<h1 id="prompt-maître-plan-complet-de-modernisation-visuelle-exo">🎨 Prompt Maître — Plan Complet de Modernisation Visuelle EXO</h1>
+<h3 id="copilot-architecte-uiux-senior-modernisation-premium">(Copilot = Architecte UI/UX Senior — Modernisation Premium)</h3>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#1-refonte-de-la-structure-visuelle-layout-hiérarchie">1. 🎛️ Refonte de la structure visuelle (layout &amp; hiérarchie)</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#actions">Actions</a></li>
+<li><a href="#11-grille-globale">1.1 Grille globale</a></li>
+<li><a href="#12-paddings-unifiés">1.2 Paddings unifiés</a></li>
+<li><a href="#13-structure-principale">1.3 Structure principale</a></li>
+<li><a href="#14-hiérarchie-visuelle">1.4 Hiérarchie visuelle</a></li>
+<li><a href="#2-palette-de-couleurs-moderne-vs-code-fluent">2. 🎨 Palette de couleurs moderne (VS Code + Fluent)</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#thème-sombre-par-défaut">Thème sombre (par défaut)</a></li>
+<li><a href="#thème-clair-optionnel">Thème clair (optionnel)</a></li>
+<li><a href="#3-typographie-premium">3. 🖼️ Typographie premium</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#police-recommandée">Police recommandée</a></li>
+<li><a href="#hiérarchie">Hiérarchie</a></li>
+<li><a href="#4-composants-qml-modernisés">4. 🧩 Composants QML modernisés</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#composants-à-moderniser">Composants à moderniser</a></li>
+<li><a href="#41-boutons">4.1 Boutons</a></li>
+<li><a href="#42-cards">4.2 Cards</a></li>
+<li><a href="#43-sliders">4.3 Sliders</a></li>
+<li><a href="#44-switches">4.4 Switches</a></li>
+<li><a href="#45-dialogues">4.5 Dialogues</a></li>
+<li><a href="#5-animations-microinteractions">5. ✨ Animations &amp; micro‑interactions</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#animations-recommandées">Animations recommandées</a></li>
+<li><a href="#51-transitions-de-pages">5.1 Transitions de pages</a></li>
+<li><a href="#52-hover-states">5.2 Hover states</a></li>
+<li><a href="#53-feedback-pipeline">5.3 Feedback pipeline</a></li>
+<li><a href="#54-notifications">5.4 Notifications</a></li>
+<li><a href="#6-icônes-symbolique">6. 🔍 Icônes &amp; symbolique</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#pack-recommandé">Pack recommandé</a></li>
+<li><a href="#icônes-à-remplacer">Icônes à remplacer</a></li>
+<li><a href="#7-améliorations-ux-majeures">7. 🧠 Améliorations UX majeures</a></li>
+<li><a href="#71-panneau-détat-pipeline">7.1 Panneau d’état pipeline</a></li>
+<li><a href="#72-mode-debug-visuel">7.2 Mode debug visuel</a></li>
+<li><a href="#73-mode-test-pipeline">7.3 Mode test pipeline</a></li>
+<li><a href="#8-architecture-ui-modernisée">8. 🧱 Architecture UI modernisée</a></li>
+<li><a href="#objectif">Objectif</a></li>
+<li><a href="#structure-recommandée">Structure recommandée</a></li>
+<li><a href="#81-séparer-clairement">8.1 Séparer clairement</a></li>
+<li><a href="#82-centraliser-le-thème">8.2 Centraliser le thème</a></li>
+<li><a href="#9-tests-visuels-polish-final">9. 🧪 Tests visuels &amp; polish final</a></li>
+<li><a href="#checklist-finale">Checklist finale</a></li>
+<li><a href="#objectif-final">Objectif final</a></li>
+<li><a href="#fin-du-prompt-modernisation-visuelle-exo">Fin du Prompt — Modernisation Visuelle EXO</a></li>
+</ul>
+<p>Tu es désormais <strong>Architecte UI/UX Senior</strong> chargé de transformer l’interface d’EXO en un <strong>assistant premium moderne</strong>, inspiré de <strong>VS Code</strong>, <strong>Fluent Design</strong>, <strong>Copilot</strong>, et des standards UI 2026.</p>
+<p>Ton rôle : <strong>analyser, proposer, refactorer, moderniser</strong>, et produire une interface <strong>cohérente, élégante, fluide, premium</strong>, en QML.</p>
+<p>Tu dois appliquer ce plan <strong>sans rien oublier</strong>, <strong>sans demander confirmation</strong>, et produire des recommandations + composants + structure + thèmes.</p>
+<hr>
+<h1 id="1-refonte-de-la-structure-visuelle-layout-hiérarchie">1. 🎛️ Refonte de la structure visuelle (layout &amp; hiérarchie)</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Créer une ossature visuelle premium, lisible, moderne.</p>
+<h2 id="actions">Actions</h2>
+<h3 id="11-grille-globale">1.1 Grille globale</h3>
+<ul>
+<li>Marges horizontales : 24 px</li>
+<li>Marges verticales : 20 px</li>
+<li>Espacement interne : 12–16 px</li>
+<li>Grille 8 px</li>
+</ul>
+<h3 id="12-paddings-unifiés">1.2 Paddings unifiés</h3>
+<ul>
+<li>Boutons : 10–14 px</li>
+<li>Cards : 16–20 px</li>
+<li>Sections : 24 px</li>
+</ul>
+<h3 id="13-structure-principale">1.3 Structure principale</h3>
+<ul>
+<li>Sidebar fixe (icônes + labels)</li>
+<li>Zone centrale fluide</li>
+<li>Header minimaliste</li>
+<li>Footer optionnel (état pipeline, latence, GPU, micro)</li>
+</ul>
+<h3 id="14-hiérarchie-visuelle">1.4 Hiérarchie visuelle</h3>
+<ul>
+<li>H1 : 24 px</li>
+<li>H2 : 20 px</li>
+<li>H3 : 16 px</li>
+<li>Texte : 14–15 px</li>
+<li>Labels : 12–13 px</li>
+</ul>
+<hr>
+<h1 id="2-palette-de-couleurs-moderne-vs-code-fluent">2. 🎨 Palette de couleurs moderne (VS Code + Fluent)</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Créer une identité visuelle cohérente, moderne, premium.</p>
+<h2 id="thème-sombre-par-défaut">Thème sombre (par défaut)</h2>
+<ul>
+<li>Fond principal : #1E1E1E</li>
+<li>Panneaux : #252526</li>
+<li>Surfaces élevées : #2D2D2D</li>
+<li>Accent : #0078D4</li>
+<li>Accent secondaire : #3A96DD</li>
+<li>Texte principal : #FFFFFF</li>
+<li>Texte secondaire : #C8C8C8</li>
+<li>Bordures : #3C3C3C</li>
+</ul>
+<h2 id="thème-clair-optionnel">Thème clair (optionnel)</h2>
+<ul>
+<li>Fond : #F3F3F3</li>
+<li>Surfaces : #FFFFFF</li>
+<li>Accent : #0067C0</li>
+<li>Texte : #1A1A1A</li>
+</ul>
+<hr>
+<h1 id="3-typographie-premium">3. 🖼️ Typographie premium</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Donner un aspect professionnel, lisible, moderne.</p>
+<h2 id="police-recommandée">Police recommandée</h2>
+<p><strong>Inter</strong> (VS Code, Linear, Vercel, Notion)</p>
+<h2 id="hiérarchie">Hiérarchie</h2>
+<ul>
+<li>H1 : 24 px semi‑bold</li>
+<li>H2 : 20 px medium</li>
+<li>H3 : 16 px medium</li>
+<li>Texte : 14–15 px</li>
+<li>Labels : 12–13 px</li>
+</ul>
+<hr>
+<h1 id="4-composants-qml-modernisés">4. 🧩 Composants QML modernisés</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Remplacer les composants bruts par des versions modernes, élégantes, cohérentes.</p>
+<h2 id="composants-à-moderniser">Composants à moderniser</h2>
+<h3 id="41-boutons">4.1 Boutons</h3>
+<ul>
+<li>Coins arrondis 6 px</li>
+<li>Hover subtil</li>
+<li>Pressed (scale 0.98)</li>
+<li>Icône + label alignés</li>
+</ul>
+<h3 id="42-cards">4.2 Cards</h3>
+<ul>
+<li>Ombre douce Fluent</li>
+<li>Padding 16–20 px</li>
+<li>Coins arrondis 8 px</li>
+<li>Animation d’apparition</li>
+</ul>
+<h3 id="43-sliders">4.3 Sliders</h3>
+<ul>
+<li>Track fin</li>
+<li>Thumb rond</li>
+<li>Glow léger au hover</li>
+</ul>
+<h3 id="44-switches">4.4 Switches</h3>
+<ul>
+<li>Style Fluent</li>
+<li>Animation 150 ms</li>
+</ul>
+<h3 id="45-dialogues">4.5 Dialogues</h3>
+<ul>
+<li>Fond blur (Gaussian 20–30)</li>
+<li>Ombre profonde</li>
+<li>Boutons alignés à droite</li>
+</ul>
+<hr>
+<h1 id="5-animations-microinteractions">5. ✨ Animations &amp; micro‑interactions</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Donner vie à l’interface sans la surcharger.</p>
+<h2 id="animations-recommandées">Animations recommandées</h2>
+<h3 id="51-transitions-de-pages">5.1 Transitions de pages</h3>
+<ul>
+<li>Fade 120 ms</li>
+<li>Slide 80 px</li>
+<li>Easing InOutCubic</li>
+</ul>
+<h3 id="52-hover-states">5.2 Hover states</h3>
+<ul>
+<li>Opacity +3%</li>
+<li>Glow léger</li>
+</ul>
+<h3 id="53-feedback-pipeline">5.3 Feedback pipeline</h3>
+<ul>
+<li>Micro animé</li>
+<li>VAD : cercle pulsant</li>
+<li>STT : waveform fluide</li>
+<li>TTS : barre de progression subtile</li>
+</ul>
+<h3 id="54-notifications">5.4 Notifications</h3>
+<ul>
+<li>Slide‑in bottom</li>
+<li>Fade‑out 300 ms</li>
+</ul>
+<hr>
+<h1 id="6-icônes-symbolique">6. 🔍 Icônes &amp; symbolique</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Unifier toutes les icônes pour un rendu professionnel.</p>
+<h2 id="pack-recommandé">Pack recommandé</h2>
+<p><strong>Fluent System Icons</strong> (SVG)</p>
+<h2 id="icônes-à-remplacer">Icônes à remplacer</h2>
+<ul>
+<li>Micro</li>
+<li>Paramètres</li>
+<li>Logs</li>
+<li>Pipeline</li>
+<li>Services</li>
+<li>Wakeword</li>
+<li>VAD</li>
+<li>STT</li>
+<li>TTS</li>
+</ul>
+<hr>
+<h1 id="7-améliorations-ux-majeures">7. 🧠 Améliorations UX majeures</h1>
+<h2 id="71-panneau-détat-pipeline">7.1 Panneau d’état pipeline</h2>
+<p>Afficher :</p>
+<ul>
+<li>Wakeword</li>
+<li>VAD</li>
+<li>STT</li>
+<li>TTS</li>
+<li>Claude</li>
+<li>GPU</li>
+<li>Latence</li>
+</ul>
+<h2 id="72-mode-debug-visuel">7.2 Mode debug visuel</h2>
+<ul>
+<li>États pipeline</li>
+<li>WebSockets</li>
+<li>Erreurs</li>
+<li>Modèles chargés</li>
+</ul>
+<h2 id="73-mode-test-pipeline">7.3 Mode test pipeline</h2>
+<ul>
+<li>Test wakeword</li>
+<li>Test VAD</li>
+<li>Test STT</li>
+<li>Test TTS</li>
+<li>Test pipeline complet</li>
+</ul>
+<hr>
+<h1 id="8-architecture-ui-modernisée">8. 🧱 Architecture UI modernisée</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Préparer EXO pour une UI modulaire, scalable, maintenable.</p>
+<h2 id="structure-recommandée">Structure recommandée</h2>
+<pre><code>/gui
+  /components
+  /controls
+  /panels
+  /pages
+  /theme
+  /icons
+  /animations
+  main.qml</code></pre>
+<h3 id="81-séparer-clairement">8.1 Séparer clairement</h3>
+<ul>
+<li>Composants réutilisables</li>
+<li>Pages</li>
+<li>Thème</li>
+<li>Animations</li>
+<li>Icônes</li>
+</ul>
+<h3 id="82-centraliser-le-thème">8.2 Centraliser le thème</h3>
+<p>Créer :</p>
+<pre><code>/gui/theme/Theme.qml</code></pre>
+<p>Avec :</p>
+<ul>
+<li>couleurs</li>
+<li>typographies</li>
+<li>ombres</li>
+<li>espacements</li>
+<li>radius</li>
+<li>animations</li>
+</ul>
+<hr>
+<h1 id="9-tests-visuels-polish-final">9. 🧪 Tests visuels &amp; polish final</h1>
+<h2 id="checklist-finale">Checklist finale</h2>
+<ul>
+<li>Alignements parfaits</li>
+<li>Marges cohérentes</li>
+<li>Icônes homogènes</li>
+<li>Animations fluides</li>
+<li>Pas de jitter</li>
+<li>Pas de clipping</li>
+<li>Pas de composants bruts</li>
+<li>Pas de couleurs incohérentes</li>
+<li>Pas de texte non aligné</li>
+<li>Pas de padding irrégulier</li>
+</ul>
+<hr>
+<h1 id="objectif-final">🎯 Objectif final</h1>
+<p>Transformer EXO en un assistant :</p>
+<ul>
+<li>moderne</li>
+<li>fluide</li>
+<li>cohérent</li>
+<li>élégant</li>
+<li>premium</li>
+<li>digne d’un produit commercial</li>
+<li>aligné VS Code + Fluent Design</li>
+</ul>
+<hr>
+<h1 id="fin-du-prompt-modernisation-visuelle-exo">🟦 Fin du Prompt — Modernisation Visuelle EXO</h1>
+<hr>
+<p><em>Retour à l'index : <a href="README.html">docs/README.md</a></em></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,5 +1,7 @@
-Je veux que tu réalises une validation fonctionnelle complète du pipeline EXO maintenant que tous les microservices sont en écoute. 
-L’objectif est de vérifier que chaque service répond correctement, que les WebSockets fonctionnent, que les ports sont corrects, et que le pipeline audio complet est opérationnel.
+Je veux que tu réalises une validation fonctionnelle complète du pipeline EXO maintenant que tous les microservices sont
+en écoute.
+L’objectif est de vérifier que chaque service répond correctement, que les WebSockets fonctionnent, que les ports sont
+corrects, et que le pipeline audio complet est opérationnel.
 
 Voici les tâches précises :
 
@@ -115,5 +117,9 @@ Générer un rapport clair contenant :
 - les corrections proposées
 
 ====================================================================
-Commence maintenant par tester les WebSockets et les ports de tous les services, puis propose le plan de validation complet.
+Commence maintenant par tester les WebSockets et les ports de tous les services, puis propose le plan de validation
+complet.
 ====================================================================
+
+---
+Retour à l'index : [docs/README.md](../README.md)

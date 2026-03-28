@@ -91,24 +91,74 @@ set_target_properties(RaspberryAssistant PROPERTIES
     WIN32_EXECUTABLE FALSE  # Console app sur Windows pour voir les erreurs
 )
 
+# Qt QML policies
+qt_policy(SET QTP0001 NEW)
+qt_policy(SET QTP0004 OLD)
+
+# Theme singleton property
+set_source_files_properties(qml/theme/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 # Module QML
 qt_add_qml_module(RaspberryAssistant
     URI RaspberryAssistant
     VERSION 4.0
     QML_FILES
         qml/MainWindow.qml
-        qml/vscode/Sidebar.qml
-        qml/vscode/StatusIndicator.qml
-        qml/vscode/MicrophoneLevel.qml
-        qml/vscode/TranscriptView.qml
-        qml/vscode/ResponseView.qml
-        qml/vscode/Visualizer.qml
-        qml/vscode/BottomBar.qml
-        qml/vscode/SettingsPanel.qml
-        qml/vscode/HistoryPanel.qml
-        qml/vscode/LogPanel.qml
-        qml/vscode/PipelineMonitor.qml
-        qml/vscode/SplashScreen.qml
+        # ── Pages ──
+        qml/pages/HomePage.qml
+        qml/pages/SettingsPage.qml
+        qml/pages/PipelinePage.qml
+        qml/pages/LogsPage.qml
+        qml/pages/HistoryPage.qml
+        # ── Panels ──
+        qml/panels/Sidebar.qml
+        qml/panels/BottomBar.qml
+        qml/panels/HeaderBar.qml
+        # ── Theme ──
+        qml/theme/Theme.qml
+        # ── Components ──
+        qml/components/ExoButton.qml
+        qml/components/ExoCard.qml
+        qml/components/ExoSwitch.qml
+        qml/components/ExoSlider.qml
+        qml/components/ExoTextField.qml
+        qml/components/ExoDialog.qml
+        qml/components/ExoNotification.qml
+        qml/components/ExoPanelHeader.qml
+        qml/components/ExoSearchField.qml
+        qml/components/ExoProgressBar.qml
+        qml/components/ExoBadge.qml
+        qml/components/ExoStatusPill.qml
+        qml/components/ExoConfirmDialog.qml
+        qml/components/ExoSheet.qml
+        qml/components/ExoTab.qml
+        qml/components/ExoPipelineStatus.qml
+        qml/components/ExoServiceStatus.qml
+        qml/components/ExoMicButton.qml
+        qml/components/ExoWaveform.qml
+        qml/components/ExoStatusIndicator.qml
+        qml/components/ExoMicrophoneLevel.qml
+        qml/components/ExoVisualizer.qml
+        qml/components/ExoTranscriptView.qml
+        qml/components/ExoResponseView.qml
+        qml/components/ExoSplashScreen.qml
+    RESOURCES
+        qml/theme/qmldir
+        qml/components/qmldir
+        qml/pages/qmldir
+        qml/panels/qmldir
+        qml/icons/chat.svg
+        qml/icons/debug.svg
+        qml/icons/history.svg
+        qml/icons/logs.svg
+        qml/icons/microphone.svg
+        qml/icons/pipeline.svg
+        qml/icons/send.svg
+        qml/icons/settings.svg
+        qml/icons/stt.svg
+        qml/icons/tts.svg
+        qml/icons/vad.svg
+        qml/icons/wakeword.svg
 )
 
 # Chemins d'inclusion — app/ comme racine + sous-dossiers
@@ -156,6 +206,20 @@ add_custom_target(${PROJECT_NAME}_copy_config ALL
     COMMENT "Copie config/ vers le répertoire de sortie"
 )
 add_dependencies(RaspberryAssistant ${PROJECT_NAME}_copy_config)
+
+# ── Auto-deploy Qt DLLs (Windows) ──
+if(WIN32)
+    find_program(WINDEPLOYQT windeployqt6 HINTS "${Qt6_DIR}/../../../bin")
+    if(WINDEPLOYQT)
+        add_custom_command(TARGET RaspberryAssistant POST_BUILD
+            COMMAND "${WINDEPLOYQT}"
+                --no-translations
+                --qmldir "${CMAKE_SOURCE_DIR}/qml"
+                "$<TARGET_FILE:RaspberryAssistant>"
+            COMMENT "Running windeployqt..."
+        )
+    endif()
+endif()
 
 # Informations de configuration
 message(STATUS "=== Configuration du projet ===")

@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Maître — EXO Assistant v4.2 — EXO Docs</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<header>
+  <button id="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <a href="../index.html" class="logo">EXO Docs</a>
+  <span class="version">v4.2</span>
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Rechercher..." autocomplete="off">
+  </div>
+</header>
+
+<div id="search-results"></div>
+
+<nav class="sidebar">
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> Documentation</div>
+<ul class="nav-links">
+<li><a href="../README.html">Readme</a></li>
+<li><a href="../VERSIONS.html">Versions</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🏗 Architecture & Spécifications</div>
+<ul class="nav-links">
+<li><a href="../core/architecture.html">Architecture</a></li>
+<li><a href="../core/architecture_graph.html">Architecture Graph</a></li>
+<li><a href="../core/architecture_modules.html">Architecture Modules</a></li>
+<li><a href="../core/EXO_DOCUMENTATION.html">Exo Documentation</a></li>
+<li><a href="../core/EXO_SPEC.html">Exo Spec</a></li>
+<li><a href="../core/limitations.html">Limitations</a></li>
+<li><a href="../core/modules.html">Modules</a></li>
+<li><a href="../core/pipeline.html">Pipeline</a></li>
+<li><a href="../core/services.html">Services</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📖 Guides Techniques</div>
+<ul class="nav-links">
+<li><a href="../guides/audio_pipeline.html">Audio Pipeline</a></li>
+<li><a href="../guides/stt.html">Stt</a></li>
+<li><a href="../guides/tests.html">Tests</a></li>
+<li><a href="../guides/tts.html">Tts</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🎨 Interface & Design</div>
+<ul class="nav-links">
+<li><a href="../ui/design_system.html">Design System</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 🔍 Audits</div>
+<ul class="nav-links">
+<li><a href="../audits/audit_master_2026_03.html">Audit Master 2026 03</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📊 Rapports Techniques</div>
+<ul class="nav-links">
+<li><a href="../reports/fix_ram_doublons.html">Fix Ram Doublons</a></li>
+<li><a href="../reports/last_update.html">Last Update</a></li>
+<li><a href="../reports/reduction_stt.html">Reduction Stt</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 💬 Prompts Historiques</div>
+<ul class="nav-links">
+<li><a href="../prompts/prompt_audit_complet.html">Prompt Audit Complet</a></li>
+<li><a href="../prompts/prompt_correction_microservices.html">Prompt Correction Microservices</a></li>
+<li><a href="../prompts/prompt_fix_ram_doublons.html">Prompt Fix Ram Doublons</a></li>
+<li><a href="../prompts/prompt_gestion_micro.html">Prompt Gestion Micro</a></li>
+<li><a href="../prompts/prompt_gui_release.html">Prompt Gui Release</a></li>
+<li><a href="../prompts/prompt_modernisation_ui.html">Prompt Modernisation ui</a></li>
+<li><a href="../prompts/prompt_nettoyage.html">Prompt Nettoyage</a></li>
+<li><a href="../prompts/prompt_reduction_stt.html">Prompt Reduction Stt</a></li>
+<li><a href="../prompts/prompt_role_permanent.html">Prompt Role Permanent</a></li>
+<li><a href="../prompts/prompt_stabilisation_finale.html">Prompt Stabilisation Finale</a></li>
+<li><a href="../prompts/prompt_validation.html">Prompt Validation</a></li>
+</ul></div>
+<div class="nav-section">
+<div class="nav-section-title" onclick="toggleNav(this)"><span class="arrow">▼</span> 📦 Archives</div>
+<ul class="nav-links">
+<li><a href="../archives/archives_index.html">Archives Index</a></li>
+<li><a href="../archives/audit_final_2025_07.html">Audit Final 2025 07</a></li>
+<li><a href="../archives/AuditComplet_Prompt.html">Auditcomplet Prompt</a></li>
+<li><a href="../archives/CorrectionComplèteMicroservices.html">Correctioncomplètemicroservices</a></li>
+<li><a href="../archives/Fix_RAM_Doublons_Microservices.html">Fix Ram Doublons Microservices</a></li>
+<li><a href="../archives/GestionMicro_Prompt.html">Gestionmicro Prompt</a></li>
+<li><a href="../archives/GUI_Release_Prompt.html">Gui Release Prompt</a></li>
+<li><a href="../archives/prompt_design_system.html">Prompt Design System</a></li>
+<li><a href="../archives/prompt_modernisation_ui_old.html">Prompt Modernisation ui Old</a></li>
+<li><a href="../archives/Reduction_STT_Prompt.html">Reduction Stt Prompt</a></li>
+<li><a href="../archives/RolePermanentMaitre_Prompt.html">Rolepermanentmaitre Prompt</a></li>
+<li><a href="../archives/StabilisationFinale.html">Stabilisationfinale</a></li>
+<li><a href="../archives/Validation.html">Validation</a></li>
+</ul></div>
+
+</nav>
+
+<main class="content">
+  <div class="breadcrumb"><a href="index.html">Accueil</a><span class="sep">›</span><a href="index.html#audits">🔍 Audits</a><span class="sep">›</span>Audit Maître — EXO Assistant v4.2</div>
+<blockquote><p>🧭 <a href="README.html">Index</a> → <a href="README.html#-audits--audits">Audits</a> → audit_master.md</p></blockquote>
+<h1 id="audit-maître-exo-assistant-v42">Audit Maître — EXO Assistant v4.2</h1>
+<blockquote><p>Documentation EXO v4.2 — Section : Audits Dernière mise à jour : Mars 2026</p></blockquote>
+<h3 id="rapport-complet-daudit-stabilisation">Rapport Complet d'Audit &amp; Stabilisation</h3>
+<h2 id="table-des-matières">Table des matières</h2>
+<ul>
+<li><a href="#1-vérification-complète-de-la-configuration-gui">1. Vérification Complète de la Configuration GUI</a></li>
+<li><a href="#11-chemins-des-services-conformes">1.1 Chemins des Services — ✅ Conformes</a></li>
+<li><a href="#12-cohérence-des-ports-websocket-100-conformes">1.2 Cohérence des Ports WebSocket — ✅ 100% Conformes</a></li>
+<li><a href="#13-dépendances-conformes">1.3 Dépendances — ✅ Conformes</a></li>
+<li><a href="#14-réglages-audio-conformes">1.4 Réglages Audio — ✅ Conformes</a></li>
+<li><a href="#2-audit-complet-du-pipeline-vocal">2. Audit Complet du Pipeline Vocal</a></li>
+<li><a href="#21-wake-word-risque-moyen">2.1 Wake-word — ⚠️ Risque Moyen</a></li>
+<li><a href="#mécanismes">Mécanismes</a></li>
+<li><a href="#protections-anti-faux-positifs">Protections Anti-Faux-Positifs</a></li>
+<li><a href="#problèmes-identifiés">Problèmes Identifiés</a></li>
+<li><a href="#22-vad-robuste">2.2 VAD — ✅ Robuste</a></li>
+<li><a href="#architecture-hybride">Architecture Hybride</a></li>
+<li><a href="#seuils-et-paramètres">Seuils et Paramètres</a></li>
+<li><a href="#vérification-des-anomalies">Vérification des Anomalies</a></li>
+<li><a href="#problème-identifié">Problème Identifié</a></li>
+<li><a href="#23-stt-fonctionnel">2.3 STT — ✅ Fonctionnel</a></li>
+<li><a href="#protocole-websocket">Protocole WebSocket</a></li>
+<li><a href="#protections">Protections</a></li>
+<li><a href="#problèmes-identifiés">Problèmes Identifiés</a></li>
+<li><a href="#24-orchestrateur-state-machine-robuste">2.4 Orchestrateur (State Machine) — ✅ Robuste</a></li>
+<li><a href="#états-et-transitions-validées">États et Transitions Validées</a></li>
+<li><a href="#guards-anti-transition-invalide">Guards Anti-Transition Invalide</a></li>
+<li><a href="#récupération-détat-bloqué">Récupération d'État Bloqué</a></li>
+<li><a href="#problème-identifié">Problème Identifié</a></li>
+<li><a href="#25-tts-xtts-v2-directml-fonctionnel">2.5 TTS (XTTS v2 DirectML) — ✅ Fonctionnel</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#flux-de-données">Flux de Données</a></li>
+<li><a href="#chaînage-inter-phrases">Chaînage Inter-Phrases</a></li>
+<li><a href="#protections">Protections</a></li>
+<li><a href="#problèmes-identifiés">Problèmes Identifiés</a></li>
+<li><a href="#26-audio-output-qaudiosink-fonctionnel">2.6 Audio Output (QAudioSink) — ✅ Fonctionnel</a></li>
+<li><a href="#paramètres">Paramètres</a></li>
+<li><a href="#guards">Guards</a></li>
+<li><a href="#problème-identifié">Problème Identifié</a></li>
+<li><a href="#3-analyse-automatique-des-logs">3. Analyse Automatique des Logs</a></li>
+<li><a href="#31-infrastructure-de-logging">3.1 Infrastructure de Logging</a></li>
+<li><a href="#c-logmanager">C++ (LogManager)</a></li>
+<li><a href="#python-logging-module">Python (logging module)</a></li>
+<li><a href="#32-anomalies-détectables">3.2 Anomalies Détectables</a></li>
+<li><a href="#stt">STT</a></li>
+<li><a href="#tts">TTS</a></li>
+<li><a href="#pipeline">Pipeline</a></li>
+<li><a href="#vadwakeword">VAD/Wakeword</a></li>
+<li><a href="#4-tests-automatiques-résultats">4. Tests Automatiques — Résultats</a></li>
+<li><a href="#41-tests-unitaires-python-162162-pass">4.1 Tests Unitaires Python — ✅ 162/162 PASS</a></li>
+<li><a href="#42-tests-intégration-1313-pass-2-erreurs-pytest-fixture">4.2 Tests Intégration — ✅ 13/13 PASS + 2 erreurs pytest-fixture</a></li>
+<li><a href="#43-test-validation-pipeline-complet-tous-services-ok">4.3 Test Validation Pipeline Complet — ✅ Tous Services OK</a></li>
+<li><a href="#44-tests-c-non-exécutés">4.4 Tests C++ — Non Exécutés</a></li>
+<li><a href="#5-plan-de-stabilisation">5. Plan de Stabilisation</a></li>
+<li><a href="#phase-1-urgent-correctifs-critiques">Phase 1 — Urgent (Correctifs Critiques)</a></li>
+<li><a href="#phase-2-important-stabilisation">Phase 2 — Important (Stabilisation)</a></li>
+<li><a href="#phase-3-optimisation">Phase 3 — Optimisation</a></li>
+<li><a href="#6-rapport-final">6. Rapport Final</a></li>
+<li><a href="#61-synthèse-des-problèmes-détectés">6.1 Synthèse des Problèmes Détectés</a></li>
+<li><a href="#62-analyse-technique-détaillée">6.2 Analyse Technique Détaillée</a></li>
+<li><a href="#63-causes-probables">6.3 Causes Probables</a></li>
+<li><a href="#64-correctifs-immédiats">6.4 Correctifs Immédiats</a></li>
+<li><a href="#fix-1-watchdog-speaking-state">Fix 1 — Watchdog Speaking State</a></li>
+<li><a href="#fix-2-file-logging">Fix 2 — File Logging</a></li>
+<li><a href="#fix-3-zero-byte-detection">Fix 3 — Zero-byte Detection</a></li>
+<li><a href="#fix-4-stt-silent-drop-log">Fix 4 — STT Silent Drop Log</a></li>
+<li><a href="#65-correctifs-structurels">6.5 Correctifs Structurels</a></li>
+<li><a href="#66-vérification-des-chemins-gui">6.6 Vérification des Chemins GUI — ✅</a></li>
+<li><a href="#67-vérification-des-services">6.7 Vérification des Services — ✅</a></li>
+<li><a href="#68-vérification-du-pipeline">6.8 Vérification du Pipeline — ✅</a></li>
+<li><a href="#69-tests-à-refaire">6.9 Tests à Refaire</a></li>
+<li><a href="#610-état-final-du-système">6.10 État Final du Système</a></li>
+<li><a href="#comparaison-avec-audit-précédent">Comparaison avec Audit Précédent</a></li>
+<li><a href="#annexe-a-audit-juillet-2025-historique">Annexe A — Audit Juillet 2025 (Historique)</a></li>
+<li><a href="#a1-bug-critique-tts-corrigé-juillet-2025">A.1 Bug Critique TTS Corrigé (Juillet 2025)</a></li>
+<li><a href="#a2-constats-de-stabilité-27-findings-juillet-2025">A.2 Constats de Stabilité (27 findings — Juillet 2025)</a></li>
+<li><a href="#critical-3">CRITICAL (3)</a></li>
+<li><a href="#high-7">HIGH (7)</a></li>
+<li><a href="#medium-8">MEDIUM (8)</a></li>
+<li><a href="#low-5-ℹ-info-4">LOW (5) / ℹ️ INFO (4)</a></li>
+<li><a href="#a3-scripts-de-test-créés-juillet-2025">A.3 Scripts de Test Créés (Juillet 2025)</a></li>
+<li><a href="#a4-benchmarks-juillet-2025">A.4 Benchmarks (Juillet 2025)</a></li>
+</ul>
+<p><strong>Date</strong> : 2026-03-22 <strong>Auditeur</strong> : GitHub Copilot (Claude Opus 4.6) <strong>Scope</strong> : Sections 1–6 du Prompt Maître</p>
+<hr>
+<h1 id="1-vérification-complète-de-la-configuration-gui">1. Vérification Complète de la Configuration GUI</h1>
+<h2 id="11-chemins-des-services-conformes">1.1 Chemins des Services — ✅ Conformes</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Service</th><th style="text-align:left">Exécutable</th><th style="text-align:left">Chemin Vérifié</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">STT (Whisper.cpp)</td><td style="text-align:left"><code>.venv_stt_tts/Scripts/python.exe</code></td><td style="text-align:left"><code>python/stt/stt_server.py</code></td></tr>
+<tr><td style="text-align:left">TTS (XTTS v2)</td><td style="text-align:left"><code>.venv_stt_tts/Scripts/python.exe</code></td><td style="text-align:left"><code>python/tts/tts_server.py</code></td></tr>
+<tr><td style="text-align:left">VAD (Silero)</td><td style="text-align:left"><code>.venv_stt_tts/Scripts/python.exe</code></td><td style="text-align:left"><code>python/vad/vad_server.py</code></td></tr>
+<tr><td style="text-align:left">Wakeword (OpenWakeWord)</td><td style="text-align:left"><code>.venv_stt_tts/Scripts/python.exe</code></td><td style="text-align:left"><code>python/wakeword/wakeword_server.py</code></td></tr>
+<tr><td style="text-align:left">Orchestrateur</td><td style="text-align:left"><code>.venv/Scripts/python.exe</code></td><td style="text-align:left"><code>python/orchestrator/exo_server.py</code></td></tr>
+<tr><td style="text-align:left">Memory (FAISS)</td><td style="text-align:left"><code>.venv_stt_tts/Scripts/python.exe</code></td><td style="text-align:left"><code>python/memory/memory_server.py</code></td></tr>
+<tr><td style="text-align:left">NLU (Regex)</td><td style="text-align:left"><code>.venv_stt_tts/Scripts/python.exe</code></td><td style="text-align:left"><code>python/nlu/nlu_server.py</code></td></tr>
+</tbody></table></div>
+<p><strong>Modèles</strong> (via variables d'environnement) :</p>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Variable</th><th style="text-align:left">Chemin</th><th style="text-align:left">État</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>EXO_WHISPER_MODELS</code></td><td style="text-align:left"><code>D:\EXO\models\whisper</code></td><td style="text-align:left">✅ Utilisé</td></tr>
+<tr><td style="text-align:left"><code>EXO_WHISPERCPP_BIN</code></td><td style="text-align:left"><code>D:\EXO\whispercpp\build_vk\bin\Release</code></td><td style="text-align:left">✅ Utilisé</td></tr>
+<tr><td style="text-align:left"><code>EXO_XTTS_MODELS</code></td><td style="text-align:left"><code>D:\EXO\models\xtts</code></td><td style="text-align:left">✅ Utilisé</td></tr>
+<tr><td style="text-align:left"><code>EXO_WAKEWORD_MODELS</code></td><td style="text-align:left"><code>D:\EXO\models\wakeword</code></td><td style="text-align:left">✅ Utilisé</td></tr>
+<tr><td style="text-align:left"><code>EXO_FAISS_DIR</code></td><td style="text-align:left"><code>D:\EXO\faiss\semantic_memory</code></td><td style="text-align:left">✅ Utilisé</td></tr>
+<tr><td style="text-align:left"><code>HF_HOME</code></td><td style="text-align:left"><code>D:\EXO\cache\huggingface</code></td><td style="text-align:left">✅ Utilisé</td></tr>
+</tbody></table></div>
+<h2 id="12-cohérence-des-ports-websocket-100-conformes">1.2 Cohérence des Ports WebSocket — ✅ 100% Conformes</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Service</th><th style="text-align:left">Port Attendu</th><th style="text-align:left">Config C++</th><th style="text-align:left">Config Python</th><th style="text-align:left">.tasks.json</th><th style="text-align:left">État</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Orchestrator</td><td style="text-align:left">8765</td><td style="text-align:left"><code>ConfigManager.h</code></td><td style="text-align:left"><code>exo_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">STT</td><td style="text-align:left">8766</td><td style="text-align:left"><code>VoicePipeline.h</code></td><td style="text-align:left"><code>stt_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">TTS</td><td style="text-align:left">8767</td><td style="text-align:left"><code>TTSBackendXTTS.cpp</code></td><td style="text-align:left"><code>tts_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">VAD</td><td style="text-align:left">8768</td><td style="text-align:left"><code>VoicePipeline.h</code></td><td style="text-align:left"><code>vad_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Wakeword</td><td style="text-align:left">8770</td><td style="text-align:left"><code>VoicePipeline.h</code></td><td style="text-align:left"><code>wakeword_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Memory</td><td style="text-align:left">8771</td><td style="text-align:left"><code>AIMemoryManager.cpp</code></td><td style="text-align:left"><code>memory_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">NLU</td><td style="text-align:left">8772</td><td style="text-align:left"><code>AssistantManager.cpp</code></td><td style="text-align:left"><code>nlu_server.py</code></td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h2 id="13-dépendances-conformes">1.3 Dépendances — ✅ Conformes</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Composant</th><th style="text-align:left">Version Requise</th><th style="text-align:left">État</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Python</td><td style="text-align:left">3.13.7</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Torch</td><td style="text-align:left">≥2.4</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">torch-directml</td><td style="text-align:left">≥0.2</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">ONNX Runtime</td><td style="text-align:left">≥1.17</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Silero VAD</td><td style="text-align:left">≥5.1</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Whisper.cpp</td><td style="text-align:left">medium (Vulkan)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">XTTS v2</td><td style="text-align:left">TTS≥0.22.0</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">OpenWakeWord</td><td style="text-align:left">hey_jarvis_v0.1</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">websockets</td><td style="text-align:left">≥12</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Qt</td><td style="text-align:left">6.9.3 (MSVC)</td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h2 id="14-réglages-audio-conformes">1.4 Réglages Audio — ✅ Conformes</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Paramètre</th><th style="text-align:left">Valeur</th><th style="text-align:left">Vérifié C++</th><th style="text-align:left">Vérifié Python</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Input sample rate</td><td style="text-align:left">16000 Hz</td><td style="text-align:left">✅</td><td style="text-align:left">✅ (STT/VAD/WW)</td></tr>
+<tr><td style="text-align:left">Output sample rate</td><td style="text-align:left">24000 Hz</td><td style="text-align:left">✅</td><td style="text-align:left">✅ (TTS)</td></tr>
+<tr><td style="text-align:left">Channels</td><td style="text-align:left">1 (mono)</td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Format</td><td style="text-align:left">PCM signed 16-bit LE</td><td style="text-align:left">✅</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">TTS prebuffer</td><td style="text-align:left">9600 bytes (200ms)</td><td style="text-align:left">✅</td><td style="text-align:left">—</td></tr>
+<tr><td style="text-align:left">Pump interval</td><td style="text-align:left">20ms</td><td style="text-align:left">✅</td><td style="text-align:left">—</td></tr>
+</tbody></table></div>
+<p><strong>Remarque mineure</strong> : 3 chemins <code>D:\EXO</code> hardcodés dans le code C++ (portabilité limitée).</p>
+<hr>
+<h1 id="2-audit-complet-du-pipeline-vocal">2. Audit Complet du Pipeline Vocal</h1>
+<h2 id="21-wake-word-risque-moyen">2.1 Wake-word — ⚠️ Risque Moyen</h2>
+<h3 id="mécanismes">Mécanismes</h3>
+<ul>
+<li><strong>Neural</strong> : OpenWakeWord via WebSocket (:8770), seuil 0.7, cooldown 3s</li>
+<li><strong>Logiciel</strong> : Détection dans le transcript STT (fuzzy Levenshtein ≤1)</li>
+<li><strong>Mots-clés</strong> : "jarvis", "exo" + variantes phonétiques (egzo, ekso, jarvice…)</li>
+</ul>
+<h3 id="protections-anti-faux-positifs">Protections Anti-Faux-Positifs</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Garde</th><th style="text-align:left">Valeur</th><th style="text-align:left">Efficacité</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Cooldown neural</td><td style="text-align:left">3000ms</td><td style="text-align:left">⭐⭐⭐ Solide</td></tr>
+<tr><td style="text-align:left">TTS Guard</td><td style="text-align:left">1500ms</td><td style="text-align:left">⭐⭐⭐ Anti-écho</td></tr>
+<tr><td style="text-align:left">Score seuil</td><td style="text-align:left">0.7</td><td style="text-align:left">⭐⭐⭐</td></tr>
+<tr><td style="text-align:left">Levenshtein ≤1</td><td style="text-align:left">Sur transcript</td><td style="text-align:left">⚠️ Risque ("écho"→"exo")</td></tr>
+</tbody></table></div>
+<h3 id="problèmes-identifiés">Problèmes Identifiés</h3>
+<ol>
+<li><strong>⚠️ P-WW-01</strong> : Pas de liste d'exclusion pour faux positifs phonétiques ("écho", "ego")</li>
+<li><strong>⚠️ P-WW-02</strong> : Audio pré-wakeword perdu (ring buffer 10s non utilisé pour capture)</li>
+<li>✅ <code>findAndRemoveWakeWord()</code> retire le wake-word sans effacer la phrase</li>
+</ol>
+<h2 id="22-vad-robuste">2.2 VAD — ✅ Robuste</h2>
+<h3 id="architecture-hybride">Architecture Hybride</h3>
+<ul>
+<li><strong>Builtin</strong> : Énergie RMS + ZCR + SNR (pour fallback)</li>
+<li><strong>Silero</strong> : VAD neural via WebSocket (:8768)</li>
+<li><strong>Poids</strong> : 0.3 × builtin + 0.7 × Silero (quand les deux actifs)</li>
+</ul>
+<h3 id="seuils-et-paramètres">Seuils et Paramètres</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Paramètre</th><th style="text-align:left">Valeur</th><th style="text-align:left">Fichier</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Detection threshold</td><td style="text-align:left">0.45</td><td style="text-align:left"><code>VoicePipeline.h:L159</code></td></tr>
+<tr><td style="text-align:left">Noise calibration</td><td style="text-align:left">30 frames (600ms)</td><td style="text-align:left"><code>VoicePipeline.h:L170</code></td></tr>
+<tr><td style="text-align:left">Speech hang frames</td><td style="text-align:left">30 frames (600ms)</td><td style="text-align:left"><code>VoicePipeline.h:L171</code></td></tr>
+<tr><td style="text-align:left">Speech start frames</td><td style="text-align:left">2 frames (40ms)</td><td style="text-align:left"><code>VoicePipeline.h:L172</code></td></tr>
+<tr><td style="text-align:left">Noise gate RMS</td><td style="text-align:left">0.001</td><td style="text-align:left"><code>VoicePipeline.cpp:L135</code></td></tr>
+<tr><td style="text-align:left">Utterance timeout</td><td style="text-align:left">15s</td><td style="text-align:left"><code>VoicePipeline.cpp:L593</code></td></tr>
+</tbody></table></div>
+<h3 id="vérification-des-anomalies">Vérification des Anomalies</h3>
+<ul>
+<li>✅ <strong>Faux départs</strong> : 2 frames consécutives requises → rejet des spikes</li>
+<li>✅ <strong>Coupures rapides</strong> : Hang-over 600ms tolère les pauses</li>
+<li>✅ <strong>Scores bas</strong> : ZCR penalty ×0.5 si ZCR &gt; 0.35 (bruit)</li>
+<li>✅ <strong>Test VAD</strong> : silence=0.0055, ton=0.853 (contraste excellent)</li>
+</ul>
+<h3 id="problème-identifié">Problème Identifié</h3>
+<ol>
+<li><strong>⚠️ P-VAD-01</strong> : Si calibration capte de la parole → noise floor trop haut (pas de reset)</li>
+</ol>
+<h2 id="23-stt-fonctionnel">2.3 STT — ✅ Fonctionnel</h2>
+<h3 id="protocole-websocket">Protocole WebSocket</h3>
+<ol>
+<li><code>{"type":"start"}</code> → ouvre la session</li>
+<li>Chunks binaires PCM16 16kHz → streaming</li>
+<li><code>{"type":"end"}</code> → finalise la transcription</li>
+<li>Réponse <code>{"type":"final", "text":"..."}</code> ou partials</li>
+</ol>
+<h3 id="protections">Protections</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Guard</th><th style="text-align:left">Implémentation</th><th style="text-align:left">État</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Durée minimum utterance</td><td style="text-align:left">2s (VAD)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Transcript vide</td><td style="text-align:left">Retour Idle silencieux</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Wake-word seul</td><td style="text-align:left">Retour Idle après suppression</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Timeout transcription</td><td style="text-align:left">20s → force Idle</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Reconnexion WS</td><td style="text-align:left">Exponentiel (1s, 2s, 4s… 10 tentatives)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Hallucinations</td><td style="text-align:left">25 patterns détectés + rejection</td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h3 id="problèmes-identifiés">Problèmes Identifiés</h3>
+<ol>
+<li><strong>⚠️ P-STT-01</strong> : Audio &lt;0.3s silencieusement supprimé (pas de log, client non notifié)</li>
+<li><strong>⚠️ P-STT-02</strong> : Compteur hallucinations (≥3 consécutives) non loggé</li>
+</ol>
+<h2 id="24-orchestrateur-state-machine-robuste">2.4 Orchestrateur (State Machine) — ✅ Robuste</h2>
+<h3 id="états-et-transitions-validées">États et Transitions Validées</h3>
+<pre><code>Idle ─(VAD)→ DetectingSpeech ─(500ms grace)→ Listening ─(600ms silence)→ Transcribing
+    → Thinking → Speaking → Idle</code></pre>
+<h3 id="guards-anti-transition-invalide">Guards Anti-Transition Invalide</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Transition Bloquée</th><th style="text-align:left">Raison</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Speaking → DetectingSpeech</td><td style="text-align:left">Capture suspendue pendant TTS</td></tr>
+<tr><td style="text-align:left">Speaking → Thinking</td><td style="text-align:left">TTS doit finir avant nouvelle commande</td></tr>
+<tr><td style="text-align:left">Transcribing → Listening</td><td style="text-align:left">Pas de retour capture après transcription</td></tr>
+<tr><td style="text-align:left">Thinking → DetectingSpeech</td><td style="text-align:left">Attendre réponse Claude</td></tr>
+</tbody></table></div>
+<h3 id="récupération-détat-bloqué">Récupération d'État Bloqué</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Mécanisme</th><th style="text-align:left">Timeout</th><th style="text-align:left">Cible</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Utterance timeout</td><td style="text-align:left">15s</td><td style="text-align:left">Force <code>finishUtterance()</code></td></tr>
+<tr><td style="text-align:left">Transcribe timeout</td><td style="text-align:left">20s</td><td style="text-align:left">Force retour Idle</td></tr>
+<tr><td style="text-align:left">TTS Guard</td><td style="text-align:left">1500ms</td><td style="text-align:left">Retour Idle après TTS</td></tr>
+</tbody></table></div>
+<h3 id="problème-identifié">Problème Identifié</h3>
+<ol>
+<li><strong>🔴 P-FSM-01</strong> : Si TTS ne déclenche jamais <code>finished()</code> → bloqué en Speaking (pas de timeout safety net)</li>
+</ol>
+<h2 id="25-tts-xtts-v2-directml-fonctionnel">2.5 TTS (XTTS v2 DirectML) — ✅ Fonctionnel</h2>
+<h3 id="architecture">Architecture</h3>
+<ul>
+<li><strong>TTSManager</strong> : Queue, DSP, QAudioSink (C++)</li>
+<li><strong>TTSBackendXTTS</strong> : Client WebSocket vers <code>tts_server.py</code></li>
+<li><strong>TTSWorker</strong> : Thread dédié pour synthèse</li>
+<li><strong>DSP</strong> : EQ 3kHz +1.5dB → Compresseur -14dB 1.8:1 → Normalizer -16dBFS → Fade in/out → Anti-clip</li>
+</ul>
+<h3 id="flux-de-données">Flux de Données</h3>
+<ol>
+<li>Claude émet <code>sentenceReady()</code> par phrase</li>
+<li><code>enqueueSentence()</code> → queue FIFO</li>
+<li><code>processQueue()</code> → dépile + émet <code>_doRequest()</code> cross-thread</li>
+<li>TTSWorker → TTSBackendXTTS → WebSocket → chunks PCM binaires</li>
+<li><code>onWorkerChunk()</code> → DSP → <code>feedSink()</code></li>
+<li>Prebuffer 200ms (9600 bytes) → <code>startSink()</code> → <code>pumpBuffer()</code> @20ms</li>
+<li><code>drainAndStop()</code> → attente vidange → <code>finalizeSpeech()</code></li>
+</ol>
+<h3 id="chaînage-inter-phrases">Chaînage Inter-Phrases</h3>
+<ul>
+<li>✅ Si queue non vide : <code>QTimer::singleShot(30ms, processQueue)</code> → enchaînement fluide</li>
+<li>✅ Si queue vide : <code>emit ttsFinished()</code> → pipeline retourne à Idle</li>
+<li>✅ Guard <code>m_draining</code> idempotent (bug fix appliqué)</li>
+</ul>
+<h3 id="protections">Protections</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Guard</th><th style="text-align:left">Implémentation</th><th style="text-align:left">État</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Prebuffer 200ms</td><td style="text-align:left">9600 bytes avant startSink()</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Drain timeout safety</td><td style="text-align:left">8s max</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Queue-aware notification</td><td style="text-align:left">Pas de ttsFinished() entre phrases</td><td style="text-align:left">✅ (bug fix récent)</td></tr>
+<tr><td style="text-align:left">Drain idempotent</td><td style="text-align:left"><code>if (m_draining) return;</code></td><td style="text-align:left">✅ (bug fix récent)</td></tr>
+<tr><td style="text-align:left">Emoji/markdown removal</td><td style="text-align:left">PCRE2 Unicode ranges</td><td style="text-align:left">✅ (bug fix récent)</td></tr>
+<tr><td style="text-align:left">Processeur DSP</td><td style="text-align:left">EQ + Compressor + Normalizer + Limiter</td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h3 id="problèmes-identifiés">Problèmes Identifiés</h3>
+<ol>
+<li><strong>⚠️ P-TTS-01</strong> : Pas de détection des chunks 0 bytes côté C++</li>
+<li><strong>⚠️ P-TTS-02</strong> : <code>PY_TTS_TIMEOUT_MS</code> pas configurable dynamiquement</li>
+</ol>
+<h2 id="26-audio-output-qaudiosink-fonctionnel">2.6 Audio Output (QAudioSink) — ✅ Fonctionnel</h2>
+<h3 id="paramètres">Paramètres</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Paramètre</th><th style="text-align:left">Valeur</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Sample Rate</td><td style="text-align:left">24000 Hz</td></tr>
+<tr><td style="text-align:left">Format</td><td style="text-align:left">PCM signed 16-bit mono</td></tr>
+<tr><td style="text-align:left">Pump interval</td><td style="text-align:left">20ms</td></tr>
+<tr><td style="text-align:left">Prebuffer</td><td style="text-align:left">200ms (9600 bytes)</td></tr>
+<tr><td style="text-align:left">Drain safety timeout</td><td style="text-align:left">8s</td></tr>
+<tr><td style="text-align:left">Buffer max</td><td style="text-align:left">Unbounded QByteArray</td></tr>
+</tbody></table></div>
+<h3 id="guards">Guards</h3>
+<ul>
+<li>✅ <code>startSink()</code> : vérifie <code>!m_sink</code> (pas de double-init)</li>
+<li>✅ <code>startSink()</code> : vérifie device non null</li>
+<li>✅ <code>startSink()</code> : vérifie <code>m_sinkIO</code> non null après <code>start()</code></li>
+<li>✅ <code>pumpBuffer()</code> : écrit ce que le sink accepte, retire les bytes écrits</li>
+<li>✅ <code>drainAndStop()</code> : idempotent, safety timeout 8s</li>
+</ul>
+<h3 id="problème-identifié">Problème Identifié</h3>
+<ol>
+<li><strong>⚠️ P-AO-01</strong> : Buffer PCM unbounded → si TTS produit plus vite que le playback, mémoire croissante</li>
+</ol>
+<hr>
+<h1 id="3-analyse-automatique-des-logs">3. Analyse Automatique des Logs</h1>
+<h2 id="31-infrastructure-de-logging">3.1 Infrastructure de Logging</h2>
+<h3 id="c-logmanager">C++ (LogManager)</h3>
+<ul>
+<li><strong>Catégories</strong> : henriMain, henriConfig, henriClaude, henriVoice, henriWeather, henriAssistant</li>
+<li><strong>Niveaux</strong> : Debug &lt; Info &lt; Warning &lt; Critical</li>
+<li><strong>Sortie</strong> : Console + fichier optionnel (<code>D:/EXO/logs/henri.log</code>)</li>
+<li><strong>🔴 GAP-LOG-01</strong> : Fichier logging <strong>désactivé par défaut</strong> (<code>m_fileEnabled=false</code>)</li>
+<li><strong>⚠️ GAP-LOG-02</strong> : Pas de rotation de logs</li>
+<li><strong>⚠️ GAP-LOG-03</strong> : Pas de corrélation timestamps C++/Python</li>
+</ul>
+<h3 id="python-logging-module">Python (logging module)</h3>
+<ul>
+<li><strong>Format</strong> : <code>%(asctime)s [SERVICE] %(levelname)s %(message)s</code></li>
+<li><strong>Sortie</strong> : stdout uniquement</li>
+<li><strong>🔴 GAP-LOG-04</strong> : Pas de logging structuré JSON</li>
+<li><strong>🔴 GAP-LOG-05</strong> : Pas de trace IDs inter-services</li>
+<li><strong>🔴 GAP-LOG-06</strong> : Pas de persistance fichier (logs perdus au redémarrage)</li>
+</ul>
+<h2 id="32-anomalies-détectables">3.2 Anomalies Détectables</h2>
+<h3 id="stt">STT</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Anomalie</th><th style="text-align:left">Loggée</th><th style="text-align:left">Détectable</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Hallucination filtrée</td><td style="text-align:left">✅ INFO</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Backend fallback</td><td style="text-align:left">✅ WARNING</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Transcript vide</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Silencieux</td></tr>
+<tr><td style="text-align:left">Audio &lt;0.3s drop</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Silencieux</td></tr>
+<tr><td style="text-align:left">3+ hallucinations consécutives</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Silencieux</td></tr>
+</tbody></table></div>
+<h3 id="tts">TTS</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Anomalie</th><th style="text-align:left">Loggée</th><th style="text-align:left">Détectable</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">GPU fallback CPU</td><td style="text-align:left">✅ WARNING</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">inference_stream fallback</td><td style="text-align:left">✅ WARNING</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Chunk 0 bytes</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Silencieux</td></tr>
+<tr><td style="text-align:left">Speaker embedding mismatch</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Silencieux</td></tr>
+</tbody></table></div>
+<h3 id="pipeline">Pipeline</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Anomalie</th><th style="text-align:left">Loggée</th><th style="text-align:left">Détectable</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Utterance timeout</td><td style="text-align:left">✅ INFO</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Transcribe timeout</td><td style="text-align:left">✅ WARNING</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">STT déconnecté</td><td style="text-align:left">✅ WARNING</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">État bloqué &gt;30s</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Pas de watchdog</td></tr>
+<tr><td style="text-align:left">Transition forcée</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Pas de log</td></tr>
+</tbody></table></div>
+<h3 id="vadwakeword">VAD/Wakeword</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Anomalie</th><th style="text-align:left">Loggée</th><th style="text-align:left">Détectable</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Wake detection</td><td style="text-align:left">✅ INFO</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Wake suppression (cooldown)</td><td style="text-align:left">✅ DEBUG</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Score near-threshold (0.5–0.7)</td><td style="text-align:left">❌</td><td style="text-align:left">❌</td></tr>
+<tr><td style="text-align:left">False positive rate</td><td style="text-align:left">❌</td><td style="text-align:left">❌ Pas de statistiques</td></tr>
+</tbody></table></div>
+<hr>
+<h1 id="4-tests-automatiques-résultats">4. Tests Automatiques — Résultats</h1>
+<h2 id="41-tests-unitaires-python-162162-pass">4.1 Tests Unitaires Python — ✅ 162/162 PASS</h2>
+<pre><code>162 passed in 5.98s</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Suite</th><th style="text-align:left">Tests</th><th style="text-align:left">Résultat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">test_actions.py</td><td style="text-align:left">23</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_areas.py</td><td style="text-align:left">11</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_devices.py</td><td style="text-align:left">14</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_entities.py</td><td style="text-align:left">14</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_healthcheck_protocol.py</td><td style="text-align:left">13</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_home_bridge.py</td><td style="text-align:left">13</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_memory_server.py</td><td style="text-align:left">5</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_nlu_server.py</td><td style="text-align:left">18</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_stt_server.py</td><td style="text-align:left">7</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_sync.py</td><td style="text-align:left">8</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_tts_server.py</td><td style="text-align:left">8</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">test_vad_server.py</td><td style="text-align:left">4</td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h2 id="42-tests-intégration-1313-pass-2-erreurs-pytest-fixture">4.2 Tests Intégration — ✅ 13/13 PASS + 2 erreurs pytest-fixture</h2>
+<pre><code>13 passed, 2 errors in 12.37s</code></pre>
+<ul>
+<li>Les 2 erreurs sont dues à <code>test_ws_connect</code> et <code>test_ws_ping</code> qui ne sont PAS des tests pytest (fonctions paramétrées,</li>
+</ul>
+<p>pas de fixtures) — <strong>faux négatifs pytest, pas de bugs réels</strong>.</p>
+<h2 id="43-test-validation-pipeline-complet-tous-services-ok">4.3 Test Validation Pipeline Complet — ✅ Tous Services OK</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Test</th><th style="text-align:left">Résultat</th><th style="text-align:left">Détails</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><strong>Connectivité WS</strong> (7 services)</td><td style="text-align:left">✅ 7/7</td><td style="text-align:left">Latence 1.9–57.6ms</td></tr>
+<tr><td style="text-align:left"><strong>Ping/Pong</strong> (6 services)</td><td style="text-align:left">✅ 6/6</td><td style="text-align:left">&lt;0.6ms (exo_server skip)</td></tr>
+<tr><td style="text-align:left"><strong>Wakeword</strong></td><td style="text-align:left">✅</td><td style="text-align:left">Ping 0.4ms, pas de faux positif sur silence</td></tr>
+<tr><td style="text-align:left"><strong>VAD</strong></td><td style="text-align:left">✅</td><td style="text-align:left">Silence 0.0055, Ton 0.853</td></tr>
+<tr><td style="text-align:left"><strong>STT</strong></td><td style="text-align:left">✅</td><td style="text-align:left">Transcription en 595ms (ton → vide = normal)</td></tr>
+<tr><td style="text-align:left"><strong>TTS</strong></td><td style="text-align:left">✅</td><td style="text-align:left">77824 bytes, 19 chunks, ~1.62s, 5ms latence</td></tr>
+<tr><td style="text-align:left"><strong>Memory</strong></td><td style="text-align:left">✅</td><td style="text-align:left">Add/Search/Remove OK, top1 score 0.61</td></tr>
+<tr><td style="text-align:left"><strong>NLU</strong></td><td style="text-align:left">✅</td><td style="text-align:left">5/5 intentions correctes</td></tr>
+<tr><td style="text-align:left"><strong>Pipeline E2E</strong></td><td style="text-align:left">✅</td><td style="text-align:left">2723ms total bout en bout</td></tr>
+</tbody></table></div>
+<h2 id="44-tests-c-non-exécutés">4.4 Tests C++ — Non Exécutés</h2>
+<p>Les tests C++ (<code>test_audiopreprocessor</code>, <code>test_circularaudiobuffer</code>, <code>test_configmanager</code>, <code>test_healthcheck</code>, <code>test_pipelineevent</code>, <code>test_pipelinetracer</code>, <code>test_tts_dsp</code>) nécessitent une compilation séparée via CMake. Les sources existent dans <code>tests/cpp/</code> avec un <code>CMakeLists.txt</code> dédié.</p>
+<hr>
+<h1 id="5-plan-de-stabilisation">5. Plan de Stabilisation</h1>
+<h2 id="phase-1-urgent-correctifs-critiques">Phase 1 — Urgent (Correctifs Critiques)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Composant</th><th style="text-align:left">Action</th><th style="text-align:left">Fichier</th><th style="text-align:left">Priorité</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">1</td><td style="text-align:left"><strong>Pipeline FSM</strong></td><td style="text-align:left">Ajouter timeout safety 30s en état Speaking (watchdog)</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">🔴 CRITIQUE</td></tr>
+<tr><td style="text-align:left">2</td><td style="text-align:left"><strong>Logging C++</strong></td><td style="text-align:left">Activer le file logging par défaut</td><td style="text-align:left"><code>LogManager.cpp</code></td><td style="text-align:left">🔴 CRITIQUE</td></tr>
+<tr><td style="text-align:left">3</td><td style="text-align:left"><strong>TTS C++</strong></td><td style="text-align:left">Détecter et loguer les chunks 0 bytes dans <code>onWorkerChunk()</code></td><td style="text-align:left"><code>TTSManager.cpp</code></td><td style="text-align:left">🔴 HAUTE</td></tr>
+<tr><td style="text-align:left">4</td><td style="text-align:left"><strong>STT Python</strong></td><td style="text-align:left">Loguer les audio &lt;0.3s rejetés et les 3+ hallucinations</td><td style="text-align:left"><code>stt_server.py</code></td><td style="text-align:left">🔴 HAUTE</td></tr>
+</tbody></table></div>
+<h2 id="phase-2-important-stabilisation">Phase 2 — Important (Stabilisation)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Composant</th><th style="text-align:left">Action</th><th style="text-align:left">Fichier</th><th style="text-align:left">Priorité</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">5</td><td style="text-align:left"><strong>Logging Python</strong></td><td style="text-align:left">Ajouter persistance fichier (RotatingFileHandler)</td><td style="text-align:left">Tous servers</td><td style="text-align:left">⚠️ HAUTE</td></tr>
+<tr><td style="text-align:left">6</td><td style="text-align:left"><strong>Pipeline</strong></td><td style="text-align:left">Loguer durée de chaque état à chaque transition</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">⚠️ MOYENNE</td></tr>
+<tr><td style="text-align:left">7</td><td style="text-align:left"><strong>TTS Buffer</strong></td><td style="text-align:left">Borner le PCM buffer (ex: 5Mo max, log si dépassé)</td><td style="text-align:left"><code>TTSManager.cpp</code></td><td style="text-align:left">⚠️ MOYENNE</td></tr>
+<tr><td style="text-align:left">8</td><td style="text-align:left"><strong>Logging</strong></td><td style="text-align:left">Ajouter rotation de logs C++ (10Mo → archive)</td><td style="text-align:left"><code>LogManager.cpp</code></td><td style="text-align:left">⚠️ MOYENNE</td></tr>
+<tr><td style="text-align:left">9</td><td style="text-align:left"><strong>VAD</strong></td><td style="text-align:left">Ajouter mécanisme de reset noise floor (commande ou timeout 5min)</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">⚠️ MOYENNE</td></tr>
+<tr><td style="text-align:left">10</td><td style="text-align:left"><strong>Wakeword</strong></td><td style="text-align:left">Ajouter liste d'exclusion phonétique ("écho", "ego", "éco")</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">⚠️ MOYENNE</td></tr>
+<tr><td style="text-align:left">11</td><td style="text-align:left"><strong>Test Fixtures</strong></td><td style="text-align:left">Corriger <code>test_ws_connect/ping</code> pour compatibilité pytest</td><td style="text-align:left"><code>test_validation_pipeline.py</code></td><td style="text-align:left">⚠️ BASSE</td></tr>
+</tbody></table></div>
+<h2 id="phase-3-optimisation">Phase 3 — Optimisation</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Composant</th><th style="text-align:left">Action</th><th style="text-align:left">Fichier</th><th style="text-align:left">Priorité</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">12</td><td style="text-align:left"><strong>Logging</strong></td><td style="text-align:left">Trace IDs inter-services + JSON structuré</td><td style="text-align:left">Tous servers</td><td style="text-align:left">📊 MOYEN</td></tr>
+<tr><td style="text-align:left">13</td><td style="text-align:left"><strong>Wakeword</strong></td><td style="text-align:left">Utiliser le ring buffer 10s pour capturer l'audio pré-wake</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">📊 MOYEN</td></tr>
+<tr><td style="text-align:left">14</td><td style="text-align:left"><strong>Portabilité</strong></td><td style="text-align:left">Remplacer les 3 chemins <code>D:\EXO</code> hardcodés par env vars</td><td style="text-align:left">C++ sources</td><td style="text-align:left">📊 BAS</td></tr>
+<tr><td style="text-align:left">15</td><td style="text-align:left"><strong>TTS</strong></td><td style="text-align:left">Rendre <code>PY_TTS_TIMEOUT_MS</code> configurable via assistant.conf</td><td style="text-align:left"><code>TTSBackendXTTS.cpp</code></td><td style="text-align:left">📊 BAS</td></tr>
+</tbody></table></div>
+<hr>
+<h1 id="6-rapport-final">6. Rapport Final</h1>
+<h2 id="61-synthèse-des-problèmes-détectés">6.1 Synthèse des Problèmes Détectés</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Sévérité</th><th style="text-align:left">Nombre</th><th style="text-align:left">Résumé</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">🔴 CRITIQUE</td><td style="text-align:left">2</td><td style="text-align:left">Speaking timeout manquant, file logging désactivé</td></tr>
+<tr><td style="text-align:left">🔴 HAUTE</td><td style="text-align:left">4</td><td style="text-align:left">Chunks 0-byte non détectés, STT drops silencieux, logging Python, log rotation</td></tr>
+<tr><td style="text-align:left">⚠️ MOYENNE</td><td style="text-align:left">5</td><td style="text-align:left">Buffer unbounded, transition logging, noise floor reset, exclusion phonétique, pytest fixtures</td></tr>
+<tr><td style="text-align:left">📊 BASSE</td><td style="text-align:left">4</td><td style="text-align:left">Trace IDs, ring buffer pré-wake, portabilité chemins, TTS timeout config</td></tr>
+<tr><td style="text-align:left"><strong>Total</strong></td><td style="text-align:left"><strong>15</strong></td><td style="text-align:left"></td></tr>
+</tbody></table></div>
+<h2 id="62-analyse-technique-détaillée">6.2 Analyse Technique Détaillée</h2>
+<p>Le système EXO v4.2 est architecturé en <strong>7 microservices Python</strong> + <strong>1 application C++ Qt</strong> communiquant par WebSockets. Le pipeline vocal suit un flux linéaire : <code>Wakeword → VAD → STT → NLU → LLM (Claude) → TTS → Audio Output</code>.</p>
+<p><strong>Points forts</strong> :</p>
+<ul>
+<li>Architecture modulaire et découplée (chaque service indépendant)</li>
+<li>Double VAD (builtin + Silero) avec pondération adaptative</li>
+<li>Double détection wakeword (neural + transcript fuzzy)</li>
+<li>DSP complet en C++ (EQ, compresseur, normalizer, limiter, fade)</li>
+<li>Queue TTS FIFO avec enchaînement 30ms inter-phrases</li>
+<li>162 tests unitaires Python exhaustifs et tous verts</li>
+<li>Pipeline E2E fonctionnel en 2.7s</li>
+</ul>
+<p><strong>Points faibles</strong> :</p>
+<ul>
+<li>Logging insuffisant (pas de persistance, pas de trace IDs, pas de rotation)</li>
+<li>Quelques chemins silencieux (drops sans log)</li>
+<li>Un cas de deadlock potentiel (Speaking sans timeout)</li>
+</ul>
+<h2 id="63-causes-probables">6.3 Causes Probables</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Problème</th><th style="text-align:left">Cause Racine</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">P-FSM-01 (Speaking stuck)</td><td style="text-align:left">Pas de watchdog timer après ttsFinished() manqué</td></tr>
+<tr><td style="text-align:left">GAP-LOG-01 (file disabled)</td><td style="text-align:left"><code>m_fileEnabled</code> initialisé à <code>false</code> par défaut</td></tr>
+<tr><td style="text-align:left">P-STT-01 (silent drops)</td><td style="text-align:left">Condition &lt;0.3s traitée sans log ni signal client</td></tr>
+<tr><td style="text-align:left">P-TTS-01 (0-byte chunks)</td><td style="text-align:left">Pas de validation de taille dans onWorkerChunk()</td></tr>
+<tr><td style="text-align:left">P-AO-01 (buffer overflow)</td><td style="text-align:left">QByteArray sans borne supérieure</td></tr>
+</tbody></table></div>
+<h2 id="64-correctifs-immédiats">6.4 Correctifs Immédiats</h2>
+<h3 id="fix-1-watchdog-speaking-state">Fix 1 — Watchdog Speaking State</h3>
+<pre><code class="language-cpp">// VoicePipeline.cpp — dans setState(Speaking)
+if (s == PipelineState::Speaking) {
+    m_speakingWatchdog.start(30000); // 30s safety
+}
+connect(&amp;m_speakingWatchdog, &amp;QTimer::timeout, [this]() {
+    hWarning(henriVoice) &lt;&lt; &quot;WATCHDOG: Speaking bloqué &gt;30s → force Idle&quot;;
+    setState(PipelineState::Idle);
+});</code></pre>
+<h3 id="fix-2-file-logging">Fix 2 — File Logging</h3>
+<pre><code class="language-cpp">// LogManager.cpp — changer le défaut
+m_fileEnabled = true; // était false</code></pre>
+<h3 id="fix-3-zero-byte-detection">Fix 3 — Zero-byte Detection</h3>
+<pre><code class="language-cpp">// TTSManager.cpp — dans onWorkerChunk()
+if (pcm.isEmpty()) {
+    hWarning(henriVoice) &lt;&lt; &quot;TTS chunk 0 bytes — synthèse possiblement échouée&quot;;
+    return;
+}</code></pre>
+<h3 id="fix-4-stt-silent-drop-log">Fix 4 — STT Silent Drop Log</h3>
+<pre><code class="language-python"># stt_server.py — dans le handler audio
+if duration &lt; 0.3:
+    logger.warning(&quot;Audio %.2fs &lt; 0.3s threshold — ignoré&quot;, duration)</code></pre>
+<h2 id="65-correctifs-structurels">6.5 Correctifs Structurels</h2>
+<ol>
+<li><strong>Logging Python persistant</strong> : Ajouter <code>RotatingFileHandler</code> (10Mo, 5 backups) à tous les servers</li>
+<li><strong>State transition logging</strong> : Loguer <code>old_state → new_state (durée=Xms)</code> à chaque transition</li>
+<li><strong>Buffer bounding</strong> : Plafonner m_pcmBuffer à 5Mo avec log si dépassé</li>
+<li><strong>Log rotation C++</strong> : Implémenter rotation dans LogManager (10Mo → gzip)</li>
+<li><strong>Trace IDs</strong> : UUID tronqué (8 chars) propagé dans chaque requête WebSocket</li>
+</ol>
+<h2 id="66-vérification-des-chemins-gui">6.6 Vérification des Chemins GUI — ✅</h2>
+<p>Tous les chemins et variables d'environnement sont cohérents entre :</p>
+<ul>
+<li><code>config/assistant.conf</code> ← fichier de configuration principal</li>
+<li><code>.env</code> ← variables sensibles (API keys)</li>
+<li><code>.vscode/tasks.json</code> ← tâches de lancement</li>
+<li>C++ <code>ConfigManager.h</code> ← constantes par défaut</li>
+<li>Python servers ← argparse + env vars</li>
+</ul>
+<p><strong>0 incohérence</strong> détectée.</p>
+<h2 id="67-vérification-des-services">6.7 Vérification des Services — ✅</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Service</th><th style="text-align:left">Port</th><th style="text-align:left">Connecté</th><th style="text-align:left">Ping</th><th style="text-align:left">Fonctionnel</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">exo_server</td><td style="text-align:left">8765</td><td style="text-align:left">✅ 57.6ms</td><td style="text-align:left">— (pas de handler)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">stt_server</td><td style="text-align:left">8766</td><td style="text-align:left">✅ 1.9ms</td><td style="text-align:left">✅ 0.5ms</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">tts_server</td><td style="text-align:left">8767</td><td style="text-align:left">✅ 2.1ms</td><td style="text-align:left">✅ 0.6ms</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">vad_server</td><td style="text-align:left">8768</td><td style="text-align:left">✅ 2.0ms</td><td style="text-align:left">✅ 0.5ms</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">wakeword_server</td><td style="text-align:left">8770</td><td style="text-align:left">✅ 1.9ms</td><td style="text-align:left">✅ 0.5ms</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">memory_server</td><td style="text-align:left">8771</td><td style="text-align:left">✅ 2.0ms</td><td style="text-align:left">✅ 0.6ms</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">nlu_server</td><td style="text-align:left">8772</td><td style="text-align:left">✅ 2.0ms</td><td style="text-align:left">✅ 0.5ms</td><td style="text-align:left">✅</td></tr>
+</tbody></table></div>
+<h2 id="68-vérification-du-pipeline">6.8 Vérification du Pipeline — ✅</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Étape</th><th style="text-align:left">Résultat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Wakeword actif (hey_jarvis)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">VAD discrimine silence/son</td><td style="text-align:left">✅ (0.005 vs 0.853)</td></tr>
+<tr><td style="text-align:left">STT transcrit (595ms)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">NLU classifie 5/5</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">TTS synthétise (77KB, 5ms)</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Memory add/search/remove</td><td style="text-align:left">✅</td></tr>
+<tr><td style="text-align:left">Pipeline E2E</td><td style="text-align:left">✅ (2723ms)</td></tr>
+</tbody></table></div>
+<h2 id="69-tests-à-refaire">6.9 Tests à Refaire</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Test</th><th style="text-align:left">Quand</th><th style="text-align:left">Raison</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Tests C++ (Qt Test)</td><td style="text-align:left">Après compilation tests</td><td style="text-align:left">Non exécutés dans cet audit</td></tr>
+<tr><td style="text-align:left">Speaking watchdog</td><td style="text-align:left">Après implémentation Fix 1</td><td style="text-align:left">Nouveau code</td></tr>
+<tr><td style="text-align:left">File logging</td><td style="text-align:left">Après implémentation Fix 2</td><td style="text-align:left">Vérifier rotation</td></tr>
+<tr><td style="text-align:left">Pipeline E2E sous charge</td><td style="text-align:left">Après fixes Phase 1</td><td style="text-align:left">Stress test 50 requêtes</td></tr>
+<tr><td style="text-align:left">TTS enchaînement 10 phrases</td><td style="text-align:left">Prochaine session</td><td style="text-align:left">Vérifier fluidité longue</td></tr>
+</tbody></table></div>
+<h2 id="610-état-final-du-système">6.10 État Final du Système</h2>
+<pre><code>╔════════════════════════════════════════════════════════════════╗
+║                 EXO v4.2 — ÉTAT DU SYSTÈME                   ║
+╠════════════════════════════════════════════════════════════════╣
+║  Configuration GUI          : ✅ 100% cohérente              ║
+║  Services (7/7)             : ✅ Tous opérationnels           ║
+║  Pipeline vocal             : ✅ Fonctionnel bout en bout     ║
+║  Tests unitaires (162)      : ✅ 100% verts                   ║
+║  Tests intégration          : ✅ 13/13 (+ 2 faux négatifs)   ║
+║  Pipeline E2E               : ✅ 2.7s latence totale          ║
+║  Logging                    : ⚠️ Insuffisant (15 gaps)       ║
+║  Robustesse                 : ⚠️ 1 deadlock potentiel        ║
+║                                                                ║
+║  VERDICT: STABLE AVEC AMÉLIORATIONS RECOMMANDÉES              ║
+║  Score global: 82/100                                          ║
+╚════════════════════════════════════════════════════════════════╝</code></pre>
+<h3 id="comparaison-avec-audit-précédent">Comparaison avec Audit Précédent</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Métrique</th><th style="text-align:left">Audit Précédent</th><th style="text-align:left">Cet Audit</th><th style="text-align:left">Évolution</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">Findings CRITIQUE</td><td style="text-align:left">3</td><td style="text-align:left">2</td><td style="text-align:left">↓ -1</td></tr>
+<tr><td style="text-align:left">Findings HAUTE</td><td style="text-align:left">7</td><td style="text-align:left">4</td><td style="text-align:left">↓ -3</td></tr>
+<tr><td style="text-align:left">Findings TOTAL</td><td style="text-align:left">27</td><td style="text-align:left">15</td><td style="text-align:left">↓ -12</td></tr>
+<tr><td style="text-align:left">Tests Python</td><td style="text-align:left">162 pass</td><td style="text-align:left">162 pass</td><td style="text-align:left">=</td></tr>
+<tr><td style="text-align:left">Pipeline E2E</td><td style="text-align:left">Non testé</td><td style="text-align:left">2.7s ✅</td><td style="text-align:left">🆕</td></tr>
+<tr><td style="text-align:left">Bug fixes appliqués</td><td style="text-align:left">0</td><td style="text-align:left">3</td><td style="text-align:left">🆕</td></tr>
+<tr><td style="text-align:left">Score</td><td style="text-align:left">~65/100</td><td style="text-align:left">82/100</td><td style="text-align:left">↑ +17</td></tr>
+</tbody></table></div>
+<hr>
+<h1 id="annexe-a-audit-juillet-2025-historique">Annexe A — Audit Juillet 2025 (Historique)</h1>
+<blockquote><p>ℹ️ Ce contenu provient de l'audit initial de juillet 2025, fusionné ici pour référence historique. Les éléments corrigés sont marqués ✅. Les recommandations restantes sont intégrées dans le <a href="#5-plan-de-stabilisation">Plan de Stabilisation</a> ci-dessus.</p></blockquote>
+<h2 id="a1-bug-critique-tts-corrigé-juillet-2025">A.1 Bug Critique TTS Corrigé (Juillet 2025)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Champ</th><th style="text-align:left">Détail</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><strong>Symptôme</strong></td><td style="text-align:left">Handshake TTS OK mais synthèse retourne 0 bytes PCM (durée = 0)</td></tr>
+<tr><td style="text-align:left"><strong>Erreur serveur</strong></td><td style="text-align:left"><code>'int' object has no attribute 'device'</code> dans <code>GPT.generate()</code></td></tr>
+<tr><td style="text-align:left"><strong>Cause racine</strong></td><td style="text-align:left"><code>GPT.generate()</code> passe <code>bos_token_id=self.start_audio_token</code> (type <code>int</code>) à <code>transformers</code>. Les versions récentes appellent <code>.device</code> sur ces token IDs → crash</td></tr>
+<tr><td style="text-align:left"><strong>Erreur secondaire</strong></td><td style="text-align:left"><code>RuntimeError: Expected all tensors on same device, but found privateuseone:0 and cpu!</code></td></tr>
+</tbody></table></div>
+<p><strong>Correctif appliqué</strong> — Monkey-patch #5 (<code>_patched_gpt_generate</code>) dans <code>python/tts/tts_server.py</code> (lignes 171-189) : wrapping des token IDs en <code>torch.Tensor(value, device=device)</code>.</p>
+<p><strong>Résultats validés</strong> : DirectML "Bonjour" → 66 560 bytes, 1.39s audio en 1.61s (RTF 0.86).</p>
+<h2 id="a2-constats-de-stabilité-27-findings-juillet-2025">A.2 Constats de Stabilité (27 findings — Juillet 2025)</h2>
+<h3 id="critical-3">🔴 CRITICAL (3)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Constat</th><th style="text-align:left">Fichier</th><th style="text-align:left">Statut Mars 2026</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">CRIT-1</td><td style="text-align:left"><code>processEvents()</code> bloquant dans <code>TTSBackendXTTS.cpp</code> — risque réentrance + dangling references</td><td style="text-align:left"><code>TTSBackendXTTS.cpp</code></td><td style="text-align:left">⚠️ À corriger (→ QEventLoop)</td></tr>
+<tr><td style="text-align:left">CRIT-2</td><td style="text-align:left"><code>processEvents()</code> dans <code>TTSBackendQt.cpp</code> + STA threading COM/SAPI</td><td style="text-align:left"><code>TTSBackendQt.cpp</code></td><td style="text-align:left">⚠️ À corriger</td></tr>
+<tr><td style="text-align:left">CRIT-3</td><td style="text-align:left">Race condition apparente <code>m_speaking</code> / <code>m_draining</code> / <code>m_pcmBuffer</code> — en réalité mono-thread, pas de bug réel</td><td style="text-align:left"><code>TTSManager.h/cpp</code></td><td style="text-align:left">✅ Faux positif (main-thread only)</td></tr>
+</tbody></table></div>
+<h3 id="high-7">🟠 HIGH (7)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Constat</th><th style="text-align:left">Fichier</th><th style="text-align:left">Statut Mars 2026</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">HIGH-4</td><td style="text-align:left">QWebSocket thread affinity sans parent</td><td style="text-align:left"><code>TTSBackendXTTS.cpp</code></td><td style="text-align:left">✅ Risque faible</td></tr>
+<tr><td style="text-align:left">HIGH-5</td><td style="text-align:left"><code>m_pcmBuffer</code> sans limite de taille</td><td style="text-align:left"><code>TTSManager.cpp</code></td><td style="text-align:left">⚠️ Repris → P-AO-01</td></tr>
+<tr><td style="text-align:left">HIGH-6</td><td style="text-align:left">Reconnexion WebSocket sans backoff (Silero/WakeWord)</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">⚠️ Plan Phase 2</td></tr>
+<tr><td style="text-align:left">HIGH-7</td><td style="text-align:left"><code>feedRmsSamples()</code> cross-thread</td><td style="text-align:left"><code>VoicePipeline.cpp</code></td><td style="text-align:left">✅ Thread-safe (atomic + QueuedConnection)</td></tr>
+<tr><td style="text-align:left">HIGH-8</td><td style="text-align:left"><code>m_utteranceBuf</code> sans mutex</td><td style="text-align:left"><code>VoicePipeline.h/cpp</code></td><td style="text-align:left">✅ Thread-safe (main thread sérialisé)</td></tr>
+<tr><td style="text-align:left">HIGH-9</td><td style="text-align:left"><code>m_processingGuard</code> release prématuré avant <code>emit _doRequest()</code></td><td style="text-align:left"><code>TTSManager.cpp</code></td><td style="text-align:left">⚠️ Plan Phase 2</td></tr>
+<tr><td style="text-align:left">HIGH-10</td><td style="text-align:left">Python TTS <code>run_in_executor(None, ...)</code> pool saturée</td><td style="text-align:left"><code>tts_server.py</code></td><td style="text-align:left">⚠️ Plan Phase 2</td></tr>
+</tbody></table></div>
+<h3 id="medium-8">🟡 MEDIUM (8)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Constat</th><th style="text-align:left">Impact</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">MED-11</td><td style="text-align:left">QAudioSink recréé à chaque utterance (pops/clicks)</td><td style="text-align:left">✅ Corrigé (finalizeSpeech keepAlive)</td></tr>
+<tr><td style="text-align:left">MED-12</td><td style="text-align:left">VADEngine latence score async (~30ms)</td><td style="text-align:left">✅ Acceptable</td></tr>
+<tr><td style="text-align:left">MED-13</td><td style="text-align:left">HealthCheck 6 WebSocketClients permanents</td><td style="text-align:left">✅ Acceptable</td></tr>
+<tr><td style="text-align:left">MED-14</td><td style="text-align:left">CircularAudioBuffer commentaire trompeur "lock-free-ish"</td><td style="text-align:left">ℹ️ Cosmétique</td></tr>
+<tr><td style="text-align:left">MED-15</td><td style="text-align:left">STT Python <code>run_in_executor(None, ...)</code> saturation</td><td style="text-align:left">⚠️ Plan Phase 2</td></tr>
+<tr><td style="text-align:left">MED-16</td><td style="text-align:left"><code>TTSManager::broadcastWaveform()</code> pointeur <code>m_ws</code> dangling potentiel (→ utiliser <code>QPointer</code>)</td><td style="text-align:left">⚠️ Plan Phase 2</td></tr>
+<tr><td style="text-align:left">MED-17</td><td style="text-align:left"><code>drainAndStop()</code> safety timer persiste après cancel</td><td style="text-align:left">✅ Bénin</td></tr>
+<tr><td style="text-align:left">MED-18</td><td style="text-align:left"><code>TTSWorker::requestStop()</code> thread-safe</td><td style="text-align:left">✅ Correct</td></tr>
+</tbody></table></div>
+<h3 id="low-5-ℹ-info-4">🟢 LOW (5) / ℹ️ INFO (4)</h3>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">#</th><th style="text-align:left">Constat</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">LOW-19</td><td style="text-align:left"><code>std::vector&lt;float&gt; fbuf</code> alloué par chunk dans DSPProcessor::process()</td></tr>
+<tr><td style="text-align:left">LOW-20</td><td style="text-align:left">HealthCheck 6 WebSocketClients permanents</td></tr>
+<tr><td style="text-align:left">LOW-21</td><td style="text-align:left">STT <code>_audio_buffer</code> borné naturellement par timeout 15s</td></tr>
+<tr><td style="text-align:left">LOW-22</td><td style="text-align:left">QElapsedTimer non thread-safe mais main-thread only</td></tr>
+<tr><td style="text-align:left">LOW-23</td><td style="text-align:left">TTSBackendXTTS double retry hardcodé (5s + 3s)</td></tr>
+<tr><td style="text-align:left">INFO-24</td><td style="text-align:left">Carte des affinités thread documentée</td></tr>
+<tr><td style="text-align:left">INFO-25</td><td style="text-align:left">Connexions signal/slot auditées — types corrects</td></tr>
+<tr><td style="text-align:left">INFO-26</td><td style="text-align:left">Python GIL interactions acceptables (mono-client)</td></tr>
+<tr><td style="text-align:left">INFO-27</td><td style="text-align:left">Architecture fondamentalement saine pour mono-client</td></tr>
+</tbody></table></div>
+<h2 id="a3-scripts-de-test-créés-juillet-2025">A.3 Scripts de Test Créés (Juillet 2025)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Script</th><th style="text-align:left">Usage</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left"><code>scripts/test_tts_audit.py</code></td><td style="text-align:left">Test WebSocket TTS (handshake + synthèse)</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_verbose.py</code></td><td style="text-align:left">Test multi-phrases TTS</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_diag.py</code></td><td style="text-align:left">Diagnostic TTS avec listing voix</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_direct.py</code></td><td style="text-align:left">Test modèle direct CPU</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_directml.py</code></td><td style="text-align:left">Test modèle direct DirectML</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_fix_verify.py</code></td><td style="text-align:left">Vérification fallback CPU</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_tts_patch5.py</code></td><td style="text-align:left">Vérification monkey-patch #5</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_stt_audit.py</code></td><td style="text-align:left">Audit STT 6 sous-tests</td></tr>
+<tr><td style="text-align:left"><code>scripts/test_pipeline_audit.py</code></td><td style="text-align:left">Test intégration 7 services</td></tr>
+</tbody></table></div>
+<h2 id="a4-benchmarks-juillet-2025">A.4 Benchmarks (Juillet 2025)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th style="text-align:left">Composant</th><th style="text-align:left">Métrique</th><th style="text-align:left">Valeur</th></tr></thead>
+<tbody>
+<tr><td style="text-align:left">TTS (XTTS v2 DirectML)</td><td style="text-align:left">RTF</td><td style="text-align:left"><strong>0.86</strong></td></tr>
+<tr><td style="text-align:left">TTS (XTTS v2 DirectML)</td><td style="text-align:left">Latence synthèse</td><td style="text-align:left">1100–2000 ms</td></tr>
+<tr><td style="text-align:left">STT (whispercpp Vulkan)</td><td style="text-align:left">Latence transcription</td><td style="text-align:left"><strong>625 ms</strong> (2s audio)</td></tr>
+<tr><td style="text-align:left">Build Release</td><td style="text-align:left">Compilation</td><td style="text-align:left">Tous targets OK</td></tr>
+</tbody></table></div>
+<hr>
+<p><em>Retour à l'index : <a href="README.html">docs/README.md</a></em></p>
+  <div class="page-footer">
+    EXO Documentation v4.2 · Généré le 28 March 2026
+  </div>
+</main>
+
+<script>
+const SEARCH_DATA = [{"title": "AIMemoryManager", "href": "api/AIMemoryManager.html", "cat": "Documentation"}, {"title": "AssistantManager", "href": "api/AssistantManager.html", "cat": "Documentation"}, {"title": "AudioInput", "href": "api/AudioInput.html", "cat": "Documentation"}, {"title": "ClaudeAPI", "href": "api/ClaudeAPI.html", "cat": "Documentation"}, {"title": "ConfigManager", "href": "api/ConfigManager.html", "cat": "Documentation"}, {"title": "exo_server — Orchestrateur Principal", "href": "api/exo_server.html", "cat": "Documentation"}, {"title": "HealthCheck", "href": "api/HealthCheck.html", "cat": "Documentation"}, {"title": "LogManager", "href": "api/LogManager.html", "cat": "Documentation"}, {"title": "memory_server — Semantic Memory Server", "href": "api/memory_server.html", "cat": "Documentation"}, {"title": "nlu_server — Natural Language Understanding Server", "href": "api/nlu_server.html", "cat": "Documentation"}, {"title": "PipelineEvent — Bus d'événements du pipeline", "href": "api/PipelineEvent.html", "cat": "Documentation"}, {"title": "PipelineTracer", "href": "api/PipelineTracer.html", "cat": "Documentation"}, {"title": "API Reference — EXO v4.2", "href": "api/README.html", "cat": "Documentation"}, {"title": "ServiceManager", "href": "api/ServiceManager.html", "cat": "Documentation"}, {"title": "stt_server — Speech-to-Text Streaming Server", "href": "api/stt_server.html", "cat": "Documentation"}, {"title": "tts_server — Text-to-Speech Streaming Server", "href": "api/tts_server.html", "cat": "Documentation"}, {"title": "TTSManager", "href": "api/TTSManager.html", "cat": "Documentation"}, {"title": "vad_server — Voice Activity Detection Server", "href": "api/vad_server.html", "cat": "Documentation"}, {"title": "VoicePipeline", "href": "api/VoicePipeline.html", "cat": "Documentation"}, {"title": "wakeword_server — Wake Word Detection Server", "href": "api/wakeword_server.html", "cat": "Documentation"}, {"title": "WeatherManager", "href": "api/WeatherManager.html", "cat": "Documentation"}, {"title": "WebSocketClient", "href": "api/WebSocketClient.html", "cat": "Documentation"}, {"title": "EXO — Archives Documentation Historique", "href": "archives/archives_index.html", "cat": "📦 Archives"}, {"title": "EXO Assistant v4.2 — Rapport d'Audit Complet", "href": "archives/audit_final_2025_07.html", "cat": "📦 Archives"}, {"title": "Auditcomplet Prompt", "href": "archives/AuditComplet_Prompt.html", "cat": "📦 Archives"}, {"title": "Correctioncomplètemicroservices", "href": "archives/CorrectionComplèteMicroservices.html", "cat": "📦 Archives"}, {"title": "Fix Ram Doublons Microservices", "href": "archives/Fix_RAM_Doublons_Microservices.html", "cat": "📦 Archives"}, {"title": "Gestionmicro Prompt", "href": "archives/GestionMicro_Prompt.html", "cat": "📦 Archives"}, {"title": "Gui Release Prompt", "href": "archives/GUI_Release_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Implémentation Complète du Design System EXO", "href": "archives/prompt_design_system.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Plan Complet de Modernisation Visuelle EXO", "href": "archives/prompt_modernisation_ui_old.html", "cat": "📦 Archives"}, {"title": "Reduction Stt Prompt", "href": "archives/Reduction_STT_Prompt.html", "cat": "📦 Archives"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "archives/RolePermanentMaitre_Prompt.html", "cat": "📦 Archives"}, {"title": "Stabilisationfinale", "href": "archives/StabilisationFinale.html", "cat": "📦 Archives"}, {"title": "Validation", "href": "archives/Validation.html", "cat": "📦 Archives"}, {"title": "Audit Maître — EXO Assistant v4.2", "href": "audits/audit_master_2026_03.html", "cat": "🔍 Audits"}, {"title": "Architecture EXO v4.2", "href": "core/architecture.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Graphe de dépendances C++", "href": "core/architecture_graph.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Diagramme des modules C++", "href": "core/architecture_modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO Assistant — Documentation Technique Complète", "href": "core/EXO_DOCUMENTATION.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "EXO_SPEC_V4.2.md — Spécification Officielle (Source de Vérité)", "href": "core/EXO_SPEC.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Limitations connues — EXO v4.2", "href": "core/limitations.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Index des modules EXO", "href": "core/modules.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline EXO — Événements", "href": "core/pipeline.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Services EXO", "href": "core/services.html", "cat": "🏗 Architecture & Spécifications"}, {"title": "Pipeline Audio EXO v4.2", "href": "guides/audio_pipeline.html", "cat": "📖 Guides Techniques"}, {"title": "STT — Speech-to-Text (Whisper.cpp)", "href": "guides/stt.html", "cat": "📖 Guides Techniques"}, {"title": "Tests — Guide complet", "href": "guides/tests.html", "cat": "📖 Guides Techniques"}, {"title": "TTS — Text-to-Speech (XTTS v2)", "href": "guides/tts.html", "cat": "📖 Guides Techniques"}, {"title": "Prompt Audit Complet", "href": "prompts/prompt_audit_complet.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Correction Microservices", "href": "prompts/prompt_correction_microservices.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Fix Ram Doublons", "href": "prompts/prompt_fix_ram_doublons.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gestion Micro", "href": "prompts/prompt_gestion_micro.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Gui Release", "href": "prompts/prompt_gui_release.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Modernisation Visuelle & Design System EXO", "href": "prompts/prompt_modernisation_ui.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Nettoyage Ultra‑strict EXO v4.2", "href": "prompts/prompt_nettoyage.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Reduction Stt", "href": "prompts/prompt_reduction_stt.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Maître — Audit & Stabilisation EXO", "href": "prompts/prompt_role_permanent.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Stabilisation Finale", "href": "prompts/prompt_stabilisation_finale.html", "cat": "💬 Prompts Historiques"}, {"title": "Prompt Validation", "href": "prompts/prompt_validation.html", "cat": "💬 Prompts Historiques"}, {"title": "EXO Assistant v4.2 — Index Documentation", "href": "README.html", "cat": "Documentation"}, {"title": "Rapport Final — Fix RAM & Doublons Microservices", "href": "reports/fix_ram_doublons.html", "cat": "📊 Rapports Techniques"}, {"title": "Dernière mise à jour", "href": "reports/last_update.html", "cat": "📊 Rapports Techniques"}, {"title": "Rapport — Réduction STT : large-v3 → medium", "href": "reports/reduction_stt.html", "cat": "📊 Rapports Techniques"}, {"title": "EXO Design System — Documentation Complète", "href": "ui/design_system.html", "cat": "🎨 Interface & Design"}, {"title": "Documentation Versions — EXO", "href": "VERSIONS.html", "cat": "Documentation"}];
+
+function toggleNav(el) {
+  el.classList.toggle('collapsed');
+  el.nextElementSibling.classList.toggle('collapsed');
+}
+
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.style.display = 'none'; return; }
+  const matches = SEARCH_DATA.filter(d =>
+    d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchResults.style.display = 'none'; return; }
+  searchResults.innerHTML = matches.map(m =>
+    '<a href="' + m.href + '"><span class="cat">' + m.cat + '</span><br>' + m.title + '</a>'
+  ).join('');
+  searchResults.style.display = 'block';
+});
+
+document.addEventListener('click', function(e) {
+  if (!searchResults.contains(e.target) && e.target !== searchInput) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Highlight active link
+const current = location.pathname.split('/').pop();
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === current ||
+      a.getAttribute('href').endsWith('/' + current)) {
+    a.classList.add('active');
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
-Je veux que tu réalises la phase finale de stabilisation du projet EXO après le nettoyage massif et la suppression de tout le passif WSL2/ROCm.
+Je veux que tu réalises la phase finale de stabilisation du projet EXO après le nettoyage massif et la suppression de
+tout le passif WSL2/ROCm.
 
 Voici les tâches précises à effectuer :
 
@@ -93,5 +94,9 @@ Tu vas :
 - attendre ma validation avant d’appliquer
 
 ====================================================================
-Commence maintenant par analyser l’état actuel des chemins et des microservices, et propose un plan de correction complet.
+Commence maintenant par analyser l’état actuel des chemins et des microservices, et propose un plan de correction
+complet.
 ====================================================================
+
+---
+Retour à l'index : [docs/README.md](../README.md)

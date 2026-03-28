@@ -32,7 +32,7 @@ LogManager::LogManager(QObject *parent)
     : QObject(parent)
     , m_currentLevel(Info)
     , m_consoleEnabled(true)
-    , m_fileEnabled(false)
+    , m_fileEnabled(true)
     , m_oldHandler(nullptr)
 {
 }
@@ -84,7 +84,7 @@ void LogManager::setLogLevel(const QString &levelName)
 void LogManager::enableFileLogging(const QString &logFilePath)
 {
     if (logFilePath.isEmpty()) {
-        QString logDir = QStringLiteral("D:/EXO/logs");
+        QString logDir = qEnvironmentVariable("EXO_LOGS_DIR", QStringLiteral("D:/EXO/logs"));
         QDir().mkpath(logDir);
         m_logFilePath = QDir(logDir).filePath("henri.log");
     } else {
@@ -245,6 +245,17 @@ void LogManager::logPipelineEvent(const QJsonObject &event)
             stream << "[PIPELINE] " << compact << Qt::endl;
         }
     }
+}
+
+QStringList LogManager::getLogsByFilter(const QString &filter) const
+{
+    if (filter.isEmpty()) return m_recentLogs;
+    QStringList result;
+    for (const QString &line : m_recentLogs) {
+        if (line.contains(filter, Qt::CaseInsensitive))
+            result.append(line);
+    }
+    return result;
 }
 
 void LogManager::copyToClipboard(const QString &text)

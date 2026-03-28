@@ -285,6 +285,7 @@ class STTEngine:
         duration = len(audio_f32) / SAMPLE_RATE
 
         if duration < 0.3:
+            logger.warning("Audio %.2fs < 0.3s threshold — ignoré", duration)
             return {"text": "", "segments": [], "duration": duration}
 
         t0 = time.monotonic()

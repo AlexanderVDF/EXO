@@ -836,7 +836,7 @@ void AIMemoryManager::saveToFile()
 
 QString AIMemoryManager::memoryFilePath() const
 {
-    QString dataPath = QStringLiteral("D:/EXO/faiss");
+    QString dataPath = qEnvironmentVariable("EXO_FAISS_DIR", QStringLiteral("D:/EXO/faiss"));
     QDir().mkpath(dataPath);
     return dataPath + "/exa_memory.json";
 }
