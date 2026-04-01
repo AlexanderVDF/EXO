@@ -113,7 +113,7 @@ bool ConfigManager::loadConfiguration(const QString &configPath)
     QString fullPath = appDir.absoluteFilePath(configPath);
 
     if (!QFile::exists(fullPath)) {
-        hWarning(henriConfig) << "Config introuvable:" << fullPath
+        hWarning(exoConfig) << "Config introuvable:" << fullPath
                               << "— valeurs par défaut";
         setDefaultValues();
         // Ne pas return false — on peut fonctionner avec les defaults
@@ -126,7 +126,7 @@ bool ConfigManager::loadConfiguration(const QString &configPath)
         m_settings = new QSettings(fullPath, QSettings::IniFormat, this);
 
         if (m_settings->status() != QSettings::NoError) {
-            hWarning(henriConfig) << "Erreur lecture config:" << fullPath;
+            hWarning(exoConfig) << "Erreur lecture config:" << fullPath;
             emit configurationError("Impossible de charger le fichier de configuration");
             return false;
         }
@@ -136,9 +136,9 @@ bool ConfigManager::loadConfiguration(const QString &configPath)
 
     // Diagnostic clés essentielles
     if (getClaudeApiKey().isEmpty())
-        hWarning(henriConfig) << "Clé API Claude manquante";
+        hWarning(exoConfig) << "Clé API Claude manquante";
     if (getWeatherApiKey().isEmpty())
-        hWarning(henriConfig) << "Clé API météo manquante";
+        hWarning(exoConfig) << "Clé API météo manquante";
 
     hConfig() << "Configuration chargée — modèle Claude:" << getClaudeModel()
               << "— ville:" << getWeatherCity();
@@ -429,14 +429,14 @@ void ConfigManager::setTTSEngine(const QString &engine)
 bool ConfigManager::saveConfiguration()
 {
     if (!m_userSettings) {
-        hWarning(henriConfig) << "Aucune configuration utilisateur à sauvegarder";
+        hWarning(exoConfig) << "Aucune configuration utilisateur à sauvegarder";
         return false;
     }
 
     m_userSettings->sync();
 
     if (m_userSettings->status() != QSettings::NoError) {
-        hWarning(henriConfig) << "Erreur sauvegarde préférences utilisateur";
+        hWarning(exoConfig) << "Erreur sauvegarde préférences utilisateur";
         return false;
     }
 
@@ -468,7 +468,7 @@ void ConfigManager::detectLocation()
         reply->deleteLater();
 
         if (reply->error() != QNetworkReply::NoError) {
-            hWarning(henriConfig) << "Erreur géolocalisation:"
+            hWarning(exoConfig) << "Erreur géolocalisation:"
                                   << reply->errorString();
             emit locationDetectionError(reply->errorString());
             return;
@@ -501,7 +501,10 @@ void ConfigManager::detectLocation()
                   << "— pays:" << country;
 
         if (isLocationDetectionEnabled()) {
-            setWeatherCity(city);
+            // Ne pas écraser une ville configurée manuellement par l'utilisateur
+            QString currentCity = getWeatherCity();
+            if (currentCity.isEmpty() || currentCity == DEFAULT_WEATHER_CITY)
+                setWeatherCity(city);
         }
 
         emit locationDetected(city, country);
@@ -511,7 +514,7 @@ void ConfigManager::detectLocation()
 bool ConfigManager::isLocationDetectionEnabled() const
 {
     if (m_userSettings)
-        return m_userSettings->value("Location/auto_detection", true).toBool();
+        return m_userSettings->value("Location/auto_detection", false).toBool();
     return false;
 }
 

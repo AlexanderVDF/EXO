@@ -6,19 +6,19 @@
 #include <QJsonObject>
 
 /**
- * @brief Gestionnaire centralisé de logging pour Henri
+ * @brief Gestionnaire centralisé de logging pour EXO
  * 
  * Fournit des catégories de logging organisées et configurables
  * pour remplacer les qDebug() dispersés dans le code.
  */
 
 // Déclaration des catégories de logging
-Q_DECLARE_LOGGING_CATEGORY(henriMain)
-Q_DECLARE_LOGGING_CATEGORY(henriConfig)
-Q_DECLARE_LOGGING_CATEGORY(henriClaude)
-Q_DECLARE_LOGGING_CATEGORY(henriVoice)
-Q_DECLARE_LOGGING_CATEGORY(henriWeather)
-Q_DECLARE_LOGGING_CATEGORY(henriAssistant)
+Q_DECLARE_LOGGING_CATEGORY(exoMain)
+Q_DECLARE_LOGGING_CATEGORY(exoConfig)
+Q_DECLARE_LOGGING_CATEGORY(exoClaude)
+Q_DECLARE_LOGGING_CATEGORY(exoVoice)
+Q_DECLARE_LOGGING_CATEGORY(exoWeather)
+Q_DECLARE_LOGGING_CATEGORY(exoAssistant)
 
 class LogManager : public QObject
 {
@@ -91,12 +91,12 @@ private:
 };
 
 // Macros de convenance pour un usage simplifié
-#define hLog()      qCInfo(henriMain)
-#define hConfig()   qCInfo(henriConfig)
-#define hClaude()   qCInfo(henriClaude)
-#define hVoice()    qCInfo(henriVoice)
-#define hWeather()  qCInfo(henriWeather)
-#define hAssistant() qCInfo(henriAssistant)
+#define hLog()      qCInfo(exoMain)
+#define hConfig()   qCInfo(exoConfig)
+#define hClaude()   qCInfo(exoClaude)
+#define hVoice()    qCInfo(exoVoice)
+#define hWeather()  qCInfo(exoWeather)
+#define hAssistant() qCInfo(exoAssistant)
 
 #define hDebug(category)    qCDebug(category)
 #define hWarning(category)  qCWarning(category)

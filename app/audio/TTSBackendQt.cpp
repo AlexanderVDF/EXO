@@ -46,10 +46,10 @@ bool TTSBackendQt::synthesize(const TTSRequest &req)
 {
     if (!m_tts) return false;
 
-    // Apply prosody
+    // Apply prosody (volume always 1.0 — DSP normalizer handles dynamics)
     m_tts->setPitch(static_cast<double>(req.prosody.pitch));
     m_tts->setRate(static_cast<double>(req.prosody.rate));
-    m_tts->setVolume(static_cast<double>(req.prosody.volume));
+    m_tts->setVolume(1.0);
 
     emit started(req.text);
 

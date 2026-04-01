@@ -96,9 +96,9 @@ class WakeWordEngine:
             )
             self._active_models = list(self._model.models.keys())
 
-            dt = time.monotonic() - t0
-            logger.info("OpenWakeWord loaded in %.2fs — models: %s",
-                        dt, self._active_models)
+            load_ms = (time.monotonic() - t0) * 1000
+            logger.info("[Latency] Preload WakeWord: OK (%.0f ms) — models: %s",
+                        load_ms, self._active_models)
         except Exception as e:
             logger.error("Failed to load OpenWakeWord: %s", e)
             raise
@@ -201,6 +201,7 @@ class WakeWordSession:
             chunk = self._chunk_buffer[:chunk_bytes]
             self._chunk_buffer = self._chunk_buffer[chunk_bytes:]
 
+            self._chunk_start_time = time.monotonic()
             pcm = np.frombuffer(bytes(chunk), dtype=np.int16)
             scores = self.engine.process_chunk(pcm)
 
@@ -212,12 +213,14 @@ class WakeWordSession:
                         logger.debug("Wake word suppressed (cooldown): %s (%.3f)", model_name, score)
                         continue
                     self._last_detection_time = now
+                    detect_ms = (now - self._chunk_start_time) * 1000 if hasattr(self, '_chunk_start_time') else 0
                     await ws.send(json.dumps({
                         "type": "wakeword",
                         "word": model_name,
                         "score": round(score, 4),
                     }))
-                    logger.info("Wake word detected: %s (%.3f)", model_name, score)
+                    logger.info("[Latency] WakeWord detected: %s (%.3f) in ~%.0f ms",
+                                model_name, score, detect_ms)
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +260,9 @@ async def main() -> None:
     )
     logger.info("WakeWord server running on ws://%s:%d (models=%s, threshold=%.2f)",
                 args.host, args.port, engine.active_models, engine.threshold)
+    logger.info("[Latency] WakeWord: chunk=%d samples (%d ms), cooldown=%.1f s",
+                CHUNK_SAMPLES, CHUNK_SAMPLES * 1000 // SAMPLE_RATE, DETECTION_COOLDOWN_S)
+    logger.info("[Latency] Streaming: OK — ready for low-latency wake word detection")
 
     try:
         await asyncio.Future()

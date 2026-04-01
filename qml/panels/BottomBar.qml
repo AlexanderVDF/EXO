@@ -91,8 +91,8 @@ Rectangle {
                         radius: Theme.dotSize / 2
                         anchors.verticalCenter: parent.verticalCenter
                         color: {
-                            if (typeof healthCheck === 'undefined') return Theme.textMuted
-                            var s = healthCheck.serviceStatus(modelData.key)
+                            if (typeof serviceSupervisor === 'undefined') return Theme.textMuted
+                            var s = serviceSupervisor.serviceState(modelData.key)
                             return Theme.healthColor(s)
                         }
 

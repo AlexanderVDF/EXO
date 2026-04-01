@@ -12,8 +12,18 @@ Rectangle {
     property string _copyFeedback: ""
 
     function appendLog(entry) {
-        logModel.append({ text: entry })
-        if (logModel.count > 500)
+        // Fix audit T4: pré-calcul du niveau de log pour éviter indexOf dans le delegate
+        var lvl = "info"
+        if (entry.indexOf("CRIT") !== -1 || entry.indexOf("FATAL") !== -1) lvl = "error"
+        else if (entry.indexOf("WARN") !== -1) lvl = "warning"
+        else if (entry.indexOf("[VOICE]") !== -1) lvl = "voice"
+        else if (entry.indexOf("[CLAUDE]") !== -1) lvl = "thinking"
+        else if (entry.indexOf("[TTS]") !== -1 || entry.indexOf("[STT]") !== -1) lvl = "success"
+        else if (entry.indexOf("[WEATHER]") !== -1) lvl = "weather"
+
+        logModel.append({ text: entry, level: lvl })
+        // Fix audit T3: while au lieu de if pour gérer les bursts
+        while (logModel.count > 500)
             logModel.remove(0)
         if (autoScroll)
             logList.positionViewAtEnd()
@@ -54,9 +64,7 @@ Rectangle {
         if (typeof logManager !== 'undefined') {
             var recent = logManager.getRecentLogs()
             for (var i = 0; i < recent.length; i++)
-                logModel.append({ text: recent[i] })
-            if (autoScroll)
-                logList.positionViewAtEnd()
+                root.appendLog(recent[i])
         }
     }
 
@@ -221,14 +229,16 @@ Rectangle {
                     font.family: Theme.fontMono
                     font.pixelSize: Theme.fontMicro
                     color: {
-                        if (model.text.indexOf("WARN") !== -1) return Theme.warning
-                        if (model.text.indexOf("CRIT") !== -1 || model.text.indexOf("FATAL") !== -1) return Theme.error
-                        if (model.text.indexOf("[VOICE]") !== -1) return Theme.info
-                        if (model.text.indexOf("[CLAUDE]") !== -1) return Theme.stateThinking
-                        if (model.text.indexOf("[TTS]") !== -1) return Theme.success
-                        if (model.text.indexOf("[STT]") !== -1) return Theme.success
-                        if (model.text.indexOf("[WEATHER]") !== -1) return "#CE9178"
-                        return Theme.textSecondary
+                        // Fix audit T4: lookup par niveau pré-calculé
+                        switch (model.level) {
+                        case "error":    return Theme.error
+                        case "warning":  return Theme.warning
+                        case "voice":    return Theme.info
+                        case "thinking": return Theme.stateThinking
+                        case "success":  return Theme.success
+                        case "weather":  return "#CE9178"
+                        default:         return Theme.textSecondary
+                        }
                     }
                     elide: Text.ElideRight
                 }

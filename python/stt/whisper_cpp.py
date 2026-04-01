@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import signal
-import struct
 import subprocess
 import time
 import wave
@@ -43,8 +42,9 @@ class WhisperCppEngine:
         server_exe: str | None = None,
         lib_dir: str | None = None,
         language: str = "fr",
-        beam_size: int = 5,
-        no_speech_thold: float = 0.6,
+        beam_size: int = 3,
+        no_speech_thold: float = 0.4,
+        threads: int = 6,
         initial_prompt: str = "EXO est un assistant vocal domotique français. Jarvis, allume, éteins, météo, température, lumière.",
         host: str = "127.0.0.1",
         port: int = 8769,
@@ -53,6 +53,7 @@ class WhisperCppEngine:
         self.language = language
         self.beam_size = beam_size
         self.no_speech_thold = no_speech_thold
+        self.threads = threads
         self.initial_prompt = initial_prompt
         self.host = host
         self.port = port
@@ -84,7 +85,7 @@ class WhisperCppEngine:
             "--language", self.language,
             "--beam-size", str(self.beam_size),
             "--no-speech-thold", str(self.no_speech_thold),
-            "--threads", "4",
+            "--threads", str(self.threads),
             "--flash-attn",
             "--suppress-nst",
         ]
@@ -191,10 +192,13 @@ class WhisperCppEngine:
                 "text": seg.get("text", "").strip(),
             })
 
+        dt_ms = dt * 1000
         logger.info(
-            "Transcribed %.1fs in %.2fs (RTF=%.2f): %s",
-            duration, dt, dt / max(duration, 0.01), full_text[:80],
+            "[Latency] STT: %.0f ms (audio=%.1fs RTF=%.2f): %s",
+            dt_ms, duration, dt / max(duration, 0.01), full_text[:80],
         )
+        if dt_ms > 450:
+            logger.warning("[Latency] STT exceeded target (%.0f ms > 450 ms)", dt_ms)
 
         return {
             "text": full_text,

@@ -10,7 +10,8 @@ Rectangle {
 
     // ── Données internes ──
     property var moduleStates: ({})
-    property var recentEvents: []
+    property var recentEvents: []  // legacy — remplacé par eventListModel pour la timeline
+    ListModel { id: eventListModel }
     property string selectedModule: ""
 
     // Couleurs par état (via Theme)
@@ -33,7 +34,7 @@ Rectangle {
         id: refreshTimer
         interval: 500
         repeat: true
-        running: true
+        running: root.visible  // fix audit M4: ne tourne que si la page est visible
         onTriggered: root.refreshSnapshot()
     }
 
@@ -56,11 +57,16 @@ Rectangle {
 
     function loadRecentEvents() {
         if (typeof pipelineEventBus === 'undefined') return
+        eventListModel.clear()
         var evts = pipelineEventBus.getRecentEvents(80)
-        var arr = []
-        for (var i = 0; i < evts.length; i++)
-            arr.push(evts[i])
-        root.recentEvents = arr
+        for (var i = 0; i < evts.length; i++) {
+            eventListModel.append({
+                "timestamp": evts[i].timestamp || "",
+                "module": evts[i].module || "",
+                "event_type": evts[i].event_type || "",
+                "elapsed_ms": evts[i].elapsed_ms || 0
+            })
+        }
     }
 
     // Écouter les nouveaux événements en temps réel
@@ -68,10 +74,15 @@ Rectangle {
         target: typeof pipelineEventBus !== 'undefined' ? pipelineEventBus : null
 
         function onEventEmitted(event) {
-            var arr = root.recentEvents.slice()
-            arr.unshift(event)
-            if (arr.length > 200) arr.length = 200
-            root.recentEvents = arr
+            // fix audit M2: insertion ListModel au lieu de copie array JS
+            eventListModel.insert(0, {
+                "timestamp": event.timestamp || "",
+                "module": event.module || "",
+                "event_type": event.event_type || "",
+                "elapsed_ms": event.elapsed_ms || 0
+            })
+            while (eventListModel.count > 200)
+                eventListModel.remove(eventListModel.count - 1)
         }
 
         function onModuleStateChanged(moduleName, state) {
@@ -195,7 +206,7 @@ Rectangle {
                     Timer {
                         interval: 600
                         repeat: true
-                        running: true
+                        running: root.visible  // fix audit M4: pas de repaint Canvas quand invisible
                         onTriggered: edgeCanvas.requestPaint()
                     }
                 }
@@ -350,7 +361,7 @@ Rectangle {
                                 Item { Layout.fillWidth: true }
 
                                 Text {
-                                    text: root.recentEvents.length + " events"
+                                    text: eventListModel.count + " events"
                                     font.family: Theme.fontMono
                                     font.pixelSize: Theme.fontTiny
                                     color: Theme.textMuted
@@ -363,7 +374,7 @@ Rectangle {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             clip: true
-                            model: root.recentEvents
+                            model: eventListModel  // fix audit M2: ListModel au lieu d'array JS
 
                             delegate: Rectangle {
                                 width: eventList.width
@@ -378,7 +389,7 @@ Rectangle {
 
                                     Text {
                                         text: {
-                                            var ts = modelData.timestamp || ""
+                                            var ts = model.timestamp || ""
                                             return ts.length > 12 ? ts.substring(11, 23) : ts
                                         }
                                         font.family: Theme.fontMono
@@ -391,12 +402,12 @@ Rectangle {
                                         Layout.preferredWidth: 72
                                         Layout.preferredHeight: 16
                                         radius: 3
-                                        color: root.stateColor(modelData.module === root.selectedModule ? "active" : "idle")
+                                        color: root.stateColor(model.module === root.selectedModule ? "active" : "idle")
                                         opacity: 0.8
 
                                         Text {
                                             anchors.centerIn: parent
-                                            text: modelData.module || ""
+                                            text: model.module || ""
                                             font.family: Theme.fontMono
                                             font.pixelSize: 8
                                             font.bold: true
@@ -405,7 +416,7 @@ Rectangle {
                                     }
 
                                     Text {
-                                        text: modelData.event_type || ""
+                                        text: model.event_type || ""
                                         font.family: Theme.fontMono
                                         font.pixelSize: Theme.fontTiny
                                         color: Theme.textPrimary
@@ -415,7 +426,7 @@ Rectangle {
 
                                     Text {
                                         text: {
-                                            var ms = modelData.elapsed_ms
+                                            var ms = model.elapsed_ms
                                             return (ms !== undefined && ms > 0) ? (ms + "ms") : ""
                                         }
                                         font.family: Theme.fontMono
@@ -431,8 +442,8 @@ Rectangle {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        if (modelData.module)
-                                            root.selectedModule = modelData.module
+                                        if (model.module)
+                                            root.selectedModule = model.module
                                     }
                                 }
                             }
@@ -486,7 +497,7 @@ Rectangle {
                         id: inspectorLogRefresh
                         interval: 1000
                         repeat: true
-                        running: !!root.selectedModule
+                        running: root.visible && !!root.selectedModule  // fix audit M4
                         onTriggered: inspectorPanel.refreshModuleLogs()
                     }
 
@@ -750,7 +761,7 @@ Rectangle {
                                             anchors.fill: parent
                                             anchors.margins: 2
                                             clip: true
-                                            model: inspectorPanel.moduleLogs.slice(-30)
+                                            model: inspectorPanel.moduleLogs.slice(-20)  // fix audit T9: limiter à 20 lignes
 
                                             delegate: Text {
                                                 width: inspectorLogList.width
@@ -875,9 +886,10 @@ Rectangle {
     function moduleFilteredEvents() {
         if (!root.selectedModule) return []
         var filtered = []
-        for (var i = 0; i < root.recentEvents.length && filtered.length < 15; i++) {
-            if (root.recentEvents[i].module === root.selectedModule)
-                filtered.push(root.recentEvents[i])
+        for (var i = 0; i < eventListModel.count && filtered.length < 15; i++) {
+            var evt = eventListModel.get(i)
+            if (evt.module === root.selectedModule)
+                filtered.push(evt)
         }
         return filtered
     }

@@ -22,6 +22,8 @@ Item {
     Row {
         anchors.centerIn: parent
         spacing: 3
+        layer.enabled: true  // GPU-accelerated rendering
+        layer.smooth: true
 
         Repeater {
             model: root.barCount
@@ -50,7 +52,7 @@ Item {
                 }
 
                 Behavior on height {
-                    NumberAnimation { duration: 80; easing.type: Easing.OutQuad }
+                    NumberAnimation { duration: 50; easing.type: Easing.OutCubic }
                 }
                 Behavior on color {
                     ColorAnimation { duration: Theme.animNormal }

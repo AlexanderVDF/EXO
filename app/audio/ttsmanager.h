@@ -110,6 +110,7 @@ public:
     void configure(int sampleRate);
     void process(int16_t *pcm, int count, bool isFinalChunk = false);
     void reset();
+    void resetNorm() { m_norm.reset(); }
 
     void setEnabled(bool on)       { m_enabled = on; }
     bool isEnabled() const         { return m_enabled; }
@@ -126,6 +127,37 @@ private:
     TTSNormalizer  m_norm;
     TTSFade        m_fade;
     bool m_firstChunk = true;
+    std::vector<float> m_fbuf;  // reusable float buffer to avoid per-chunk allocation
+};
+
+// ─────────────────────────────────────────────────────
+//  PCMRingBuffer — lock-free circular PCM buffer
+//
+//  Fixed-capacity ring buffer for streaming PCM between
+//  TTS worker (write) and persistent audio sink (read).
+//  Single-thread access only (main thread).
+// ─────────────────────────────────────────────────────
+class PCMRingBuffer
+{
+public:
+    explicit PCMRingBuffer(int capacity = 480000);  // ~10s @ 24kHz mono 16bit
+
+    int  write(const char *data, int size);
+    int  read(char *data, int maxSize);
+    int  availableRead()  const { return m_count; }
+    int  availableWrite() const { return m_capacity - m_count; }
+    bool isEmpty()        const { return m_count == 0; }
+    void clear();
+
+    /// Apply cosine fade-out to the last fadeBytes of buffered data
+    void fadeOutTail(int fadeBytes);
+
+private:
+    std::vector<char> m_buf;
+    int m_capacity;
+    int m_readPos  = 0;
+    int m_writePos = 0;
+    int m_count    = 0;
 };
 
 // ─────────────────────────────────────────────────────
@@ -164,6 +196,7 @@ public slots:
     void setPythonWsUrl(const QString &url);
     void setXTTSVoice(const QString &name);
     void setXTTSLang(const QString &lang);
+    void warmConnect();
 
 signals:
     void started(const QString &text);
@@ -261,12 +294,11 @@ private:
     ProsodyProfile analyzeProsody(const QString &text) const;
     QString preprocessText(const QString &raw) const;
 
-    // ── streaming playback ──
-    void startSink();
-    void feedSink(const QByteArray &pcm);
+    // ── streaming playback — persistent sink + ring buffer ──
+    void ensureSinkReady();
+    void feedRingBuffer(const QByteArray &pcm);
     void pumpBuffer();
-    void stopSink();
-    void drainAndStop();
+    void destroySink();
     void finalizeSpeech();
     void onSinkStateChanged(QAudio::State state);
     void broadcastWaveform(const QByteArray &pcm);
@@ -275,7 +307,8 @@ private:
     // ── state ──
     std::atomic<bool> m_speaking{false};
     std::atomic<bool> m_processingGuard{false}; // prevents re-entrant processQueue
-    bool m_draining = false;
+    bool m_synthesizing = false;  // true while worker is producing chunks for current phrase
+    bool m_turnActive   = false;  // true while a speech turn is ongoing (spans chained phrases)
     bool m_cascadeEnabled = true;
     float m_baseRate   = 0.0f;
     float m_basePitch  = 0.0f;
@@ -291,13 +324,13 @@ private:
     // ── DSP ──
     TTSDSPProcessor m_dsp;
 
-    // ── audio output ──
+    // ── audio output — persistent sink + ring buffer ──
     QAudioFormat m_sinkFormat;
     std::unique_ptr<QAudioSink> m_sink;
     QIODevice *m_sinkIO = nullptr;
-    QByteArray m_pcmBuffer;    // intermediate PCM accumulator
-    QTimer    *m_pumpTimer = nullptr; // feeds sink from m_pcmBuffer
-    qint64     m_totalPcmBytes = 0;  // diagnostic counter
+    PCMRingBuffer m_ringBuffer;       // circular PCM buffer between TTS and sink
+    QTimer    *m_pumpTimer = nullptr; // feeds sink from ring buffer
+    qint64     m_totalPcmBytes = 0;   // diagnostic counter
 
     // ── worker thread ──
     QThread      m_workerThread;
@@ -305,6 +338,8 @@ private:
 
     // ── timers ──
     QElapsedTimer m_lastSpeechEnd;
+    QElapsedTimer m_speakRequestTime;
+    bool m_firstChunkReceived = false;
 
     // ── WebSocket ──
     QWebSocket *m_ws = nullptr;

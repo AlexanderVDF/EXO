@@ -22,8 +22,8 @@ ApplicationWindow {
     property string partialTranscript: ""
     property string currentResponse: ""
     property bool isStreaming: false
-    property bool servicesReady: typeof serviceManager !== 'undefined'
-                                 ? serviceManager.allReady : true
+    property bool servicesReady: typeof serviceSupervisor !== 'undefined'
+                                 ? serviceSupervisor.allReady : true
 
     // ══════════════════════════════════════════════
     //  Connexions aux context properties C++
@@ -350,10 +350,10 @@ ApplicationWindow {
         z: 100
         visible: !mainWindow.servicesReady
         allReady: mainWindow.servicesReady
-        readyCount: typeof serviceManager !== 'undefined' ? serviceManager.readyCount : 0
-        totalServices: typeof serviceManager !== 'undefined' ? serviceManager.totalServices : 0
-        currentAction: typeof serviceManager !== 'undefined' ? serviceManager.currentAction : "Initialisation…"
-        serviceStatuses: typeof serviceManager !== 'undefined' ? serviceManager.serviceStatuses : []
+        readyCount: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.readyCount : 0
+        totalServices: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.totalServices : 0
+        currentAction: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.currentAction : "Initialisation…"
+        serviceStatuses: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.serviceStatuses : []
         onDismissed: splashScreen.visible = false
     }
 

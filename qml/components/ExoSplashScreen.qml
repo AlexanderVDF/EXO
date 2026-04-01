@@ -58,7 +58,7 @@ Rectangle {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "v4.2"
+                text: "v5.1"
                 font.family: Theme.fontMono
                 font.pixelSize: Theme.fontBody
                 color: Theme.textSecondary
@@ -123,7 +123,7 @@ Rectangle {
 
                 Rectangle {
                     width: parent.width
-                    height: 28
+                    height: 32
                     radius: Theme.radiusSmall
                     color: Theme.splashPanel
 
@@ -138,16 +138,19 @@ Rectangle {
                             color: {
                                 var s = modelData.status
                                 if (s === "ready")     return Theme.success
-                                if (s === "failed")    return Theme.error
-                                if (s === "launching" || s === "running" || s === "checking")
+                                if (s === "failed" || s === "crashed") return Theme.error
+                                if (s === "starting" || s === "waiting_ready"
+                                    || s === "restarting"
+                                    || s === "launching" || s === "running" || s === "checking")
                                     return Theme.warning
                                 return Theme.textMuted
                             }
 
                             SequentialAnimation on opacity {
-                                running: modelData.status === "launching"
-                                         || modelData.status === "running"
-                                         || modelData.status === "checking"
+                                running: modelData.status !== "ready"
+                                         && modelData.status !== "failed"
+                                         && modelData.status !== "crashed"
+                                         && modelData.status !== "stopped"
                                 loops: Animation.Infinite
                                 NumberAnimation { to: 0.3; duration: 500 }
                                 NumberAnimation { to: 1.0; duration: 500 }
@@ -158,7 +161,34 @@ Rectangle {
                             text: modelData.name
                             font.family: Theme.fontMono
                             font.pixelSize: Theme.fontCaption
+                            font.weight: Font.Bold
                             color: Theme.textPrimary
+                        }
+
+                        // v5.1: phase detail for TTS
+                        Text {
+                            visible: modelData.phase !== undefined
+                                     && modelData.phase !== "none"
+                                     && modelData.phase !== "ready_online"
+                            text: {
+                                var p = modelData.phase
+                                if (p === "ready_init")    return "Initialisation…"
+                                if (p === "ready_loading") return "Chargement modèle…"
+                                if (p === "ready_warmup")  return "Préchauffage GPU…"
+                                return ""
+                            }
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.fontMicro
+                            font.italic: true
+                            color: Theme.splashAccent
+                            Layout.fillWidth: true
+                        }
+
+                        // Filler when no phase
+                        Item {
+                            visible: modelData.phase === undefined
+                                     || modelData.phase === "none"
+                                     || modelData.phase === "ready_online"
                             Layout.fillWidth: true
                         }
 
@@ -172,18 +202,22 @@ Rectangle {
                         Text {
                             text: {
                                 var s = modelData.status
-                                if (s === "ready")     return "✓"
-                                if (s === "failed")    return "✗"
-                                if (s === "launching") return "…"
-                                if (s === "checking")  return "?"
-                                if (s === "running")   return "↻"
+                                if (s === "ready")         return "✓"
+                                if (s === "failed")        return "✗"
+                                if (s === "crashed")       return "⚠"
+                                if (s === "starting")      return "…"
+                                if (s === "waiting_ready") return "◉"
+                                if (s === "restarting")    return "↻"
+                                if (s === "launching")     return "…"
+                                if (s === "checking")      return "?"
+                                if (s === "running")       return "↻"
                                 return ""
                             }
                             font.pixelSize: Theme.fontBody
                             color: {
                                 var s = modelData.status
                                 if (s === "ready")  return Theme.success
-                                if (s === "failed") return Theme.error
+                                if (s === "failed" || s === "crashed") return Theme.error
                                 return Theme.warning
                             }
                         }

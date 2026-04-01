@@ -28,7 +28,7 @@ AssistantManager::AssistantManager(QObject *parent)
     , m_healthCheck(nullptr)
     , m_qmlEngine(nullptr)
 {
-    hAssistant() << "AssistantManager v4 créé";
+    hAssistant() << "AssistantManager v5.1 créé";
 }
 
 AssistantManager::~AssistantManager()
@@ -42,20 +42,37 @@ void AssistantManager::setQmlEngine(QQmlApplicationEngine *engine)
     hAssistant() << "QML Engine configuré";
 }
 
+void AssistantManager::initConfigEarly(const QString &configPath)
+{
+    if (m_configManager) return; // déjà créé
+
+    m_configManager = new ConfigManager(this);
+    if (!m_configManager->loadConfiguration(configPath)) {
+        hWarning(exoAssistant) << "Configuration par défaut utilisée (early)";
+    }
+
+    // Exposer immédiatement au QML pour que Component.onCompleted voit les vraies valeurs
+    if (m_qmlEngine) {
+        m_qmlEngine->rootContext()->setContextProperty("configManager", m_configManager);
+        hAssistant() << "configManager exposé au QML (early)";
+    }
+}
+
 bool AssistantManager::initializeWithConfig(const QString &configPath)
 {
     if (m_isInitialized) {
-        hWarning(henriAssistant) << "AssistantManager déjà initialisé";
+        hWarning(exoAssistant) << "AssistantManager déjà initialisé";
         return true;
     }
 
     hAssistant() << "=== Initialisation d'EXO Assistant ===" ;
 
-    // 1. Créer et charger la configuration
-    m_configManager = new ConfigManager(this);
-    
-    if (!m_configManager->loadConfiguration(configPath)) {
-        hWarning(henriAssistant) << "Configuration par défaut utilisée";
+    // 1. Créer et charger la configuration (si pas déjà fait par initConfigEarly)
+    if (!m_configManager) {
+        m_configManager = new ConfigManager(this);
+        if (!m_configManager->loadConfiguration(configPath)) {
+            hWarning(exoAssistant) << "Configuration par défaut utilisée";
+        }
     }
     
     // 2. Initialiser le système de logging avec la config
@@ -103,7 +120,7 @@ void AssistantManager::initializeComponents()
         m_claudeApi->setModel(m_configManager->getClaudeModel());
         hClaude() << "Claude API configuré avec le modèle:" << m_configManager->getClaudeModel();
     } else {
-        hWarning(henriClaude) << "Clé API Claude manquante - fonctionnalité désactivée";
+        hWarning(exoClaude) << "Clé API Claude manquante - fonctionnalité désactivée";
     }
 
     // === Voice Pipeline ===
@@ -140,6 +157,12 @@ void AssistantManager::initializeComponents()
     m_voicePipeline->setTTSLanguage(m_configManager->getTTSLanguage());
     m_voicePipeline->setTTSStyle(m_configManager->getTTSStyle());
     m_voicePipeline->setTTSEngine(m_configManager->getTTSEngine());
+    m_voicePipeline->setTTSPitch(m_configManager->getString("TTS", "pitch", "1.0").toFloat());
+    m_voicePipeline->setTTSRate(m_configManager->getString("TTS", "rate", "1.0").toFloat());
+
+    // Audio preprocessing from config
+    m_voicePipeline->setNoiseGate(m_configManager->getString("Audio", "noise_gate", "0.005").toFloat());
+    m_voicePipeline->setAGC(m_configManager->getBool("Audio", "agc_enabled", false));
 
     // Configure STT language from config
     m_voicePipeline->setSTTLanguage(m_configManager->getSTTLanguage());
@@ -166,7 +189,7 @@ void AssistantManager::initializeComponents()
         m_weatherManager->initialize();
         hWeather() << "Weather Manager configuré pour:" << m_configManager->getWeatherCity();
     } else {
-        hWarning(henriWeather) << "Clé API météo manquante - fonctionnalité désactivée";
+        hWarning(exoWeather) << "Clé API météo manquante - fonctionnalité désactivée";
     }
     
     // === Memory Manager ===
@@ -188,6 +211,9 @@ void AssistantManager::initializeComponents()
     m_healthCheck->configure(m_configManager);
     m_healthCheck->start(10000);  // Ping toutes les 10 secondes
     hAssistant() << "HealthCheck initialisé — surveillance des microservices activée";
+
+    // === Tool Sockets (microservices outils) ===
+    initToolSockets();
 }
 
 void AssistantManager::setupConnections()
@@ -251,7 +277,7 @@ void AssistantManager::setupConnections()
     if (m_voicePipeline) {
         connect(m_voicePipeline, &VoicePipeline::voiceError,
                 this, [this](const QString& error) {
-                    hWarning(henriVoice) << "Erreur vocale:" << error;
+                    hWarning(exoVoice) << "Erreur vocale:" << error;
                     emit errorOccurred(error);
                 });
         connect(m_voicePipeline, &VoicePipeline::statusChanged,
@@ -289,7 +315,7 @@ void AssistantManager::setupConnections()
 void AssistantManager::exposeToQml()
 {
     if (!m_qmlEngine) {
-        hWarning(henriAssistant) << "QML Engine non disponible pour l'exposition";
+        hWarning(exoAssistant) << "QML Engine non disponible pour l'exposition";
         return;
     }
 
@@ -336,7 +362,7 @@ AudioDeviceManager* AssistantManager::audioDeviceManager() const
 void AssistantManager::sendMessage(const QString &message)
 {
     if (!m_claudeApi) {
-        hWarning(henriAssistant) << "sendMessage: Claude API NULL!";
+        hWarning(exoAssistant) << "sendMessage: Claude API NULL!";
         emit errorOccurred("Claude API non disponible");
         return;
     }
@@ -347,24 +373,49 @@ void AssistantManager::sendMessage(const QString &message)
     // Stocker le message utilisateur pour la mémoire
     m_lastUserMessage = message;
     
-    // Contexte système enrichi avec les capacités EXO
-    QString systemContext = "Vous êtes EXO, un assistant domotique français intelligent. ";
-    systemContext += "L'utilisateur s'appelle Alex. Appelle-le toujours Alex, jamais autrement. ";
-    systemContext += "Vous avez accès aux outils suivants via Function Calling: ";
-    systemContext += "ha_turn_on, ha_turn_off, ha_toggle, ha_set_brightness, ha_set_temperature, ha_get_state (Home Assistant), ";
-    systemContext += "get_weather (météo), get_datetime (date/heure). ";
-    systemContext += "Utilisez ces outils quand l'utilisateur demande une action domotique ou une information. ";
-    
+    // ── Prompt système EXO v5.2 (Claude Optimisé) ──
+    QString systemContext = QStringLiteral(
+        "Tu es EXO, le moteur cognitif d'un assistant vocal temps réel.\n"
+        "Ton rôle est de fournir des réponses immédiates, courtes, parlables, "
+        "sans hésitation, parfaitement adaptées à un pipeline vocal streaming.\n"
+        "L'utilisateur s'appelle Alex. Appelle-le toujours Alex, jamais autrement.\n\n"
+
+        "STYLE : Tu parles comme un assistant vocal premium, clair, naturel, concis. "
+        "Tu réponds en 1 à 2 phrases maximum sauf demande explicite. "
+        "Tu vas directement à l'essentiel, sans préambule, sans remplissage. "
+        "Tu ne fais aucun méta-commentaire sur ton fonctionnement. "
+        "Tu n'utilises pas d'emojis sauf si demandé. "
+        "Tu adaptes ton ton à celui de l'utilisateur.\n\n"
+
+        "STREAMING : Tu produis des phrases courtes, complètes, bien ponctuées "
+        "pour permettre un TTS phrase par phrase. "
+        "Tu termines clairement tes phrases. "
+        "Tu ne génères jamais de texte parasite avant la première phrase. "
+        "Tu ne génères jamais de listes ou blocs longs sauf si demandé.\n\n"
+
+        "LATENCE : Tu donnes la première phrase immédiatement. "
+        "Tu ne fais pas d'introduction ni de transition inutile.\n\n"
+
+        "OUTILS : Tu utilises les outils EXO uniquement quand c'est pertinent. "
+        "Si un outil est nécessaire, tu l'appelles immédiatement sans commentaire. "
+        "Outils disponibles : ha_turn_on, ha_turn_off, ha_toggle, ha_set_brightness, "
+        "ha_set_temperature, ha_get_state (Home Assistant), "
+        "get_weather (météo), get_datetime (date/heure).\n\n"
+
+        "SÉCURITÉ : Tu ne fais jamais d'hallucination factuelle. "
+        "Si tu ne sais pas, tu réponds simplement et brièvement."
+    );
+
     // Ajouter le contexte de mémoire intelligente si disponible
     if (m_memoryManager) {
         QString memoryContext = m_memoryManager->buildClaudeContext(5, 5);
         if (!memoryContext.isEmpty()) {
-            systemContext += "\n\n" + memoryContext;
+            systemContext += QStringLiteral("\n\n") + memoryContext;
         }
-        systemContext += "\nUtilise ta mémoire des conversations précédentes et les souvenirs utilisateur pour personnaliser tes réponses.";
+        systemContext += QStringLiteral(
+            "\nUtilise ta mémoire des conversations précédentes "
+            "et les souvenirs utilisateur pour personnaliser tes réponses.");
     }
-    
-    systemContext += "\nUtilisez ces informations pour répondre de manière contextuelle et utile.";
     
     // Construire les outils EXO Function Calling
     QJsonArray tools = ClaudeAPI::buildEXOTools();
@@ -384,7 +435,7 @@ void AssistantManager::sendManualQuery(const QString &text)
 void AssistantManager::startListening()
 {
     if (!m_voicePipeline) {
-        hWarning(henriAssistant) << "Voice Pipeline non disponible";
+        hWarning(exoAssistant) << "Voice Pipeline non disponible";
         return;
     }
     
@@ -429,7 +480,7 @@ void AssistantManager::onWeatherUpdate()
 
 void AssistantManager::onError(const QString &error)
 {
-    hCritical(henriAssistant) << "Erreur AssistantManager:" << error;
+    hCritical(exoAssistant) << "Erreur AssistantManager:" << error;
     emit errorOccurred(error);
 }
 
@@ -549,10 +600,179 @@ void AssistantManager::onToolCall(const QString &toolUseId,
         return;
     }
 
+    // ── Outils microservices (dispatch async vers serveurs Python dédiés) ─────
+    if (toolName == QLatin1String("search_web")) {
+        dispatchToolToService(QStringLiteral("websearch"), toolUseId,
+                              QStringLiteral("search_web"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("get_news")) {
+        dispatchToolToService(QStringLiteral("news"), toolUseId,
+                              QStringLiteral("get_news"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("get_summary")) {
+        dispatchToolToService(QStringLiteral("knowledge"), toolUseId,
+                              QStringLiteral("get_summary"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("calculate")) {
+        dispatchToolToService(QStringLiteral("tools"), toolUseId,
+                              QStringLiteral("calculate"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("convert")) {
+        dispatchToolToService(QStringLiteral("tools"), toolUseId,
+                              QStringLiteral("convert"), arguments);
+        return;
+    }
+
     // ── Outil inconnu ────────────────────────────────
-    hWarning(henriAssistant) << "Tool inconnu:" << toolName;
+    hWarning(exoAssistant) << "Tool inconnu:" << toolName;
     result[QStringLiteral("status")] = QStringLiteral("error");
     result[QStringLiteral("message")] =
         QStringLiteral("Outil '%1' non reconnu").arg(toolName);
+    m_claudeApi->sendToolResult(toolUseId, result);
+}
+
+// ═══════════════════════════════════════════════════════
+//  Microservices Outils — WebSocket dispatch
+// ═══════════════════════════════════════════════════════
+
+void AssistantManager::initToolSockets()
+{
+    struct ServiceDef {
+        QString name;
+        QString section;
+        QString key;
+        QString defaultUrl;
+    };
+
+    const ServiceDef services[] = {
+        { QStringLiteral("websearch"), QStringLiteral("Tools"), QStringLiteral("websearch_url"), QStringLiteral("ws://localhost:8773") },
+        { QStringLiteral("news"),      QStringLiteral("Tools"), QStringLiteral("news_url"),      QStringLiteral("ws://localhost:8774") },
+        { QStringLiteral("knowledge"), QStringLiteral("Tools"), QStringLiteral("knowledge_url"), QStringLiteral("ws://localhost:8775") },
+        { QStringLiteral("tools"),     QStringLiteral("Tools"), QStringLiteral("tools_url"),     QStringLiteral("ws://localhost:8776") },
+    };
+
+    for (const auto &svc : services) {
+        QString url = m_configManager->getString(svc.section, svc.key, svc.defaultUrl);
+        auto *ws = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+        const QString serviceName = svc.name;
+
+        connect(ws, &QWebSocket::connected, this, [this, serviceName]() {
+            hAssistant() << "Tool socket connecté:" << serviceName;
+        });
+
+        connect(ws, &QWebSocket::disconnected, this, [this, serviceName]() {
+            hAssistant() << "Tool socket déconnecté:" << serviceName;
+            // Reconnexion automatique après 3 secondes
+            QTimer::singleShot(3000, this, [this, serviceName]() {
+                if (auto *sock = m_toolSockets.value(serviceName)) {
+                    QString url = m_configManager->getString(
+                        QStringLiteral("Tools"),
+                        serviceName + QStringLiteral("_url"),
+                        QStringLiteral("ws://localhost:8773"));
+                    sock->open(QUrl(url));
+                }
+            });
+        });
+
+        connect(ws, &QWebSocket::textMessageReceived, this,
+                [this, serviceName](const QString &msg) {
+                    onToolServiceMessage(serviceName, msg);
+                });
+
+        m_toolSockets.insert(svc.name, ws);
+        ws->open(QUrl(url));
+        hAssistant() << "Tool socket" << svc.name << "→" << url;
+    }
+}
+
+void AssistantManager::dispatchToolToService(const QString &service,
+                                              const QString &toolUseId,
+                                              const QString &action,
+                                              const QJsonObject &params)
+{
+    auto *ws = m_toolSockets.value(service);
+    if (!ws || !ws->isValid()) {
+        hWarning(exoAssistant) << "Tool socket non disponible:" << service;
+        QJsonObject err;
+        err[QStringLiteral("status")] = QStringLiteral("error");
+        err[QStringLiteral("message")] =
+            QStringLiteral("Service %1 non disponible").arg(service);
+        m_claudeApi->sendToolResult(toolUseId, err);
+        return;
+    }
+
+    // Stocker le tool_use_id en attente pour ce service
+    m_pendingToolCalls.insert(service, toolUseId);
+
+    // Envoyer la requête au microservice
+    QJsonObject request;
+    request[QStringLiteral("action")] = action;
+    request[QStringLiteral("params")] = params;
+
+    QJsonDocument doc(request);
+    ws->sendTextMessage(QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+
+    hAssistant() << "Tool dispatch:" << action << "→" << service
+                 << "(tool_use_id:" << toolUseId << ")";
+
+    // Timeout : si pas de réponse en 15 secondes, envoyer une erreur à Claude
+    QTimer::singleShot(15000, this, [this, service, toolUseId]() {
+        if (m_pendingToolCalls.value(service) == toolUseId) {
+            m_pendingToolCalls.remove(service);
+            hWarning(exoAssistant) << "Tool timeout:" << service;
+            QJsonObject err;
+            err[QStringLiteral("status")] = QStringLiteral("error");
+            err[QStringLiteral("message")] =
+                QStringLiteral("Timeout: le service %1 n'a pas répondu").arg(service);
+            m_claudeApi->sendToolResult(toolUseId, err);
+        }
+    });
+}
+
+void AssistantManager::onToolServiceMessage(const QString &service,
+                                             const QString &message)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+    if (doc.isNull()) return;
+
+    QJsonObject msg = doc.object();
+
+    // Ignorer les messages ready et pong (protocole interne)
+    QString type = msg.value(QStringLiteral("type")).toString();
+    if (type == QLatin1String("ready") || type == QLatin1String("pong"))
+        return;
+
+    // Récupérer le tool_use_id en attente
+    QString toolUseId = m_pendingToolCalls.value(service);
+    if (toolUseId.isEmpty()) {
+        hAssistant() << "Message tool reçu sans requête en attente:" << service;
+        return;
+    }
+
+    m_pendingToolCalls.remove(service);
+
+    // Construire le résultat pour Claude
+    QJsonObject result;
+    if (msg.value(QStringLiteral("ok")).toBool()) {
+        result[QStringLiteral("status")] = QStringLiteral("success");
+        QJsonObject data = msg.value(QStringLiteral("data")).toObject();
+        // Fusionner les données dans le résultat
+        for (auto it = data.begin(); it != data.end(); ++it) {
+            result.insert(it.key(), it.value());
+        }
+    } else {
+        result[QStringLiteral("status")] = QStringLiteral("error");
+        result[QStringLiteral("message")] =
+            msg.value(QStringLiteral("error")).toString(QStringLiteral("Erreur inconnue"));
+    }
+
+    hAssistant() << "Tool response:" << service << "→ status:"
+                 << result.value(QStringLiteral("status")).toString();
+
     m_claudeApi->sendToolResult(toolUseId, result);
 }

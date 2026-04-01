@@ -226,6 +226,12 @@ async def handle_client(ws):
     remote = ws.remote_address
     log.info(f"Client connected: {remote}")
     try:
+        # Envoyer le message ready au client (ReadinessProtocol v5)
+        await ws.send(json.dumps({
+            "type": "ready",
+            "service": "nlu",
+            "intents": list(INTENTS.keys()),
+        }))
         async for raw in ws:
             try:
                 msg = json.loads(raw)
@@ -234,8 +240,13 @@ async def handle_client(ws):
                 continue
 
             action = msg.get("action", "")
+            msg_type = msg.get("type", "")
 
-            if action == "classify":
+            # Support both "type": "ping" and "action": "ping" for consistency
+            if action == "ping" or msg_type == "ping":
+                await ws.send(json.dumps({"type": "pong"}))
+
+            elif action == "classify":
                 text = msg.get("text", "").strip()
                 if not text:
                     await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
@@ -244,9 +255,6 @@ async def handle_client(ws):
                 result = regex_nlu.classify(text)
                 result["type"] = "nlu_result"
                 await ws.send(json.dumps(result, ensure_ascii=False))
-
-            elif action == "ping":
-                await ws.send(json.dumps({"type": "pong"}))
 
             elif action == "list_intents":
                 intents = list(INTENTS.keys())

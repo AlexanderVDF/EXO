@@ -500,7 +500,7 @@ bool AIMemoryManager::importFromFile(const QString &path)
     file.close();
 
     if (err.error != QJsonParseError::NoError) {
-        hWarning(henriAssistant) << "Import JSON erreur:" << err.errorString();
+        hWarning(exoAssistant) << "Import JSON erreur:" << err.errorString();
         return false;
     }
 
@@ -666,7 +666,7 @@ void AIMemoryManager::onSemanticConnected()
 
 void AIMemoryManager::onSemanticDisconnected()
 {
-    hWarning(henriAssistant) << "Semantic memory server disconnected — fallback regex";
+    hWarning(exoAssistant) << "Semantic memory server disconnected — fallback regex";
     // Reconnection automatique gérée par WebSocketClient
 }
 
@@ -699,7 +699,7 @@ void AIMemoryManager::onSemanticMessage(const QString &msg)
     } else if (type == "add_result") {
         hAssistant() << "Semantic server: memory added, id=" << obj["id"].toString();
     } else if (type == "error") {
-        hWarning(henriAssistant) << "Semantic server error:" << obj["message"].toString();
+        hWarning(exoAssistant) << "Semantic server error:" << obj["message"].toString();
     }
 }
 
@@ -728,7 +728,7 @@ void AIMemoryManager::loadFromFile()
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
-        hWarning(henriAssistant) << "Impossible d'ouvrir:" << path;
+        hWarning(exoAssistant) << "Impossible d'ouvrir:" << path;
         return;
     }
 
@@ -737,7 +737,7 @@ void AIMemoryManager::loadFromFile()
     file.close();
 
     if (err.error != QJsonParseError::NoError) {
-        hWarning(henriAssistant) << "JSON corrompu, fallback vide —" << err.errorString();
+        hWarning(exoAssistant) << "JSON corrompu, fallback vide —" << err.errorString();
         return;
     }
 
@@ -794,7 +794,7 @@ void AIMemoryManager::saveToFile()
     QString tmpPath = path + ".tmp";
     QFile tmpFile(tmpPath);
     if (!tmpFile.open(QIODevice::WriteOnly)) {
-        hWarning(henriAssistant) << "Impossible d'écrire:" << tmpPath;
+        hWarning(exoAssistant) << "Impossible d'écrire:" << tmpPath;
         return;
     }
 
@@ -829,7 +829,7 @@ void AIMemoryManager::saveToFile()
 
     QFile::remove(path);
     if (!QFile::rename(tmpPath, path)) {
-        hWarning(henriAssistant) << "Rename atomique échoué";
+        hWarning(exoAssistant) << "Rename atomique échoué";
         QFile::remove(tmpPath);
     }
 }

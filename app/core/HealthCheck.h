@@ -67,6 +67,7 @@ public:
     bool allHealthy() const;
 
     // Accès programmatique
+    Q_INVOKABLE QString serviceStatus(const QString &name) const;
     ServiceHealth serviceHealth(const QString &name) const;
     OverallHealth overall() const;
     int latencyMs(const QString &name) const;

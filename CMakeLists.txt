@@ -1,7 +1,7 @@
 # Version simplifiée pour compilation initiale
 cmake_minimum_required(VERSION 3.21)
 
-project(RaspberryAssistant VERSION 4.2.0 LANGUAGES CXX)
+project(RaspberryAssistant VERSION 5.1.0 LANGUAGES CXX)
 
 # ── Options ──
 option(ENABLE_RTAUDIO "Enable RtAudio backend (WASAPI on Windows)" ON)
@@ -40,6 +40,8 @@ set(SOURCES
     app/core/WebSocketClient.cpp
     app/core/HealthCheck.cpp
     app/core/ServiceManager.cpp
+    app/core/ServiceSupervisor.cpp
+    app/core/ServiceRegistry.cpp
     app/audio/VoicePipeline.cpp
     app/audio/TTSManager.cpp
     app/audio/TTSBackendQt.cpp
@@ -61,6 +63,10 @@ set(HEADERS
     app/core/WebSocketClient.h
     app/core/HealthCheck.h
     app/core/ServiceManager.h
+    app/core/ServiceSupervisor.h
+    app/core/ServiceState.h
+    app/core/ServiceDescriptor.h
+    app/core/ServiceRegistry.h
     app/audio/VoicePipeline.h
     app/audio/TTSManager.h
     app/audio/TTSBackend.h
@@ -118,20 +124,13 @@ qt_add_qml_module(RaspberryAssistant
         qml/theme/Theme.qml
         # ── Components ──
         qml/components/ExoButton.qml
-        qml/components/ExoCard.qml
-        qml/components/ExoSwitch.qml
-        qml/components/ExoSlider.qml
-        qml/components/ExoTextField.qml
         qml/components/ExoDialog.qml
         qml/components/ExoNotification.qml
         qml/components/ExoPanelHeader.qml
-        qml/components/ExoSearchField.qml
         qml/components/ExoProgressBar.qml
         qml/components/ExoBadge.qml
         qml/components/ExoStatusPill.qml
         qml/components/ExoConfirmDialog.qml
-        qml/components/ExoSheet.qml
-        qml/components/ExoTab.qml
         qml/components/ExoPipelineStatus.qml
         qml/components/ExoServiceStatus.qml
         qml/components/ExoMicButton.qml

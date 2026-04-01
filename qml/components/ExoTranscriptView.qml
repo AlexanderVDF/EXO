@@ -23,6 +23,9 @@ Rectangle {
             "isPartial": isPartial || false,
             "timestamp": Qt.formatTime(new Date(), "hh:mm")
         })
+        // Purge: garder les 200 derniers messages (fix audit M1)
+        while (messageListModel.count > 200)
+            messageListModel.remove(0)
         messageListView.positionViewAtEnd()
     }
 

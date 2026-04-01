@@ -26,7 +26,7 @@ $icoPath = Join-Path $projectDir "resources\icons\exo.ico"
 $shortcut.TargetPath       = $pythonExe
 $shortcut.Arguments        = "`"$launcher`""
 $shortcut.WorkingDirectory = $projectDir
-$shortcut.Description      = "Lance EXO Assistant v4.2"
+$shortcut.Description      = "Lance EXO Assistant v5.1"
 if (Test-Path $icoPath) {
     $shortcut.IconLocation = "$icoPath,0"
 }

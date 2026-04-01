@@ -22,7 +22,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import struct
 import sys
 import time
 from pathlib import Path
@@ -63,7 +62,7 @@ class SileroVAD:
         self._speech_frames = 0
         self._silence_frames = 0
         self._speech_start_frames = 2
-        self._speech_hang_frames = 15  # ~480ms at 32ms chunks
+        self._speech_hang_frames = 10  # ~320ms at 32ms chunks (optimized for ultra-low latency)
 
     def load(self) -> None:
         """Load Silero VAD model."""
@@ -71,8 +70,8 @@ class SileroVAD:
         try:
             from silero_vad import load_silero_vad
             self._model = load_silero_vad()
-            dt = time.monotonic() - t0
-            logger.info("Silero VAD loaded in %.2fs", dt)
+            load_ms = (time.monotonic() - t0) * 1000
+            logger.info("[Latency] Preload VAD: OK (%.0f ms)", load_ms)
         except Exception as e:
             logger.error("Failed to load Silero VAD: %s", e)
             raise
@@ -120,13 +119,17 @@ class SileroVAD:
         else:
             self._silence_frames += 1
 
+        prev_speech = self._is_speech
         if not self._is_speech:
             if self._speech_frames >= self._speech_start_frames:
                 self._is_speech = True
+                logger.debug("[Latency] VAD speech-start after %d frames", self._speech_frames)
         else:
             if self._silence_frames >= self._speech_hang_frames:
                 self._is_speech = False
                 self._speech_frames = 0
+                logger.debug("[Latency] VAD speech-end after %d silence frames (~%d ms)",
+                            self._silence_frames, self._silence_frames * 32)
 
         return score, self._is_speech
 
@@ -249,8 +252,11 @@ async def main() -> None:
         handler, args.host, args.port,
         ping_interval=None, ping_timeout=None,
     )
-    logger.info("VAD server running on ws://%s:%d (threshold=%.2f)",
-                args.host, args.port, vad.threshold)
+    logger.info("VAD server running on ws://%s:%d (threshold=%.2f, hang_frames=%d)",
+                args.host, args.port, vad.threshold, vad._speech_hang_frames)
+    logger.info("[Latency] VAD: speech_hang=~%d ms, speech_start=~%d ms",
+                vad._speech_hang_frames * 32, vad._speech_start_frames * 32)
+    logger.info("[Latency] Streaming: OK — ready for low-latency VAD")
 
     try:
         await asyncio.Future()

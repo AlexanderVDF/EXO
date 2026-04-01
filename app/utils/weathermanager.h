@@ -55,9 +55,6 @@ public slots:
     Q_INVOKABLE void getForecast();
     Q_INVOKABLE QString getWeatherSummary();
     Q_INVOKABLE QString getClothingAdvice();
-    
-    // Commandes vocales spécialisées
-    Q_INVOKABLE QString handleVoiceCommand(const QString &command);
 
 signals:
     void weatherUpdated();

@@ -49,7 +49,7 @@ torch.inference_mode = torch.no_grad  # type: ignore[assignment]
 # ---------------------------------------------------------------------------
 # Transformers compat: recent transformers calls isin_mps_friendly() with
 # eos_token_id (int) and expects a tensor.  Monkey-patch to convert int→tensor
-# so inference_stream() works on DirectML / CPU / CUDA.
+# so inference_stream() works on CUDA / CPU.
 # ---------------------------------------------------------------------------
 try:
     import transformers.pytorch_utils as _tpu
@@ -140,12 +140,9 @@ except Exception:
     pass
 
 # ---------------------------------------------------------------------------
-# Transformers/DirectML compat (4): Coqui TTS stream_generator.py passes
-# integer token IDs (bos/pad/eos) to sample_stream(). PyTorch DirectML
-# cannot implicitly broadcast int*tensor when both must be on the same
-# device: int converts to 'privateuseone' while model tensors are on
-# 'privateuseone:0'. Monkey-patch GPT.get_generator() to convert token
-# IDs to tensors on the correct device before calling generate_stream().
+# Transformers/CUDA compat (4): Coqui TTS stream_generator.py passes
+# integer token IDs (bos/pad/eos) to sample_stream(). Ensure they are
+# converted to tensors on the correct device before calling generate_stream().
 # ---------------------------------------------------------------------------
 try:
     from TTS.tts.layers.xtts.gpt import GPT as _GPT
@@ -207,7 +204,8 @@ DEFAULT_VOICE = "Claribel Dervla"
 DEFAULT_LANG = "fr"
 XTTS_SAMPLE_RATE = 24000   # XTTS v2 native rate
 OUTPUT_SAMPLE_RATE = 24000  # Send at native rate (C++ TTSManager expects 24kHz)
-CHUNK_SIZE = 4096           # bytes per WebSocket binary frame
+CHUNK_SIZE = 2048           # v5.1: ~43ms @ 24kHz mono16 — ultra-low latency streaming
+STREAM_CHUNK_SIZE = 8       # v5.2: smaller GPT chunks for faster first-chunk (was 16→12→8)
 
 SUPPORTED_LANGUAGES = [
     "en", "es", "fr", "de", "it", "pt", "pl", "tr",
@@ -243,6 +241,12 @@ from shared.cache import PhraseCache
 class XTTSEngine:
     """Wraps Coqui XTTS v2 for streaming synthesis."""
 
+    # Readiness phases (v5.1)
+    PHASE_INIT    = "ready_init"
+    PHASE_LOADING = "ready_loading"
+    PHASE_WARMUP  = "ready_warmup"
+    PHASE_ONLINE  = "ready_online"
+
     def __init__(self, voice: str = DEFAULT_VOICE, lang: str = DEFAULT_LANG) -> None:
         self.voice_name = voice
         self.language = lang
@@ -253,46 +257,66 @@ class XTTSEngine:
         self._loaded = False
         self._cache = PhraseCache()
         self.device = "cpu"
+        self._last_synth_time = 0.0  # monotonic timestamp of last synthesis
+        # v5.1 readiness
+        self.phase = self.PHASE_INIT
+        self._phase_callback = None   # async callback for phase changes
+        self._profile: dict = {}      # startup profiling timings
 
     @staticmethod
     def _detect_device():
-        """Detect best available device: CUDA > DirectML > CPU."""
+        """Detect best available device: CUDA > CPU.
+        Priority: RTX 3070 SUPRIM X via CUDA for all critical TTS workloads."""
         import torch
         if torch.cuda.is_available():
             name = torch.cuda.get_device_name(0)
-            logger.info("GPU detected: CUDA — %s", name)
+            vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            logger.info("XTTS CUDA device: %s (VRAM: %.1f GB)", name, vram)
+            logger.info("CUDA: OK")
+            logger.info("XTTS loaded on CUDA")
             return "cuda"
-        try:
-            import torch_directml
-            if torch_directml.is_available():
-                logger.info("GPU detected: DirectML — %s", torch_directml.device())
-                return torch_directml.device()
-        except ImportError:
-            pass
-        logger.info("No GPU detected, using CPU")
+        logger.warning("CUDA not available — falling back to CPU (TTS will be slower)")
         return "cpu"
 
     def load(self) -> None:
-        """Load XTTS v2 model and speaker embeddings."""
+        """Load XTTS v2 model, speaker embeddings, warm-up GPU + audio (v5.2 persistent)."""
         import torch
         from TTS.api import TTS
 
-        self.device = self._detect_device()
+        # v5.2: CUDA persistence — lock cudnn benchmarks for stable kernel selection
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
 
+        t_total = time.monotonic()
+
+        # ── Phase 1: READY_INIT — Python lancé ──
+        self._set_phase(self.PHASE_INIT)
+        t0 = time.monotonic()
+        self.device = self._detect_device()
+        self._profile["python_init_ms"] = (time.monotonic() - t0) * 1000
+
+        # ── Phase 2: READY_LOADING — chargement du modèle ──
+        self._set_phase(self.PHASE_LOADING)
+        t0 = time.monotonic()
         logger.info("Loading XTTS v2 model on %s...", self.device)
         tts_api = TTS(
             model_name="tts_models/multilingual/multi-dataset/xtts_v2",
             progress_bar=False,
         )
         self.model = tts_api.synthesizer.tts_model
+        self._profile["model_load_ms"] = (time.monotonic() - t0) * 1000
 
         # Move model to GPU (fall back to CPU if VRAM insufficient)
         if str(self.device) != "cpu":
             try:
+                t0 = time.monotonic()
                 self.model = self.model.to(self.device)
+                self._profile["model_to_gpu_ms"] = (time.monotonic() - t0) * 1000
                 logger.info("XTTS model moved to %s", self.device)
             except RuntimeError as exc:
-                logger.warning("GPU allocation failed (%s), falling back to CPU", exc)
+                logger.warning("XTTS fallback: CUDA → CPU (%s)", exc)
                 self.device = "cpu"
                 self.model = self.model.to("cpu")
 
@@ -303,6 +327,7 @@ class XTTSEngine:
         )
         spk_file = os.path.join(model_dir, "speakers_xtts.pth")
         if os.path.exists(spk_file):
+            t0 = time.monotonic()
             self.speakers = torch.load(spk_file, weights_only=False)
             # Move speaker embeddings to GPU
             if str(self.device) != "cpu":
@@ -315,46 +340,118 @@ class XTTSEngine:
                     logger.warning("GPU speaker embed allocation failed (%s), falling back to CPU", exc)
                     self.device = "cpu"
                     self.model = self.model.to("cpu")
+            self._profile["speakers_load_ms"] = (time.monotonic() - t0) * 1000
             logger.info("Loaded %d speakers from %s", len(self.speakers), spk_file)
         else:
             logger.warning("No speakers file found at %s", spk_file)
 
-        # Set initial voice
+        # Set initial voice (pre-load embeddings)
         self.set_voice(self.voice_name)
 
-        # Validate inference on non-CPU devices (DirectML has known tensor
-        # device-mismatch issues with transformers StoppingCriteria).
-        if str(self.device) != "cpu" and self.gpt_cond_latent is not None:
-            try:
-                logger.info("Validating inference on %s...", self.device)
-                _test = self.model.inference(
-                    text="test",
-                    language="en",
-                    gpt_cond_latent=self.gpt_cond_latent,
-                    speaker_embedding=self.speaker_embedding,
-                    speed=1.0,
-                )
-                logger.info("Inference validation passed on %s", self.device)
-            except RuntimeError as exc:
-                logger.warning(
-                    "Inference failed on %s (%s), falling back to CPU", self.device, exc,
-                )
-                self.device = "cpu"
-                self.model = self.model.to("cpu")
-                for name in self.speakers:
-                    for key in self.speakers[name]:
-                        if hasattr(self.speakers[name][key], "to"):
-                            self.speakers[name][key] = self.speakers[name][key].to("cpu")
-                if self.gpt_cond_latent is not None:
-                    self.gpt_cond_latent = self.gpt_cond_latent.to("cpu")
-                if self.speaker_embedding is not None:
-                    self.speaker_embedding = self.speaker_embedding.to("cpu")
+        # ── Phase 3: READY_WARMUP — warm-up GPU + audio ──
+        self._set_phase(self.PHASE_WARMUP)
+        self._warmup_gpu(torch)
+        self._warmup_streaming()
+        self._warmup_audio()
 
         self._loaded = True
+
+        # ── Phase 4: READY_ONLINE — service prêt ──
+        self._profile["total_ms"] = (time.monotonic() - t_total) * 1000
+        self._set_phase(self.PHASE_ONLINE)
+
         logger.info(
             "XTTS v2 ready — device=%s, voice=%s, lang=%s, speakers=%d",
             self.device, self.voice_name, self.language, len(self.speakers),
         )
+        if str(self.device).startswith("cuda"):
+            logger.info("Streaming CUDA active")
+            logger.info("[TTS] XTTS backend: CUDA (RTX 3070)")
+            logger.info("[GPU] TTS: CUDA → RTX 3070 (OK)")
+            logger.info("[GPU] Multi-GPU configuration: ACTIVE")
+
+        # ── Profiling report ──
+        logger.info("═══ TTS STARTUP PROFILE ═══")
+        for k, v in self._profile.items():
+            logger.info("  %-25s %7.0f ms", k, v)
+        logger.info("═══════════════════════════")
+
+    def _set_phase(self, phase: str) -> None:
+        """Update readiness phase and notify callback."""
+        self.phase = phase
+        logger.info("[Readiness] Phase → %s", phase)
+        if self._phase_callback:
+            try:
+                self._phase_callback(phase)
+            except Exception:
+                pass
+
+    def _warmup_gpu(self, torch) -> None:
+        """Warm-up GPU with a dummy tensor pass to keep DirectML/CUDA backend hot."""
+        if str(self.device) == "cpu" or self.gpt_cond_latent is None:
+            return
+        t0 = time.monotonic()
+        try:
+            logger.info("GPU warm-up on %s...", self.device)
+            # Inference with minimal text to warm the full pipeline
+            _test = self.model.inference(
+                text="test",
+                language="en",
+                gpt_cond_latent=self.gpt_cond_latent,
+                speaker_embedding=self.speaker_embedding,
+                speed=1.0,
+            )
+            del _test
+            self._profile["gpu_warmup_ms"] = (time.monotonic() - t0) * 1000
+            logger.info("GPU warm-up done in %.0f ms", self._profile["gpu_warmup_ms"])
+        except RuntimeError as exc:
+            logger.warning("GPU warm-up failed (%s) — falling back to CPU", exc)
+            self._profile["gpu_warmup_ms"] = (time.monotonic() - t0) * 1000
+            self.device = "cpu"
+            self.model = self.model.to("cpu")
+            for name in self.speakers:
+                for key in self.speakers[name]:
+                    if hasattr(self.speakers[name][key], "to"):
+                        self.speakers[name][key] = self.speakers[name][key].to("cpu")
+            if self.gpt_cond_latent is not None:
+                self.gpt_cond_latent = self.gpt_cond_latent.to("cpu")
+            if self.speaker_embedding is not None:
+                self.speaker_embedding = self.speaker_embedding.to("cpu")
+
+    def _warmup_streaming(self) -> None:
+        """Warm-up inference_stream to pre-compile the streaming compute graph."""
+        if str(self.device) == "cpu" or self.gpt_cond_latent is None:
+            return
+        t0 = time.monotonic()
+        try:
+            logger.info("Streaming warm-up on %s...", self.device)
+            for chunk in self.model.inference_stream(
+                text="bonjour",
+                language="fr",
+                gpt_cond_latent=self.gpt_cond_latent,
+                speaker_embedding=self.speaker_embedding,
+                speed=1.0,
+                stream_chunk_size=STREAM_CHUNK_SIZE,
+                overlap_wav_len=256,
+                enable_text_splitting=True,
+            ):
+                break  # first chunk is enough to warm the graph
+            logger.info("Streaming warm-up done in %.0f ms", (time.monotonic() - t0) * 1000)
+        except Exception as exc:
+            logger.warning("Streaming warm-up failed: %s", exc)
+
+    def _warmup_audio(self) -> None:
+        """Generate 1 second of silence to initialize the DSP/audio pipeline."""
+        t0 = time.monotonic()
+        try:
+            silence = np.zeros(OUTPUT_SAMPLE_RATE, dtype=np.float32)
+            pcm = np.clip(silence * 32767, -32768, 32767).astype(np.int16)
+            _ = pcm.tobytes()
+            del pcm, silence
+            self._profile["audio_warmup_ms"] = (time.monotonic() - t0) * 1000
+        except Exception as exc:
+            logger.warning("Audio warm-up failed: %s", exc)
+            self._profile["audio_warmup_ms"] = (time.monotonic() - t0) * 1000
 
     def set_voice(self, voice: str) -> bool:
         """Switch to a different speaker. Returns True if found."""
@@ -464,8 +561,8 @@ class XTTSEngine:
         dt = time.monotonic() - t0
         duration = len(raw_pcm) / (OUTPUT_SAMPLE_RATE * 2)
         logger.info(
-            "XTTS synthesized %.1fs audio in %.2fs (RTF=%.2f) voice=%s lang=%s: %s",
-            duration, dt, dt / max(duration, 0.01), use_voice, use_lang, text[:60],
+            "XTTS synthesized %.1fs audio in %.2fs (RTF=%.2f, TTS latency: %.0fms) voice=%s lang=%s: %s",
+            duration, dt, dt / max(duration, 0.01), dt * 1000, use_voice, use_lang, text[:60],
         )
 
         # Cache short phrases
@@ -503,14 +600,6 @@ class XTTSEngine:
         t0 = time.monotonic()
         chunk_idx = 0
 
-        # DirectML's stream_generator has device-mismatch bugs (privateuseone:0
-        # vs privateuseone) — skip streaming and use full synthesis directly.
-        if "privateuseone" in str(self.device):
-            full_pcm = self.synthesize(text, voice, lang, rate)
-            if full_pcm:
-                yield full_pcm
-            return
-
         try:
             chunks_gen = self.model.inference_stream(
                 text=text,
@@ -518,8 +607,12 @@ class XTTSEngine:
                 gpt_cond_latent=gpt_cond,
                 speaker_embedding=spk_emb,
                 speed=rate,
-                stream_chunk_size=20,
-                overlap_wav_len=1024,
+                stream_chunk_size=STREAM_CHUNK_SIZE,  # v5.2: use global constant
+                overlap_wav_len=256,       # reduced overlap for faster chunks
+                temperature=0.5,           # lower temp = faster convergence
+                top_p=0.85,
+                repetition_penalty=1.1,    # prevent repetitive output
+                enable_text_splitting=True, # split long text → faster first chunk
             )
         except AttributeError:
             # Fallback: model doesn't support inference_stream (old version)
@@ -558,10 +651,13 @@ class XTTSEngine:
                 pcm_bytes = pcm_int16.tobytes()
 
                 if chunk_idx == 0:
+                    first_chunk_ms = (time.monotonic() - t0) * 1000
                     logger.info(
-                        "[STREAM] first chunk in %.0fms (%d bytes) text=%s",
-                        (time.monotonic() - t0) * 1000, len(pcm_bytes), text[:50],
+                        "[Latency] TTS first-chunk: %.0f ms (%d bytes) text=%s",
+                        first_chunk_ms, len(pcm_bytes), text[:50],
                     )
+                    if first_chunk_ms > 800:
+                        logger.warning("[Latency] TTS first-chunk slow (%.0f ms > 800 ms)", first_chunk_ms)
 
                 chunk_idx += 1
                 yield pcm_bytes
@@ -575,6 +671,7 @@ class XTTSEngine:
                 return
 
         dt = time.monotonic() - t0
+        self._last_synth_time = time.monotonic()
         logger.info(
             "[STREAM] done: %d chunks in %.2fs text=%s",
             chunk_idx, dt, text[:50],
@@ -622,12 +719,15 @@ class TTSSession:
         """Handle a WebSocket connection."""
         logger.info("TTS client connected")
 
+        # v5.1: Send current phase as ready message
         await ws.send(json.dumps({
             "type": "ready",
+            "phase": self.engine.phase,
             "voice": self.engine.voice_name,
             "sample_rate": OUTPUT_SAMPLE_RATE,
             "backend": "xtts_v2",
             "languages": SUPPORTED_LANGUAGES,
+            "profile": self.engine._profile,
         }))
 
         try:
@@ -775,9 +875,11 @@ class TTSSession:
             synth_ms = (time.monotonic() - t0) * 1000
             duration = total_bytes / (OUTPUT_SAMPLE_RATE * 2)
             logger.info(
-                "[TTS] streamed %.1fs audio in %.0fms text=%s",
-                duration, synth_ms, text[:60],
+                "[Latency] TTS: %.0f ms (audio=%.1fs, %d bytes) text=%s",
+                synth_ms, duration, total_bytes, text[:60],
             )
+            if synth_ms > 1200:
+                logger.warning("[Latency] TTS exceeded target (%.0f ms > 1200 ms)", synth_ms)
 
             # Cache the result for future calls
             if all_pcm and not self._cancel_flag:
@@ -820,33 +922,112 @@ async def main() -> None:
     # Prevent duplicate instances
     ensure_single_instance(args.port, "tts_server")
 
+    logger.info("[Latency] TTS target: < 1200 ms")
+    logger.info("[Latency] Pipeline vocal complet target: < 2500 ms")
+
+    # v5.1: Track connected clients for phase broadcast
+    connected_clients: set = set()
+
     engine = XTTSEngine(voice=args.voice, lang=args.lang)
-    engine.load()
 
-    async def handler(ws):
-        session = TTSSession(engine)
-        await session.handle(ws)
+    # Get event loop reference for thread-safe phase broadcasts
+    _event_loop = asyncio.get_running_loop()
 
+    # Phase broadcast callback — pushes phase changes to all connected WS clients
+    # MUST be thread-safe: engine.load() runs in an executor thread
+    def _broadcast_phase(phase: str):
+        msg = json.dumps({
+            "type": "ready",
+            "phase": phase,
+            "profile": engine._profile,
+        })
+
+        async def _do_send():
+            for ws in list(connected_clients):
+                try:
+                    await ws.send(msg)
+                except Exception:
+                    connected_clients.discard(ws)
+
+        # run_coroutine_threadsafe works from both event loop and executor threads
+        asyncio.run_coroutine_threadsafe(_do_send(), _event_loop)
+
+    engine._phase_callback = _broadcast_phase
+
+    # Start server BEFORE loading model so supervisor can connect immediately
     try:
         import websockets
     except ImportError:
         logger.error("websockets not installed. Run: pip install websockets")
         return
 
+    async def handler(ws):
+        connected_clients.add(ws)
+        try:
+            session = TTSSession(engine)
+            await session.handle(ws)
+        finally:
+            connected_clients.discard(ws)
+
     server = await websockets.serve(
         handler, args.host, args.port,
         ping_interval=None, ping_timeout=None,
     )
     logger.info(
-        "XTTS v2 TTS server running on ws://%s:%d (voice=%s, lang=%s, speakers=%d)",
+        "TTS WS server listening on ws://%s:%d — loading model…",
+        args.host, args.port,
+    )
+
+    # Load model in executor to keep event loop responsive for WS connections
+    loop = asyncio.get_event_loop()
+    t_load = time.monotonic()
+    await loop.run_in_executor(None, engine.load)
+    load_ms = (time.monotonic() - t_load) * 1000
+    logger.info("[Latency] Preload TTS: OK (%.0f ms)", load_ms)
+
+    # Broadcast READY_ONLINE to any already-connected clients
+    _broadcast_phase(XTTSEngine.PHASE_ONLINE)
+
+    logger.info(
+        "XTTS v2 TTS server ready on ws://%s:%d (voice=%s, lang=%s, speakers=%d)",
         args.host, args.port, args.voice, args.lang, len(engine.speakers),
     )
+    logger.info("[Latency] Streaming: OK — ready for low-latency synthesis")
+
+    # v5.2: CUDA keepalive — prevent GPU clock downclocking during idle periods.
+    # Runs a tiny tensor op every 30s if no synthesis happened recently.
+    async def _cuda_keepalive():
+        if str(engine.device) == "cpu":
+            return
+        while True:
+            await asyncio.sleep(30)
+            idle_s = time.monotonic() - engine._last_synth_time
+            if idle_s > 20 and engine._loaded:
+                try:
+                    # Full streaming mini-inference to keep GPT graph warm
+                    for chunk in engine.model.inference_stream(
+                        text="ok",
+                        language="fr",
+                        gpt_cond_latent=engine.gpt_cond_latent,
+                        speaker_embedding=engine.speaker_embedding,
+                        speed=1.0,
+                        stream_chunk_size=STREAM_CHUNK_SIZE,
+                        overlap_wav_len=256,
+                        enable_text_splitting=True,
+                    ):
+                        break  # first chunk enough
+                    engine._last_synth_time = time.monotonic()
+                except Exception:
+                    pass
+
+    keepalive_task = asyncio.create_task(_cuda_keepalive())
 
     try:
         await asyncio.Future()
     except KeyboardInterrupt:
         pass
     finally:
+        keepalive_task.cancel()
         server.close()
         await server.wait_closed()
         logger.info("TTS server stopped")

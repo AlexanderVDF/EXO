@@ -6,13 +6,20 @@
 #include <QElapsedTimer>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QTimer>
 
 TTSBackendXTTS::TTSBackendXTTS(QObject *parent)
     : TTSBackend(parent)
-{}
+{
+    qInfo() << "[TTS] Backend: CUDA (RTX 3070)";
+}
 
 TTSBackendXTTS::~TTSBackendXTTS()
 {
+    if (m_keepaliveTimer) {
+        m_keepaliveTimer->stop();
+        delete m_keepaliveTimer;
+    }
     if (m_ws) {
         m_ws->close();
         delete m_ws;
@@ -27,23 +34,25 @@ bool TTSBackendXTTS::isAvailable() const
 void TTSBackendXTTS::setUrl(const QString &url)
 {
     m_url = url;
-    qWarning() << "[TTS] XTTS URL set:" << m_url;
+    qInfo() << "[TTS] XTTS URL set:" << m_url;
 }
 
 void TTSBackendXTTS::setVoice(const QString &voice)
 {
     m_voice = voice;
-    qWarning() << "[TTS] XTTS voice set to:" << voice;
+    qInfo() << "[TTS] XTTS voice set to:" << voice;
 }
 
 void TTSBackendXTTS::setLang(const QString &lang)
 {
     m_lang = lang;
-    qWarning() << "[TTS] XTTS language set to:" << lang;
+    qInfo() << "[TTS] XTTS language set to:" << lang;
 }
 
 void TTSBackendXTTS::resetConnection()
 {
+    if (m_keepaliveTimer)
+        m_keepaliveTimer->stop();
     if (m_ws) {
         m_ws->close();
         m_ws->deleteLater();
@@ -51,7 +60,38 @@ void TTSBackendXTTS::resetConnection()
     }
     m_connected = false;
     m_readyReceived = false;
-    qWarning() << "[TTS] Connexion Python réinitialisée";
+    qInfo() << "[TTS] Connexion Python réinitialisée";
+}
+
+void TTSBackendXTTS::warmConnect()
+{
+    if (m_url.isEmpty()) return;
+    if (m_ws && m_connected) {
+        qInfo() << "[TTS] warmConnect: already connected";
+        return;
+    }
+    qInfo() << "[TTS] warmConnect: early connection to" << m_url;
+    ensureConnected();
+    if (m_connected)
+        setupKeepalive();
+}
+
+void TTSBackendXTTS::setupKeepalive()
+{
+    if (m_keepaliveTimer)
+        return;
+    m_keepaliveTimer = new QTimer(this);
+    m_keepaliveTimer->setInterval(15000);  // ping every 15s
+    connect(m_keepaliveTimer, &QTimer::timeout, this, [this]() {
+        if (m_ws && m_connected) {
+            m_ws->sendTextMessage(QStringLiteral(R"({"type":"ping"})"));
+        } else {
+            qInfo() << "[TTS] keepalive: connection lost, reconnecting...";
+            ensureConnected();
+        }
+    });
+    m_keepaliveTimer->start();
+    qInfo() << "[TTS] WebSocket keepalive started (15s interval)";
 }
 
 void TTSBackendXTTS::cancel()
@@ -70,45 +110,58 @@ bool TTSBackendXTTS::ensureConnected()
         resetConnection();
 
     m_ws = new QWebSocket();
+
+    // Connect ready handler BEFORE opening — prevents race condition where
+    // the server sends "ready" during the connection busy-wait
+    bool gotReady = false;
+    QMetaObject::Connection readyConn = connect(m_ws, &QWebSocket::textMessageReceived,
+        this, [&gotReady](const QString &txt) {
+            QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
+            if (d.isObject() && d.object()["type"].toString() == "ready")
+                gotReady = true;
+        });
+
     qWarning() << "[TTS] tryPythonTTS: connexion à" << m_url;
     m_ws->open(QUrl(m_url));
 
     QElapsedTimer connectTimer;
     connectTimer.start();
     while (m_ws->state() != QAbstractSocket::ConnectedState
-           && connectTimer.elapsed() < 5000 && !isCancelled()) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+           && connectTimer.elapsed() < 3000 && !isCancelled()) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 30);
     }
     m_connected = (m_ws->state() == QAbstractSocket::ConnectedState);
     qWarning() << "[TTS] tryPythonTTS: connected =" << m_connected
                << "state:" << m_ws->state()
                << "après" << connectTimer.elapsed() << "ms";
     if (m_connected)
-        qWarning() << "[TTS] Connected to XTTS DirectML server";
+        qWarning() << "[TTS] Connected to XTTS CUDA GPU server";
 
-    // Drain initial "ready" message from XTTS v2 server
-    if (m_connected && !m_readyReceived) {
+    // Wait for "ready" message (handler already connected above)
+    if (m_connected && !m_readyReceived && !gotReady) {
         QElapsedTimer readyTimer;
         readyTimer.start();
-        bool gotReady = false;
-        QMetaObject::Connection readyConn = connect(m_ws, &QWebSocket::textMessageReceived,
-            this, [&gotReady](const QString &txt) {
-                QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
-                if (d.isObject() && d.object()["type"].toString() == "ready")
-                    gotReady = true;
-            });
         while (!gotReady && readyTimer.elapsed() < 3000 && !isCancelled())
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-        disconnect(readyConn);
-        m_readyReceived = gotReady;
-        qWarning() << "[TTS] XTTS v2 ready message:" << (gotReady ? "OK" : "timeout");
     }
+    disconnect(readyConn);
+    m_readyReceived = gotReady || m_readyReceived;
+    qWarning() << "[TTS] XTTS v2 ready message:" << (m_readyReceived ? "OK" : "timeout");
 
     if (!m_connected) {
         // Retry once
         qWarning() << "[TTS] tryPythonTTS: non connecté — retry connexion...";
         resetConnection();
         m_ws = new QWebSocket();
+
+        bool gotRetryReady = false;
+        QMetaObject::Connection retryReadyConn = connect(m_ws, &QWebSocket::textMessageReceived,
+            this, [&gotRetryReady](const QString &txt) {
+                QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
+                if (d.isObject() && d.object()["type"].toString() == "ready")
+                    gotRetryReady = true;
+            });
+
         m_ws->open(QUrl(m_url));
 
         QElapsedTimer retryTimer;
@@ -121,21 +174,14 @@ bool TTSBackendXTTS::ensureConnected()
         qWarning() << "[TTS] tryPythonTTS retry: connected =" << m_connected
                     << "après" << retryTimer.elapsed() << "ms";
 
-        if (m_connected && !m_readyReceived) {
+        if (m_connected && !m_readyReceived && !gotRetryReady) {
             QElapsedTimer readyTimer;
             readyTimer.start();
-            bool gotReady = false;
-            QMetaObject::Connection readyConn = connect(m_ws, &QWebSocket::textMessageReceived,
-                this, [&gotReady](const QString &txt) {
-                    QJsonDocument d = QJsonDocument::fromJson(txt.toUtf8());
-                    if (d.isObject() && d.object()["type"].toString() == "ready")
-                        gotReady = true;
-                });
-            while (!gotReady && readyTimer.elapsed() < 3000 && !isCancelled())
+            while (!gotRetryReady && readyTimer.elapsed() < 3000 && !isCancelled())
                 QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-            disconnect(readyConn);
-            m_readyReceived = gotReady;
         }
+        disconnect(retryReadyConn);
+        m_readyReceived = gotRetryReady || m_readyReceived;
 
         if (!m_connected) {
             qWarning() << "[TTS] Python TTS unavailable — fallback Qt TTS";
@@ -156,9 +202,14 @@ bool TTSBackendXTTS::synthesize(const TTSRequest &req)
     if (!ensureConnected())
         return false;
 
+    // Start keepalive if not yet running (first successful connection)
+    setupKeepalive();
+
     emit started(req.text);
 
     // Send synthesis request (XTTS v2 tts_server.py protocol)
+    QElapsedTimer synthLatency;
+    synthLatency.start();
     QJsonObject msg;
     msg["type"]  = "synthesize";
     msg["text"]  = req.text;
@@ -176,7 +227,11 @@ bool TTSBackendXTTS::synthesize(const TTSRequest &req)
     bool gotStart = false;
 
     QMetaObject::Connection binConn = connect(m_ws, &QWebSocket::binaryMessageReceived,
-        this, [this, &timeout](const QByteArray &data) {
+        this, [this, &timeout, &synthLatency](const QByteArray &data) {
+            if (synthLatency.isValid()) {
+                qWarning() << "[Latency] TTS backend first-chunk:" << synthLatency.elapsed() << "ms";
+                synthLatency.invalidate();
+            }
             timeout.restart();
             emit chunk(data);
         });
@@ -196,7 +251,7 @@ bool TTSBackendXTTS::synthesize(const TTSRequest &req)
         });
 
     while (!done && timeout.elapsed() < PY_TTS_TIMEOUT_MS && !isCancelled()) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 15);
     }
 
     disconnect(binConn);

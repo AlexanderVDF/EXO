@@ -6,7 +6,7 @@
 class QWebSocket;
 
 // ─────────────────────────────────────────────────────
-//  TTSBackendXTTS — XTTS v2 Python backend (DirectML)
+//  TTSBackendXTTS — XTTS v2 Python backend (CUDA)
 //
 //  Blocking WebSocket synthesis via processEvents.
 //  Protocol: JSON control + binary PCM16 chunks.
@@ -27,6 +27,7 @@ public:
     void setUrl(const QString &url);
     void setVoice(const QString &voice);
     void setLang(const QString &lang);
+    void warmConnect();  // establish WebSocket eagerly at startup
 
 private:
     bool ensureConnected();
@@ -38,7 +39,9 @@ private:
     bool m_connected = false;
     bool m_readyReceived = false;
 
-    static constexpr int PY_TTS_TIMEOUT_MS = 20000;
+    static constexpr int PY_TTS_TIMEOUT_MS = 12000;  // GPU-optimized (was 15s)
+    QTimer *m_keepaliveTimer = nullptr;
+    void setupKeepalive();
 };
 
 #endif // TTSBACKENDXTTS_H

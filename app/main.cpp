@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
 #include <QDir>
 #include <QLoggingCategory>
 #include <QStandardPaths>
@@ -27,7 +29,7 @@
 
 #include "core/AssistantManager.h"
 #include "core/LogManager.h"
-#include "core/ServiceManager.h"
+#include "core/ServiceSupervisor.h"
 
 // ═══════════════════════════════════════════════════════
 //  Crash handler — write minidump + log before dying
@@ -114,6 +116,16 @@ int main(int argc, char *argv[])
 #endif
 #endif
 
+    // ── Multi-GPU: Qt/QML on AMD (display) — RTX 3070 reserved for compute ──
+#ifndef RASPBERRY_PI
+    // Do NOT force Vulkan or D3D11 on NVIDIA — let Qt use the AMD display GPU.
+    // The RTX 3070 is exclusively used by CUDA (TTS) and Vulkan (STT) compute.
+    qputenv("QSG_RHI_PREFER_SOFTWARE_RENDERER", "0");
+    // Remove any NVIDIA forcing — AMD is the display adapter
+    qunsetenv("DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_1");
+    qunsetenv("SHIM_MCCOMPAT");
+#endif
+
     // Configuration de l'application selon la plateforme
 #ifdef RASPBERRY_PI
     // Mode EGLFS pour Raspberry Pi (sans serveur X)
@@ -130,7 +142,7 @@ int main(int argc, char *argv[])
 
     // === Configuration de base de l'application ===
     app.setApplicationName("EXO Assistant");
-    app.setApplicationVersion("4.2");
+    app.setApplicationVersion("5.1");
     app.setOrganizationName("EXOAssistant");
     app.setOrganizationDomain("exo-assistant.local");
 
@@ -138,11 +150,26 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle("Material");
     qputenv("QT_QUICK_CONTROLS_MATERIAL_THEME", "Dark");
 
+    // Log GPU renderer selection & multi-GPU status
+    {
+        auto api = QQuickWindow::graphicsApi();
+        const char *apiName = (api == QSGRendererInterface::Vulkan)    ? "Vulkan"
+                            : (api == QSGRendererInterface::Direct3D11) ? "Direct3D11"
+                            : (api == QSGRendererInterface::OpenGL)     ? "OpenGL"
+                            : "Unknown";
+        qInfo() << "[GUI] Graphics API:" << apiName;
+        qInfo() << "[GUI] GPU attendu: AMD (affichage)";
+        qInfo() << "[GPU] GUI: AMD (OK)";
+        qInfo() << "[GPU] STT: Vulkan → RTX 3070 (delegated to stt_server.py)";
+        qInfo() << "[GPU] TTS: CUDA → RTX 3070 (delegated to tts_server.py)";
+        qInfo() << "[GPU] Multi-GPU configuration: ACTIVE";
+    }
+
     // Initialize LogManager with file logging ENABLED for crash diagnostics
     LogManager::instance()->initialize(LogManager::Debug, true, true);
     hLog() << "Fichier de log:" << LogManager::instance()->getRecentLogs();
 
-    qInfo() << "=== Démarrage d'EXO Assistant v4.2 ===";
+    qInfo() << "=== Démarrage d'EXO Assistant v5.1 ===";
     qInfo() << "Plateforme:" 
 #ifdef RASPBERRY_PI
                  << "Raspberry Pi 5 (EGLFS)"
@@ -155,8 +182,8 @@ int main(int argc, char *argv[])
     
     qInfo() << "Démarrage EXO...";
     
-    // Créer le ServiceManager (auto-launch des services backend)
-    ServiceManager serviceManager;
+    // Créer le ServiceSupervisor v5 (auto-launch + readiness + retry)
+    ServiceSupervisor serviceSupervisor;
     
     // Créer l'AssistantManager réel
     AssistantManager assistantManager;
@@ -173,9 +200,13 @@ int main(int argc, char *argv[])
     engine.addImportPath("qrc:/qml");
     engine.addImportPath(":/");
     
-    // Exposer l'AssistantManager et le ServiceManager à QML
+    // Exposer l'AssistantManager et le ServiceSupervisor à QML
     engine.rootContext()->setContextProperty("assistantManager", &assistantManager);
-    engine.rootContext()->setContextProperty("serviceManager", &serviceManager);
+    engine.rootContext()->setContextProperty("serviceSupervisor", &serviceSupervisor);
+
+    // Créer et exposer ConfigManager AVANT le chargement QML
+    // pour que les ComboBox voient les vraies valeurs dans Component.onCompleted
+    assistantManager.initConfigEarly();
 
     // Interface VS Code style - chemin relatif au répertoire de l'application
     QString appDir = QCoreApplication::applicationDirPath();
@@ -184,12 +215,12 @@ int main(int argc, char *argv[])
     projectDir.cdUp(); // Debug -> build
     projectDir.cdUp(); // build -> racine
 
-    // Lancer le ServiceManager (auto-launch des services backend)
+    // Lancer le ServiceSupervisor v5 (auto-launch + readiness + retry)
     QString servicesJson = projectDir.absoluteFilePath("config/services.json");
-    serviceManager.start(servicesJson);
+    serviceSupervisor.start(servicesJson);
     
     // Initialiser l'assistant quand tous les services sont prêts
-    QObject::connect(&serviceManager, &ServiceManager::allServicesReady, [&]() {
+    QObject::connect(&serviceSupervisor, &ServiceSupervisor::allServicesReady, [&]() {
         qInfo() << "[GUI] All services ready → initializing assistant";
         assistantManager.initializeWithConfig();
     });
@@ -225,7 +256,7 @@ int main(int argc, char *argv[])
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
         qWarning() << "=== aboutToQuit signal reçu — fermeture en cours ===";
         qWarning() << "  Uptime:" << QTime::currentTime().toString("HH:mm:ss");
-        serviceManager.shutdownAll();
+        serviceSupervisor.shutdownAll();
     });
 
     // Lancement de la boucle d'événements

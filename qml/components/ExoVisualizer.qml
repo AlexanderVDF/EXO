@@ -69,8 +69,8 @@ Item {
     }
 
     Timer {
-        interval: 33
-        running: root.active
+        interval: 50  // fix audit T11: 20 FPS suffisant pour une onde sinusoïdale
+        running: root.active && root.visible
         repeat: true
         onTriggered: {
             root.iTime += interval / 1000.0

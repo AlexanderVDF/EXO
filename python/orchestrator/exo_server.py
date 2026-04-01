@@ -75,6 +75,9 @@ class GUIServer:
         self._clients.add(ws)
         logger.info("GUI client connected (%d total)", len(self._clients))
         try:
+            # ReadinessProtocol v5 — envoyer ready avant le snapshot
+            await ws.send(json.dumps({"type": "ready", "service": "orchestrator"}))
+
             # Send initial snapshot
             snapshot = self._sync.build_full_snapshot()
             snapshot["state"] = self._state
@@ -96,7 +99,10 @@ class GUIServer:
 
         msg_type = msg.get("type")
 
-        if msg_type == "plan_move":
+        if msg_type == "ping":
+            await ws.send(json.dumps({"type": "pong"}))
+
+        elif msg_type == "plan_move":
             await self._sync.on_plan_move(
                 device_id=msg.get("device_id", ""),
                 x=msg.get("x", 0),

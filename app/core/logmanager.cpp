@@ -11,12 +11,12 @@
 #include <iostream>
 
 // Définition des catégories de logging
-Q_LOGGING_CATEGORY(henriMain, "henri.main")
-Q_LOGGING_CATEGORY(henriConfig, "henri.config")
-Q_LOGGING_CATEGORY(henriClaude, "henri.claude")
-Q_LOGGING_CATEGORY(henriVoice, "henri.voice")
-Q_LOGGING_CATEGORY(henriWeather, "henri.weather")
-Q_LOGGING_CATEGORY(henriAssistant, "henri.assistant")
+Q_LOGGING_CATEGORY(exoMain, "exo.main")
+Q_LOGGING_CATEGORY(exoConfig, "exo.config")
+Q_LOGGING_CATEGORY(exoClaude, "exo.claude")
+Q_LOGGING_CATEGORY(exoVoice, "exo.voice")
+Q_LOGGING_CATEGORY(exoWeather, "exo.weather")
+Q_LOGGING_CATEGORY(exoAssistant, "exo.assistant")
 
 LogManager* LogManager::s_instance = nullptr;
 
@@ -62,7 +62,7 @@ void LogManager::initialize(LogLevel level, bool enableConsole, bool enableFile)
         enableFileLogging(); // Configure le chemin par défaut et crée le fichier
     }
     
-    hLog() << "=== Système de logging Henri initialisé ===";
+    hLog() << "=== Système de logging EXO initialisé ===";
     hLog() << "Niveau:" << logLevelToString(m_currentLevel);
     hLog() << "Console:" << (m_consoleEnabled ? "Activée" : "Désactivée");
     hLog() << "Fichier:" << (m_fileEnabled ? "Activé" : "Désactivé");
@@ -86,7 +86,7 @@ void LogManager::enableFileLogging(const QString &logFilePath)
     if (logFilePath.isEmpty()) {
         QString logDir = qEnvironmentVariable("EXO_LOGS_DIR", QStringLiteral("D:/EXO/logs"));
         QDir().mkpath(logDir);
-        m_logFilePath = QDir(logDir).filePath("henri.log");
+        m_logFilePath = QDir(logDir).filePath("exo.log");
     } else {
         m_logFilePath = logFilePath;
     }
@@ -134,24 +134,24 @@ void LogManager::setupLoggingRules()
     // Configuration des règles Qt Logging
     QString rules;
     if (debugEnabled) {
-        rules += "henri.*.debug=true\n";
+        rules += "exo.*.debug=true\n";
     } else {
-        rules += "henri.*.debug=false\n";
+        rules += "exo.*.debug=false\n";
     }
     
     if (infoEnabled) {
-        rules += "henri.*.info=true\n";
+        rules += "exo.*.info=true\n";
     } else {
-        rules += "henri.*.info=false\n";
+        rules += "exo.*.info=false\n";
     }
     
     if (warningEnabled) {
-        rules += "henri.*.warning=true\n";
+        rules += "exo.*.warning=true\n";
     } else {
-        rules += "henri.*.warning=false\n";
+        rules += "exo.*.warning=false\n";
     }
     
-    rules += "henri.*.critical=true\n"; // Toujours activé
+    rules += "exo.*.critical=true\n"; // Toujours activé
     
     QLoggingCategory::setFilterRules(rules);
 }
@@ -171,6 +171,10 @@ void LogManager::createLogFile()
 
 void LogManager::handleMessage(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+    // Filtrer les warnings internes Qt (QWebSocket destructor sur QTcpSocket détruit)
+    if (type == QtWarningMsg && msg.contains(QLatin1String("wildcard call disconnects")))
+        return;
+
     LogManager* manager = LogManager::instance();
     
     // Format du message
@@ -187,8 +191,8 @@ void LogManager::handleMessage(QtMsgType type, const QMessageLogContext &context
     
     // Extraire la catégorie proprement
     QString category = QString(context.category);
-    if (category.startsWith("henri.")) {
-        category = category.mid(6); // Supprimer "henri."
+    if (category.startsWith("exo.")) {
+        category = category.mid(4); // Supprimer "exo."
     }
     
     QString formattedMsg = QString("[%1] %2 [%3] %4")

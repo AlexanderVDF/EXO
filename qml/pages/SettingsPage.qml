@@ -321,6 +321,13 @@ Rectangle {
                                         if (typeof weatherManager !== 'undefined')
                                             weatherManager.setCity(cityInput.text)
                                     }
+                                    onActiveFocusChanged: {
+                                        if (!activeFocus && typeof configManager !== 'undefined') {
+                                            configManager.setWeatherCity(cityInput.text)
+                                            if (typeof weatherManager !== 'undefined')
+                                                weatherManager.setCity(cityInput.text)
+                                        }
+                                    }
                                 }
                             }
 
@@ -659,6 +666,8 @@ Rectangle {
                                    ? configManager.getVADThreshold() : 0.45
 
                             onMoved: {
+                                if (typeof configManager !== 'undefined')
+                                    configManager.setUserValue("VAD", "threshold", value.toFixed(2))
                                 if (typeof voiceManager !== 'undefined')
                                     voiceManager.setVADThreshold(value)
                             }
@@ -724,7 +733,15 @@ Rectangle {
                             stepSize: 0.001
                             value: 0.005
 
+                            Component.onCompleted: {
+                                if (typeof configManager !== 'undefined') {
+                                    var v = parseFloat(configManager.getString("Audio", "noise_gate", "0.005"))
+                                    if (!isNaN(v)) value = v
+                                }
+                            }
                             onMoved: {
+                                if (typeof configManager !== 'undefined')
+                                    configManager.setUserValue("Audio", "noise_gate", value.toFixed(3))
                                 if (typeof voiceManager !== 'undefined')
                                     voiceManager.setNoiseGate(value)
                             }
@@ -778,7 +795,13 @@ Rectangle {
                             id: agcSwitch
                             checked: false
 
+                            Component.onCompleted: {
+                                if (typeof configManager !== 'undefined')
+                                    checked = configManager.getBool("Audio", "agc_enabled", false)
+                            }
                             onToggled: {
+                                if (typeof configManager !== 'undefined')
+                                    configManager.setUserValue("Audio", "agc_enabled", checked ? "true" : "false")
                                 if (typeof voiceManager !== 'undefined')
                                     voiceManager.setAGC(checked)
                             }
@@ -1197,6 +1220,13 @@ Rectangle {
                                 model: ["neutral", "conversational"]
                                 currentIndex: 0
 
+                                Component.onCompleted: {
+                                    if (typeof configManager !== 'undefined') {
+                                        var saved = configManager.getString("TTS", "style", "neutral")
+                                        var idx = model.indexOf(saved)
+                                        if (idx >= 0) currentIndex = idx
+                                    }
+                                }
                                 onActivated: {
                                     var val = model[currentIndex]
                                     if (typeof configManager !== 'undefined')
@@ -1382,7 +1412,10 @@ Rectangle {
                                 id: testPhraseField
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 30
-                                text: "Bonjour, je suis EXO, votre assistant vocal."
+                                text: typeof configManager !== 'undefined'
+                                      ? configManager.getString("TTS", "testPhrase",
+                                            "Bonjour, je suis EXO, votre assistant vocal.")
+                                      : "Bonjour, je suis EXO, votre assistant vocal."
                                 font.family: Theme.fontMono
                                 font.pixelSize: Theme.fontSmall
                                 color: Theme.textPrimary
@@ -1392,6 +1425,10 @@ Rectangle {
                                     radius: Theme.radiusSmall
                                     color: Theme.bgInput
                                     border.color: testPhraseField.activeFocus ? Theme.borderFocus : "transparent"
+                                }
+                                onEditingFinished: {
+                                    if (typeof configManager !== 'undefined')
+                                        configManager.setUserValue("TTS", "testPhrase", text)
                                 }
                             }
 
@@ -1588,6 +1625,10 @@ Rectangle {
                         Switch {
                             id: noiseReductionToggle
                             checked: true
+                            Component.onCompleted: {
+                                if (typeof configManager !== 'undefined')
+                                    checked = configManager.getBool("DSP", "noise_reduction_enabled", true)
+                            }
                             onToggled: {
                                 if (typeof configManager !== 'undefined')
                                     configManager.setUserValue("DSP", "noise_reduction_enabled",
@@ -1615,6 +1656,12 @@ Rectangle {
                             to: 1.0
                             value: 0.7
                             stepSize: 0.05
+                            Component.onCompleted: {
+                                if (typeof configManager !== 'undefined') {
+                                    var v = parseFloat(configManager.getString("DSP", "noise_reduction_strength", "0.70"))
+                                    if (!isNaN(v)) value = v
+                                }
+                            }
                             onMoved: {
                                 if (typeof configManager !== 'undefined')
                                     configManager.setUserValue("DSP", "noise_reduction_strength",

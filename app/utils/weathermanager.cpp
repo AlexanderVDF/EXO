@@ -127,44 +127,12 @@ QString WeatherManager::getClothingAdvice()
     return m_clothingAdvice;
 }
 
-QString WeatherManager::handleVoiceCommand(const QString &command)
-{
-    QString lowerCmd = command.toLower();
-    
-    if (lowerCmd.contains("temps") || lowerCmd.contains("météo") || 
-        lowerCmd.contains("temperature") || lowerCmd.contains("il fait")) {
-        
-        if (lowerCmd.contains("demain") || lowerCmd.contains("prévision")) {
-            getForecast();
-            return "Je vérifie les prévisions météorologiques...";
-        } else {
-            updateWeather();
-            return getWeatherSummary();
-        }
-    }
-    
-    if (lowerCmd.contains("habiller") || lowerCmd.contains("vêtement") || 
-        lowerCmd.contains("porter") || lowerCmd.contains("m'habiller")) {
-        return getClothingAdvice();
-    }
-    
-    if (lowerCmd.contains("pluie") || lowerCmd.contains("parapluie")) {
-        if (m_description.contains("pluie") || m_description.contains("orage")) {
-            return "Oui, il pleut actuellement. N'oubliez pas votre parapluie !";
-        } else {
-            return "Non, il ne pleut pas pour le moment.";
-        }
-    }
-    
-    return ""; // Commande non reconnue
-}
-
 void WeatherManager::makeWeatherRequest(const QString &endpoint)
 {
     QString url = buildApiUrl(endpoint);
     QNetworkRequest request;
     request.setUrl(QUrl(url));
-    request.setRawHeader("User-Agent", "Henri Assistant Domotique v1.0");
+    request.setRawHeader("User-Agent", "EXO Assistant v4.2");
     
     QNetworkReply *reply = m_networkManager->get(request);
     

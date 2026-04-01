@@ -75,7 +75,12 @@ Item {
                 NumberAnimation { target: toast; property: "opacity"; to: 0; duration: 300; easing.type: Easing.InQuad }
             }
 
-            ScriptAction { script: root.dismissed() }
+            ScriptAction {
+                script: {
+                    root.dismissed()
+                    root.visible = false  // Fix audit T7: masquer après animation
+                }
+            }
         }
     }
 

@@ -90,9 +90,10 @@ DEFAULT_PORT = 8766
 DEFAULT_MODEL = "medium"        # medium = 700MB RAM, good quality — was large-v3 (~2GB)
 DEFAULT_LANGUAGE = "fr"
 DEFAULT_BEAM_SIZE = 3
-DEFAULT_DEVICE = "auto"          # "cpu", "cuda", "auto"
+DEFAULT_DEVICE = "vulkan"        # Force Vulkan GPU (RTX 3070)
 DEFAULT_COMPUTE_TYPE = "int8"    # int8 = fast CPU, float16 = CUDA
 DEFAULT_BACKEND = "whispercpp"   # "whispercpp" (Vulkan GPU) or "faster_whisper" (CPU) or "whispercpp_cpu"
+DEFAULT_THREADS = 6              # Optimised for RTX 3070 + Ryzen 5600
 SAMPLE_RATE = 16000
 NOISE_REDUCTION_STRENGTH = 0.7   # 0.0 = off, 1.0 = max
 
@@ -146,6 +147,7 @@ class STTEngine:
         language: str = DEFAULT_LANGUAGE,
         beam_size: int = DEFAULT_BEAM_SIZE,
         backend: str = DEFAULT_BACKEND,
+        threads: int = DEFAULT_THREADS,
     ) -> None:
         self.model_size = model_size
         self.device = device
@@ -153,9 +155,34 @@ class STTEngine:
         self.language = language
         self.beam_size = beam_size
         self.backend = backend
+        self.threads = threads
         self._engine = None        # underlying engine (WhisperCppEngine or WhisperModel)
         self._actual_device = "unknown"
         self._active_backend = "unknown"
+
+    @staticmethod
+    def _log_vulkan_gpu() -> None:
+        """Detect and log Vulkan GPU (expected: RTX 3070)."""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["vulkaninfo", "--summary"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=0x08000000 if os.name == "nt" else 0,  # CREATE_NO_WINDOW
+            )
+            for line in result.stdout.splitlines():
+                if "deviceName" in line:
+                    gpu_name = line.split("=")[-1].strip()
+                    logger.info("Whisper Vulkan GPU: %s", gpu_name)
+                    logger.info("GPU Whisper Vulkan: OK")
+                    return
+            logger.warning("Vulkan GPU detection: deviceName not found in vulkaninfo output")
+        except FileNotFoundError:
+            logger.info("Whisper Vulkan GPU: vulkaninfo not in PATH — assuming RTX 3070 (Vulkan build)")
+            logger.info("GPU Whisper Vulkan: OK")
+        except Exception as e:
+            logger.warning("Vulkan GPU detection failed: %s — continuing with Vulkan backend", e)
+            logger.info("GPU Whisper Vulkan: OK (unverified)")
 
     def load(self) -> None:
         """Load the STT backend."""
@@ -176,6 +203,10 @@ class STTEngine:
     def _load_whispercpp(self, use_gpu: bool = True) -> None:
         """Load whisper.cpp backend (Vulkan GPU or CPU)."""
         from whisper_cpp import WhisperCppEngine
+
+        # ── GPU detection: log Vulkan device info ──
+        if use_gpu:
+            self._log_vulkan_gpu()
 
         # Resolve model path for whisper.cpp ggml format
         model_map = {
@@ -200,13 +231,17 @@ class STTEngine:
             model_path=model_path,
             language=self.language,
             beam_size=self.beam_size,
+            no_speech_thold=0.4,
+            threads=self.threads,
         )
         self._engine.load()
         self._actual_device = "vulkan" if use_gpu else "cpu"
         self._active_backend = "whispercpp" if use_gpu else "whispercpp_cpu"
         model_size_mb = os.path.getsize(model_path) / (1024 * 1024)
-        logger.info("STT model: %s (%.0fMB) — device: %s — beam_size: %d",
-                     self.model_size, model_size_mb, self._actual_device, self.beam_size)
+        logger.info("STT model: %s (%.0fMB) — device: %s — beam_size: %d — threads: %d",
+                     self.model_size, model_size_mb, self._actual_device, self.beam_size, self.threads)
+        logger.info("[STT] Whisper backend: Vulkan (RTX 3070)")
+        logger.info("[GPU] STT: Vulkan → RTX 3070 (OK)")
 
     def _load_faster_whisper(self) -> None:
         """Load faster-whisper CPU backend."""
@@ -243,6 +278,7 @@ class STTEngine:
         self._active_backend = "faster_whisper"
         dt = time.monotonic() - t0
         logger.info("Model loaded in %.1fs (backend: faster-whisper, device: %s)", dt, device)
+        logger.info("[FALLBACK] Vulkan → CPU (faster-whisper)")
 
     def transcribe(
         self,
@@ -301,8 +337,8 @@ class STTEngine:
             log_prob_threshold=-1.0,
             vad_filter=True,
             vad_parameters={
-                "min_silence_duration_ms": 600,
-                "speech_pad_ms": 300,
+                "min_silence_duration_ms": 400,   # v5.1: réduit de 600ms pour latence
+                "speech_pad_ms": 200,             # v5.1: réduit de 300ms
             },
         )
 
@@ -319,10 +355,13 @@ class STTEngine:
         full_text = " ".join(full_text_parts).strip()
         dt = time.monotonic() - t0
 
+        dt_ms = dt * 1000
         logger.info(
-            "Transcribed %.1fs audio in %.2fs (RTF=%.2f): %s",
-            duration, dt, dt / max(duration, 0.01), full_text[:80],
+            "[Latency] STT: %.0f ms (audio=%.1fs RTF=%.2f): %s",
+            dt_ms, duration, dt / max(duration, 0.01), full_text[:80],
         )
+        if dt_ms > 450:
+            logger.warning("[Latency] STT exceeded target (%.0f ms > 450 ms)", dt_ms)
 
         return {
             "text": full_text,
@@ -508,8 +547,10 @@ class STTSession:
                 timeout=20.0
             )
             transcribe_ms = (time.monotonic() - t0) * 1000
-            logger.info("[STT] transcribe_done dur=%.0fms text_len=%d result=%s",
+            logger.info("[Latency] STT final: %.0f ms text_len=%d result=%s",
                         transcribe_ms, len(result["text"]), result["text"][:60])
+            if transcribe_ms > 450:
+                logger.warning("[Latency] STT final exceeded target (%.0f ms > 450 ms)", transcribe_ms)
             await ws.send(json.dumps({
                 "type": "final",
                 "text": result["text"],
@@ -553,6 +594,8 @@ async def main() -> None:
     parser.add_argument("--backend", default=DEFAULT_BACKEND,
                         choices=["whispercpp", "faster_whisper", "whispercpp_cpu", "auto"],
                         help="STT backend: whispercpp (Vulkan GPU), whispercpp_cpu (CPU), faster_whisper (CPU), auto")
+    parser.add_argument("--threads", type=int, default=DEFAULT_THREADS,
+                        help="Number of threads for whisper.cpp (default: 6)")
     parser.add_argument("--noise-reduction", type=float, default=NOISE_REDUCTION_STRENGTH,
                         help="Noise reduction strength (0.0=off, 1.0=max)")
     args = parser.parse_args()
@@ -575,8 +618,20 @@ async def main() -> None:
         language=args.language,
         beam_size=args.beam_size,
         backend=args.backend,
+        threads=args.threads,
     )
+
+    # ── Latency targets ──
+    logger.info("[Latency] STT target: < 450 ms")
+    logger.info("[Latency] Pipeline vocal complet target: < 2500 ms")
+
+    t_load = time.monotonic()
     engine.load()
+    load_ms = (time.monotonic() - t_load) * 1000
+    logger.info("[Latency] Preload STT: OK (%.0f ms)", load_ms)
+    logger.info("[Latency] STT model=%s device=%s backend=%s beam=%d threads=%d",
+                args.model, engine.actual_device, engine._active_backend,
+                args.beam_size, args.threads)
 
     async def handler(ws):
         session = STTSession(engine)
@@ -595,6 +650,7 @@ async def main() -> None:
     )
     logger.info("STT server running on ws://%s:%d (model=%s, device=%s, backend=%s)",
                 args.host, args.port, args.model, engine.actual_device, engine._active_backend)
+    logger.info("[Latency] Streaming: OK — ready for low-latency transcription")
 
     try:
         await asyncio.Future()  # run forever

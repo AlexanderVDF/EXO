@@ -1,5 +1,9 @@
 """
 EXO Assistant Launcher
+
+⚠️  DEPRECATED: Prefer VS Code tasks (launch_all) for development.
+    This standalone launcher is kept for CI/headless use only.
+
 Lance tous les services backend puis la GUI.
 Usage : python exo_launcher.py
 """
@@ -19,7 +23,7 @@ LOG_DIR = SSD_ROOT / "logs"
 VENV_MAIN = PROJECT_DIR / ".venv" / "Scripts" / "python.exe"
 VENV_STT_TTS = PROJECT_DIR / ".venv_stt_tts" / "Scripts" / "python.exe"
 
-GUI_EXE = PROJECT_DIR / "build" / "Debug" / "RaspberryAssistant.exe"
+GUI_EXE = PROJECT_DIR / "build" / "Release" / "RaspberryAssistant.exe"
 
 # ── Variables d'environnement EXO ────────────────────────────────
 EXO_ENV = {
@@ -37,12 +41,16 @@ EXO_ENV = {
 SERVICES = [
     ("STT Server",      VENV_STT_TTS, "python/stt/stt_server.py",
      ["--backend", "whispercpp", "--model", "medium", "--beam-size", "3", "--language", "fr"]),
-    ("TTS Server",      VENV_STT_TTS, "python/tts/tts_server_directml.py",
+    ("TTS Server",      VENV_STT_TTS, "python/tts/tts_server.py",
      ["--voice", "Claribel Dervla", "--lang", "fr"]),
     ("VAD Server",      VENV_STT_TTS, "python/vad/vad_server.py", []),
     ("Wakeword Server", VENV_STT_TTS, "python/wakeword/wakeword_server.py", []),
     ("Memory Server",   VENV_STT_TTS, "python/memory/memory_server.py", []),
     ("NLU Server",      VENV_STT_TTS, "python/nlu/nlu_server.py", []),
+    ("WebSearch",       VENV_MAIN,    "python/websearch/websearch_server.py", []),
+    ("News",            VENV_MAIN,    "python/news/news_server.py", []),
+    ("Knowledge",       VENV_MAIN,    "python/knowledge/knowledge_server.py", []),
+    ("Tools",           VENV_MAIN,    "python/tools/tools_server.py", []),
     ("Orchestrator",    VENV_MAIN,    "python/orchestrator/exo_server.py", []),
 ]
 

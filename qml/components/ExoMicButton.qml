@@ -32,18 +32,21 @@ Item {
 
         Behavior on border.color { ColorAnimation { duration: Theme.animNormal } }
 
+        // Fix audit T6: layer.enabled retiré — le halo est un simple Rectangle+border,
+        // pas besoin d'un FBO GPU dédié
+
         SequentialAnimation on opacity {
             running: root.pipelineState === "Listening"
             loops: Animation.Infinite
-            NumberAnimation { from: 0; to: 0.5; duration: 700; easing.type: Easing.OutSine }
-            NumberAnimation { from: 0.5; to: 0; duration: 700; easing.type: Easing.InSine }
+            NumberAnimation { from: 0; to: 0.5; duration: 500; easing.type: Easing.OutCubic }
+            NumberAnimation { from: 0.5; to: 0; duration: 500; easing.type: Easing.InCubic }
         }
 
         SequentialAnimation on scale {
             running: root.pipelineState === "Listening"
             loops: Animation.Infinite
-            NumberAnimation { from: 1.0; to: 1.15; duration: 700; easing.type: Easing.OutSine }
-            NumberAnimation { from: 1.15; to: 1.0; duration: 700; easing.type: Easing.InSine }
+            NumberAnimation { from: 1.0; to: 1.15; duration: 500; easing.type: Easing.OutCubic }
+            NumberAnimation { from: 1.15; to: 1.0; duration: 500; easing.type: Easing.InCubic }
         }
     }
 
@@ -71,7 +74,7 @@ Item {
         Behavior on border.color { ColorAnimation { duration: Theme.animNormal } }
 
         scale: micMouse.pressed ? 0.93 : 1.0
-        Behavior on scale { NumberAnimation { duration: Theme.animFast; easing.type: Easing.OutQuad } }
+        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         // Icône micro (unicode)
         Text {

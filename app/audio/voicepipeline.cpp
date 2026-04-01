@@ -451,7 +451,7 @@ void StreamingSTT::onWsDisconnected()
     m_connected = false;
     m_recording = false;
     QWebSocket *raw = m_ws->socket();
-    hWarning(henriVoice) << "StreamingSTT: DÉCONNECTÉ du serveur STT"
+    hWarning(exoVoice) << "StreamingSTT: DÉCONNECTÉ du serveur STT"
                         << "— closeCode:" << (raw ? raw->closeCode() : 0)
                         << "closeReason:" << (raw ? raw->closeReason() : QString())
                         << "errorString:" << (raw ? raw->errorString() : QString());
@@ -511,7 +511,7 @@ void StreamingSTT::endUtterance()
              << "recording=" << m_recording
              << "wsState=" << (m_ws && m_ws->socket() ? static_cast<int>(m_ws->socket()->state()) : -1);
     if (!m_connected) {
-        hWarning(henriVoice) << "endUtterance: STT non connecté — abandon";
+        hWarning(exoVoice) << "endUtterance: STT non connecté — abandon";
         return;
     }
     m_recording = false;
@@ -575,6 +575,7 @@ VoicePipeline::VoicePipeline(QObject *parent)
 {
     m_ttsEndClock.start();
     m_lastWakeWordClock.start();
+    m_interactionClock.start();
 
     // Initialize default wake-word variants (accept both Jarvis and EXO)
     m_wakeVariants << "jarvis" << "jarvice" << "jarvi" << "jarviss" << "garvis"
@@ -724,6 +725,11 @@ void VoicePipeline::initTTS(const QString &ttsServerUrl)
             this, &VoicePipeline::onTtsError);
 
     hVoice() << "TTSManager initialisé avec DSP pipeline";
+    hVoice() << "[Pipeline] GPU STT/TTS: RTX 3070";
+    hVoice() << "[Pipeline] GPU GUI: AMD";
+    hVoice() << "[Latency] Targets: STT < 300 ms | TTS < 800 ms | Pipeline < 1500 ms";
+    hVoice() << "[Latency] TTS guard:" << TTS_GUARD_MS << "ms | Wake cooldown:" << WAKE_COOLDOWN_MS << "ms"
+             << "| Min utterance:" << MIN_UTTERANCE_MS << "ms";
 }
 
 // ── OpenWakeWord server integration ──────────────────
@@ -753,7 +759,7 @@ void VoicePipeline::onWakeWordWsConnected()
 
 void VoicePipeline::onWakeWordWsDisconnected()
 {
-    hWarning(henriVoice) << "OpenWakeWord server disconnected — fallback transcript detection";
+    hWarning(exoVoice) << "OpenWakeWord server disconnected — fallback transcript detection";
     // Reconnection automatique gérée par WebSocketClient
 }
 
@@ -827,6 +833,10 @@ void VoicePipeline::speak(const QString &text)
 {
     if (text.isEmpty() || !m_ttsManager) return;
 
+    if (m_vadInteraction)
+        hVoice() << "[Latency] speak() called (" << m_interactionClock.elapsed() << "ms since VAD)";
+    else
+        hVoice() << "[Latency] speak() called (manual request — no VAD)";
     PIPELINE_EVENT(PipelineModule::TTS, EventType::SpeakRequested,
                    {{"text_length", text.length()},
                     {"preview", text.left(80)}});
@@ -1035,7 +1045,7 @@ void VoicePipeline::sendWebSocketMessage(const QString &message)
     if (m_ws && m_ws->isValid()) {
         m_ws->sendTextMessage(message);
     } else {
-        hWarning(henriVoice) << "WebSocket non connecté — message perdu";
+        hWarning(exoVoice) << "WebSocket non connecté — message perdu";
     }
 }
 
@@ -1090,7 +1100,7 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
     if (m_vad) {
         vadScore = m_vad->processChunk(samples, count);
     } else {
-        hWarning(henriVoice) << "processAudioChunk: m_vad est nullptr — VAD désactivé";
+        hWarning(exoVoice) << "processAudioChunk: m_vad est nullptr — VAD désactivé";
         return;
     }
 
@@ -1132,9 +1142,9 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
         if (m_stt && m_stt->isConnected() && m_sttStreaming) {
             m_stt->feedAudio(samples, count);
         }
-        // End-of-speech detection via VAD (min 2s pour éviter clips trop courts)
+        // End-of-speech detection via VAD (min 800ms pour éviter clips trop courts)
         if (m_vad && !m_vad->isSpeech()
-            && m_utteranceBuf.size() > static_cast<size_t>(SAMPLE_RATE * 2)) {
+            && m_utteranceBuf.size() > static_cast<size_t>(SAMPLE_RATE * MIN_UTTERANCE_MS / 1000)) {
             finishUtterance();
         }
         break;
@@ -1153,6 +1163,9 @@ void VoicePipeline::handleVAD(const int16_t *samples, int count, float vadScore)
 
     if (vadScore >= m_vad->threshold()) {
         hVoice() << "VAD: parole détectée (score:" << vadScore << ") → streaming STT";
+        hVoice() << "[Latency] VAD → STT start";
+        m_interactionClock.restart();  // v5.2: start end-to-end measurement
+        m_vadInteraction = true;       // mark as VAD-triggered interaction
         m_utteranceBuf.clear();
         m_wakeWordTriggered = false;  // reset wake-word flag pour cette utterance
         setState(PipelineState::DetectingSpeech);
@@ -1289,8 +1302,9 @@ void VoicePipeline::finishUtterance()
     emit speechEnded();
     emit statusChanged("Transcription en cours...");
 
-    hVoice() << "Utterance capturée:" << m_utteranceBuf.size() << "samples ("
-             << (m_utteranceBuf.size() * 1000 / SAMPLE_RATE) << "ms)";
+    const qint64 uttDurationMs = static_cast<qint64>(m_utteranceBuf.size() * 1000 / SAMPLE_RATE);
+    hVoice() << "[Latency] Utterance captured:" << m_utteranceBuf.size() << "samples ("
+             << uttDurationMs << "ms)";
 
     // End the streaming utterance if we were streaming
     if (m_stt && m_stt->isConnected()) {
@@ -1305,7 +1319,7 @@ void VoicePipeline::finishUtterance()
             m_stt->transcribeBuffer(m_utteranceBuf);
         }
     } else {
-        hWarning(henriVoice) << "finishUtterance: STT non connecté — fallback interne";
+        hWarning(exoVoice) << "finishUtterance: STT non connecté — fallback interne";
         QString text = analyzeAudioFallback(m_utteranceBuf);
         if (!text.isEmpty()) {
             dispatchTranscript(text);
@@ -1319,6 +1333,7 @@ void VoicePipeline::finishUtterance()
 void VoicePipeline::dispatchTranscript(const QString &text)
 {
     hVoice() << "=== dispatchTranscript ===" << text.left(80);
+    hVoice() << "[Latency] STT → dispatch (" << m_interactionClock.elapsed() << "ms since VAD)";
 
     // Début d'une nouvelle interaction
     PipelineEventBus::instance()->beginInteraction();
@@ -1346,7 +1361,7 @@ void VoicePipeline::dispatchTranscript(const QString &text)
         m_ws->sendTextMessage(QString::fromUtf8(QJsonDocument(msg).toJson(QJsonDocument::Compact)));
         hVoice() << "dispatchTranscript: transcript envoyé via WS";
     } else {
-        hWarning(henriVoice) << "dispatchTranscript: WebSocket backend non connecté!";
+        hWarning(exoVoice) << "dispatchTranscript: WebSocket backend non connecté!";
     }
 
     hVoice() << "dispatchTranscript: passage à Thinking";
@@ -1366,7 +1381,7 @@ void VoicePipeline::onUtteranceTimeout()
 
 void VoicePipeline::onTranscribeTimeout()
 {
-    hWarning(henriVoice) << "Transcription timeout (" << TRANSCRIBE_TIMEOUT_MS
+    hWarning(exoVoice) << "Transcription timeout (" << TRANSCRIBE_TIMEOUT_MS
                          << "ms) — pipeline bloqué en Transcribing, retour Idle";
     if (m_state == PipelineState::Transcribing) {
         if (m_stt && m_stt->isConnected()) {
@@ -1428,6 +1443,7 @@ void VoicePipeline::onSTTPartial(const QString &text)
 void VoicePipeline::onSTTFinal(const QString &text)
 {
     m_transcribeTimer->stop();
+    hVoice() << "[Latency] STT final received";
     hVoice() << "=== onSTTFinal ===" << text.left(80)
              << "state=" << static_cast<int>(m_state)
              << "wakeTriggered=" << m_wakeWordTriggered
@@ -1491,10 +1507,15 @@ void VoicePipeline::onSTTError(const QString &msg)
 
 void VoicePipeline::onTtsStarted()
 {
+    if (m_vadInteraction)
+        hVoice() << "[Latency] TTS playback started (" << m_interactionClock.elapsed() << "ms end-to-end)";
+    else
+        hVoice() << "[Latency] TTS playback started (manual request)";
     PIPELINE_EVENT(PipelineModule::TTS, EventType::PlaybackStarted);
     PIPELINE_STATE(PipelineModule::TTS, ModuleState::Active);
     PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Active);
     m_isSpeaking = true;
+    m_ttsPlaybackStart.restart();
     setState(PipelineState::Speaking);
     emit speakingChanged();
 }
@@ -1512,24 +1533,26 @@ void VoicePipeline::onTtsFinished()
             PipelineEventBus::instance()->endInteraction(cid);
 
         m_isSpeaking = false;
+        m_vadInteraction = false;  // reset for next interaction
         m_ttsEndClock.restart();
         emit speakingChanged();
-        hVoice() << "TTS terminé — reprise écoute dans" << TTS_GUARD_MS << "ms";
+        hVoice() << "[Latency] TTS playback finished (" << m_ttsPlaybackStart.elapsed() << "ms)";
 
         // Activer le mode conversation après une réponse TTS
         m_conversationActive = true;
         m_conversationTimer->start(CONVERSATION_TIMEOUT_MS);
         hVoice() << "Mode conversation activé pour" << CONVERSATION_TIMEOUT_MS << "ms";
 
-        QTimer::singleShot(TTS_GUARD_MS, this, [this]() {
-            if (m_audioInput) {
-                m_audioInput->resume();
-            } else {
-                hWarning(henriVoice) << "onTtsFinished: m_audioInput est nullptr — impossible de reprendre capture";
-            }
-            resetBuffers();
-            setState(PipelineState::Idle);
-        });
+        // v5.2: Resume pipeline immediately — processAudioChunk guards via
+        // m_ttsEndClock < TTS_GUARD_MS, so no artificial delay needed.
+        if (m_audioInput) {
+            m_audioInput->resume();
+        } else {
+            hWarning(exoVoice) << "onTtsFinished: m_audioInput est nullptr";
+        }
+        resetBuffers();
+        setState(PipelineState::Idle);
+        hVoice() << "Pipeline prêt — anti-echo guard:" << TTS_GUARD_MS << "ms";
     }
 }
 
@@ -1555,14 +1578,14 @@ void VoicePipeline::setState(PipelineState s)
 
     // Guard: block invalid transitions while Speaking (only Idle is allowed after Speaking)
     if (m_state == PipelineState::Speaking && s != PipelineState::Idle) {
-        hWarning(henriVoice) << "setState: transition bloquée pendant Speaking → "
+        hWarning(exoVoice) << "setState: transition bloquée pendant Speaking → "
                              << static_cast<int>(s);
         return;
     }
     // Guard: don't go backwards from Thinking/Transcribing to DetectingSpeech/Listening
     if ((m_state == PipelineState::Thinking || m_state == PipelineState::Transcribing)
         && (s == PipelineState::DetectingSpeech || s == PipelineState::Listening)) {
-        hWarning(henriVoice) << "setState: transition arrière bloquée "
+        hWarning(exoVoice) << "setState: transition arrière bloquée "
                              << static_cast<int>(m_state) << " → " << static_cast<int>(s);
         return;
     }
@@ -1578,7 +1601,7 @@ void VoicePipeline::setState(PipelineState s)
             m_speakingWatchdog = new QTimer(this);
             m_speakingWatchdog->setSingleShot(true);
             connect(m_speakingWatchdog, &QTimer::timeout, this, [this]() {
-                hWarning(henriVoice) << "WATCHDOG: Speaking bloqué >" << SPEAKING_WATCHDOG_MS / 1000 << "s → force Idle";
+                hWarning(exoVoice) << "WATCHDOG: Speaking bloqué >" << SPEAKING_WATCHDOG_MS / 1000 << "s → force Idle";
                 setState(PipelineState::Idle);
             });
         }

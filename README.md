@@ -1,6 +1,6 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 4.2 "Premium Open-Source Edition"** | Mars 2026
+**Version 5.2** | Mars 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
@@ -67,7 +67,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 |---------|------|-------------|------|
 | **Orchestrator** | 8765 | Python 3.13 | GUI WebSocket + bridge Home Assistant |
 | **STT** | 8766 | Whisper.cpp (Vulkan) | Reconnaissance vocale GPU, modèle medium |
-| **TTS** | 8767 | XTTS v2 (DirectML) | Synthèse vocale neurale, 24 kHz PCM16 |
+| **TTS** | 8767 | XTTS v2 (CUDA) | Synthèse vocale neurale, 24 kHz PCM16 |
 | **VAD** | 8768 | Silero VAD | Détection d'activité vocale neurale |
 | **WakeWord** | 8770 | OpenWakeWord | Détection du mot-clé "EXO" |
 | **Memory** | 8771 | FAISS + SentenceTransformers | Mémoire sémantique vectorielle |
@@ -83,11 +83,11 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 | ClaudeAPI | `app/llm/` | LLM SSE streaming + 8 Function Calling |
 | AIMemoryManager | `app/llm/` | Mémoire 3 couches + FAISS |
 | WeatherManager | `app/utils/` | Météo OpenWeatherMap + géolocalisation |
-| ConfigManager | `app/core/` | Configuration 3 couches (env > local > global) |
+| ConfigManager | `app/core/` | Configuration 2 couches (env > global) |
 
 ### Interface
 
-- **QML** — 19 composants style VS Code + Fluent Design (Sidebar, Transcript, Response, Visualizer GPU ShaderEffect GLSL 60 FPS, Settings, History, etc.)
+- **QML** — 18 composants style VS Code + Fluent Design (Sidebar, Transcript, Response, Visualizer GPU ShaderEffect GLSL 60 FPS, Settings, History, etc.)
 - **React** — Interface web alternative (React 18 + Vite, dans `gui/`)
 
 ---
@@ -119,7 +119,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 | Visual Studio Build Tools | 2022 | Compilateur MSVC |
 | Python | 3.11+ | Microservices IA (venv `.venv_stt_tts`) |
 | Python | 3.13+ | Orchestrator (venv `.venv`) |
-| GPU | Vulkan compatible | STT (Whisper.cpp) + TTS (DirectML) |
+| GPU | Vulkan compatible | STT (Whisper.cpp) + TTS (CUDA) |
 | Node.js | 22+ | GUI React (optionnel) |
 
 > **Modèles & données** — Stockés sur `D:\EXO\` (modèles Whisper, XTTS, FAISS, wakeword, cache HuggingFace).
@@ -144,8 +144,8 @@ cmake --build build --config Release
 python -m venv .venv_stt_tts
 .\.venv_stt_tts\Scripts\Activate.ps1
 pip install websockets numpy soundfile "transformers>=4.40,<4.50"
-pip install "torch==2.4.1" "torchaudio==2.4.1" --index-url https://download.pytorch.org/whl/cpu
-pip install torch-directml TTS
+pip install "torch==2.4.1" "torchaudio==2.4.1" --index-url https://download.pytorch.org/whl/cu121
+pip install TTS
 pip install silero-vad onnxruntime noisereduce openwakeword faiss-cpu sentence-transformers
 ```
 

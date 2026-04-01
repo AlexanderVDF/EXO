@@ -177,7 +177,7 @@ private:
     static constexpr const char *DEFAULT_STT_LANGUAGE    = "fr";
     static constexpr int         DEFAULT_STT_BEAM_SIZE   = 5;
     static constexpr const char *DEFAULT_TTS_VOICE       = "Claribel Dervla";
-    static constexpr const char *DEFAULT_TTS_ENGINE      = "xtts_directml";
-    static constexpr const char *DEFAULT_VAD_BACKEND     = "builtin";
+    static constexpr const char *DEFAULT_TTS_ENGINE      = "xtts_cuda";
+    static constexpr const char *DEFAULT_VAD_BACKEND     = "hybrid";
     static constexpr double      DEFAULT_VAD_THRESHOLD   = 0.45;
 };

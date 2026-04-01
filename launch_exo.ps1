@@ -1,9 +1,16 @@
 ﻿#!/usr/bin/env powershell
 # Script de lancement EXO Assistant
+# ⚠️  DEPRECATED: Prefer VS Code tasks (launch_all) for development.
+#     This standalone script is kept for CI/headless use only.
 # Utilisation: .\launch_exo.ps1
-# TTS GPU via DirectML (XTTS v2 + ONNX Runtime DirectML / AMD GPU)
+# Multi-GPU: AMD = GUI | RTX 3070 = compute IA (CUDA + Vulkan)
 
 Write-Host "Lancement d'EXO Assistant..." -ForegroundColor Cyan
+Write-Host "=== Configuration Multi-GPU ===" -ForegroundColor Magenta
+Write-Host "  GUI (Qt/QML)  : AMD (affichage)" -ForegroundColor Green
+Write-Host "  TTS (XTTS v2) : CUDA -> RTX 3070" -ForegroundColor Green
+Write-Host "  STT (Whisper)  : Vulkan -> RTX 3070" -ForegroundColor Green
+Write-Host "================================" -ForegroundColor Magenta
 
 # --- Racines projet ---
 $projectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -14,16 +21,16 @@ $pythonSTT  = "$projectDir\.venv_stt_tts\Scripts\python.exe"
 $logDir = "$ssdRoot\logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
-# --- TTS GPU DirectML ---
+# --- TTS GPU CUDA (RTX 3070) ---
 $ttsPort = 8767
 $ttsRunning = Get-NetTCPConnection -LocalPort $ttsPort -ErrorAction SilentlyContinue |
     Where-Object { $_.State -eq 'Listen' }
 if (-not $ttsRunning) {
-    $ttsScript = "$projectDir\python\tts\tts_server_directml.py"
+    $ttsScript = "$projectDir\python\tts\tts_server.py"
     if ((Test-Path $pythonSTT) -and (Test-Path $ttsScript)) {
-        Write-Host "Demarrage du TTS GPU DirectML (XTTS v2)..." -ForegroundColor Yellow
+        Write-Host "Demarrage du TTS GPU CUDA (XTTS v2 — RTX 3070)..." -ForegroundColor Yellow
         $ttsProc = Start-Process -FilePath $pythonSTT -ArgumentList "$ttsScript --voice `"Claribel Dervla`" --lang fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\tts_stdout.log" -RedirectStandardError "$logDir\tts_stderr.log"
-        Write-Host "TTS DirectML lance (PID: $($ttsProc.Id)) - attente demarrage..." -ForegroundColor Yellow
+        Write-Host "TTS CUDA lance (PID: $($ttsProc.Id)) - attente demarrage..." -ForegroundColor Yellow
         $timeout = 120
         $elapsed = 0
         while ($elapsed -lt $timeout) {
@@ -32,25 +39,25 @@ if (-not $ttsRunning) {
             $listening = Get-NetTCPConnection -LocalPort $ttsPort -ErrorAction SilentlyContinue |
                 Where-Object { $_.State -eq 'Listen' }
             if ($listening) {
-                Write-Host "TTS DirectML pret sur le port $ttsPort" -ForegroundColor Green
+                Write-Host "TTS CUDA pret sur le port $ttsPort" -ForegroundColor Green
                 break
             }
         }
         if ($elapsed -ge $timeout) {
-            Write-Host "ATTENTION: TTS DirectML non demarre dans les ${timeout}s - fallback Qt TTS" -ForegroundColor Red
+            Write-Host "ATTENTION: TTS CUDA non demarre dans les ${timeout}s - fallback Qt TTS" -ForegroundColor Red
         }
     } else {
-        Write-Host "ATTENTION: TTS DirectML non disponible - EXO utilisera le fallback Qt TTS" -ForegroundColor Red
+        Write-Host "ATTENTION: TTS CUDA non disponible - EXO utilisera le fallback Qt TTS" -ForegroundColor Red
     }
 } else {
     Write-Host "TTS GPU deja actif sur le port $ttsPort" -ForegroundColor Green
 }
 
 # Verifier que l'executable existe
-$exePath = "$projectDir\build\Debug\RaspberryAssistant.exe"
+$exePath = "$projectDir\build\Release\RaspberryAssistant.exe"
 if (-not (Test-Path $exePath)) {
     Write-Host "Erreur: Executable non trouve a $exePath" -ForegroundColor Red
-    Write-Host "Compilez d'abord avec: cmake --build . --config Debug" -ForegroundColor Yellow
+    Write-Host "Compilez d'abord avec: cmake --build build --config Release" -ForegroundColor Yellow
     exit 1
 }
 
@@ -90,8 +97,8 @@ $sttServer = "$projectDir\python\stt\stt_server.py"
 $sttRunning = Get-NetTCPConnection -LocalPort 8766 -ErrorAction SilentlyContinue
 if (-not $sttRunning) {
     if (Test-Path $pythonSTT) {
-        Write-Host "Demarrage du serveur STT (whisper.cpp medium)..." -ForegroundColor Yellow
-        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model medium --beam-size 3 --language fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
+        Write-Host "Demarrage du serveur STT (whisper.cpp medium — Vulkan GPU)..." -ForegroundColor Yellow
+        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model medium --beam-size 3 --language fr --threads 6 --device vulkan" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
         Write-Host "STT server lance (PID: $($sttProc.Id)) - attente connexion..." -ForegroundColor Yellow
         # Attendre que le serveur soit pret (max 30s)
         $timeout = 30
@@ -117,7 +124,7 @@ if (-not $sttRunning) {
 
 # Lancer EXO
 Write-Host "Demarrage d'EXO..." -ForegroundColor Green
-Set-Location "$projectDir\build\Debug"
+Set-Location "$projectDir\build\Release"
 Write-Host "EXO demarre a $(Get-Date -Format 'HH:mm:ss') - logs dans $logDir" -ForegroundColor Cyan
 & .\RaspberryAssistant.exe 2>&1 | Tee-Object -FilePath "$logDir\exo_console.log"
 $exoExitCode = $LASTEXITCODE
@@ -125,7 +132,7 @@ Write-Host "EXO termine avec code: $exoExitCode a $(Get-Date -Format 'HH:mm:ss')
 
 # Cleanup: arreter les serveurs lances
 if ($ttsProc -and -not $ttsProc.HasExited) {
-    Write-Host "Arret du serveur TTS DirectML (PID: $($ttsProc.Id))..." -ForegroundColor Yellow
+    Write-Host "Arret du serveur TTS CUDA (PID: $($ttsProc.Id))..." -ForegroundColor Yellow
     Stop-Process -Id $ttsProc.Id -Force -ErrorAction SilentlyContinue
 }
 if ($sttProc -and -not $sttProc.HasExited) {

@@ -133,10 +133,25 @@ class SemanticMemory:
         """Load embedding model and existing data."""
         t0 = time.monotonic()
 
-        # Load SentenceTransformer
+        # Load SentenceTransformer — prefer secondary GPU (cuda:1), fallback cuda:0, then CPU
         from sentence_transformers import SentenceTransformer
-        self._encoder = SentenceTransformer(self._model_name)
+        import torch
+        device = "cpu"
+        if torch.cuda.is_available():
+            n_gpus = torch.cuda.device_count()
+            if n_gpus >= 2:
+                device = "cuda:1"
+                logger.info("GPU secondaire détecté: %s → embeddings sur cuda:1",
+                            torch.cuda.get_device_name(1))
+            else:
+                device = "cuda:0"
+                logger.info("GPU unique: %s → embeddings sur cuda:0",
+                            torch.cuda.get_device_name(0))
+        else:
+            logger.info("Pas de GPU CUDA, embeddings sur CPU")
+        self._encoder = SentenceTransformer(self._model_name, device=device)
         self._dim = self._encoder.get_sentence_embedding_dimension()
+        logger.info("GPU Memory (embeddings): %s", device)
 
         # Initialize or load FAISS index
         import faiss

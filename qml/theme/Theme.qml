@@ -204,9 +204,14 @@ QtObject {
     }
 
     function healthColor(status) {
+        // v4 strings (from HealthCheck)
         if (status === "healthy")  return success
         if (status === "degraded") return warning
         if (status === "down")     return error
+        // v5 strings (from ServiceSupervisor)
+        if (status === "ready")    return success
+        if (status === "starting" || status === "waiting_ready" || status === "restarting") return warning
+        if (status === "failed" || status === "crashed") return error
         return textMuted
     }
 

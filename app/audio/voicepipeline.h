@@ -139,8 +139,8 @@ private:
     float  m_noiseFloor = 0.0f;
     bool   m_noiseCalibrated = false;
     int    m_calibrationFrames = 0;
-    static constexpr int CALIBRATION_WINDOW = 30;   // ~600 ms @ 20 ms chunks
-    static constexpr int SPEECH_HANG_FRAMES = 30;   // keep speech state for N silent frames (~600ms)
+    static constexpr int CALIBRATION_WINDOW = 15;   // ~300 ms @ 20 ms chunks (v5.2: halved for faster startup)
+    static constexpr int SPEECH_HANG_FRAMES = 8;    // v5.2: 8 frames (~160ms) — faster speech-end detection
     static constexpr int SPEECH_START_FRAMES = 2;    // require N consecutive speech frames
 
     // Silero VAD via WebSocketClient
@@ -201,7 +201,7 @@ private:
     bool m_connected = false;
     bool m_recording = false;
     QString m_language = "fr";
-    int m_beamSize = 5;
+    int m_beamSize = 3;
 };
 
 // ─────────────────────────────────────────────────────
@@ -373,14 +373,18 @@ private:
     QTimer *m_transcribeTimer = nullptr;
     QTimer *m_speakingWatchdog = nullptr;
     QElapsedTimer m_ttsEndClock;
+    QElapsedTimer m_ttsPlaybackStart;
     QElapsedTimer m_lastWakeWordClock;
-    static constexpr int TTS_GUARD_MS           = 1500;
-    static constexpr int WAKE_COOLDOWN_MS       = 3000;
-    static constexpr int UTTERANCE_TIMEOUT_MS   = 15000;
-    static constexpr int POST_WAKE_GRACE_MS     = 500;
-    static constexpr int CONVERSATION_TIMEOUT_MS = 15000; // 15 s conversation mode after TTS
-    static constexpr int TRANSCRIBE_TIMEOUT_MS  = 20000; // 20 s max for STT transcription
-    static constexpr int SPEAKING_WATCHDOG_MS    = 30000; // 30 s safety net if TTS never finishes
+    QElapsedTimer m_interactionClock;  // v5.2: end-to-end latency measurement
+    bool m_vadInteraction = false;       // true when current interaction was triggered by VAD
+    static constexpr int TTS_GUARD_MS           = 400;   // v5.2: 400ms anti-echo guard (was 1000)
+    static constexpr int WAKE_COOLDOWN_MS       = 800;   // v5.2: 800ms cooldown (was 2000)
+    static constexpr int UTTERANCE_TIMEOUT_MS   = 8000;  // v5.2: 8s max utterance (was 12000)
+    static constexpr int POST_WAKE_GRACE_MS     = 150;   // v5.2: 150ms grace (was 400)
+    static constexpr int CONVERSATION_TIMEOUT_MS = 10000; // v5.2: 10s conversation mode (was 15000)
+    static constexpr int TRANSCRIBE_TIMEOUT_MS  = 10000; // v5.2: 10s STT timeout (was 20000)
+    static constexpr int SPEAKING_WATCHDOG_MS    = 20000; // v5.2: 20s watchdog (was 30000)
+    static constexpr int MIN_UTTERANCE_MS       = 800;   // v5.2: min 800ms before end-of-speech
 
     // ── Conversation mode (no wake-word needed after TTS response) ──
     bool m_conversationActive = false;

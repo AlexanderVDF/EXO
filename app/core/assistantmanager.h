@@ -5,6 +5,8 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QQmlApplicationEngine>
+#include <QWebSocket>
+#include <QMap>
 #include "ConfigManager.h"
 #include "HealthCheck.h"
 
@@ -40,6 +42,7 @@ public:
     
     // Configuration
     void setQmlEngine(QQmlApplicationEngine *engine);
+    void initConfigEarly(const QString &configPath = "config/assistant.conf");
 
     // Méthodes publiques
     Q_INVOKABLE bool initializeWithConfig(const QString &configPath = "config/assistant.conf");
@@ -83,6 +86,14 @@ private:
     void sendWelcomeMessage();
     void onSpeechTranscribed(const QString &transcription);
 
+    // Dispatch des outils vers microservices Python
+    void initToolSockets();
+    void dispatchToolToService(const QString &service,
+                               const QString &toolUseId,
+                               const QString &action,
+                               const QJsonObject &params);
+    void onToolServiceMessage(const QString &service, const QString &message);
+
     // Membres privés
     bool m_isListening;
     bool m_isInitialized;
@@ -96,4 +107,8 @@ private:
     AIMemoryManager *m_memoryManager;
     HealthCheck *m_healthCheck;
     QQmlApplicationEngine *m_qmlEngine;
+
+    // Microservices outils (WebSocket)
+    QMap<QString, QWebSocket*> m_toolSockets;
+    QMap<QString, QString> m_pendingToolCalls;  // service → toolUseId
 };

@@ -330,6 +330,15 @@ void ClaudeAPI::startRequest(const QByteArray &payload, bool stream)
     ++m_totalRequests;
     m_requestTimestamps.append(QDateTime::currentMSecsSinceEpoch());
 
+    // Nettoyer l'ancienne reply si elle existe encore
+    // (ex: sendToolResult pendant que la 1ère requête est encore ouverte)
+    if (m_currentReply) {
+        m_currentReply->blockSignals(true);
+        m_currentReply->abort();
+        m_currentReply->deleteLater();
+        m_currentReply = nullptr;
+    }
+
     // Reset des accumulateurs streaming
     m_sseBuffer.clear();
     m_currentEventType.clear();
@@ -369,7 +378,7 @@ void ClaudeAPI::startRequest(const QByteArray &payload, bool stream)
 void ClaudeAPI::onStreamDataReady()
 {
     if (!m_currentReply) {
-        hWarning(henriClaude) << "onStreamDataReady: m_currentReply est nullptr";
+        hWarning(exoClaude) << "onStreamDataReady: m_currentReply est nullptr";
         return;
     }
 
@@ -490,7 +499,7 @@ void ClaudeAPI::handleContentBlockStart(const QJsonObject &data)
 
     // Guard against unbounded growth from malformed index
     if (index < 0 || index > 100) {
-        hWarning(henriClaude) << "handleContentBlockStart: index hors limites:" << index;
+        hWarning(exoClaude) << "handleContentBlockStart: index hors limites:" << index;
         return;
     }
 
@@ -564,7 +573,7 @@ void ClaudeAPI::handleContentBlockStop(const QJsonObject &data)
         if (err.error == QJsonParseError::NoError) {
             args = doc.object();
         } else {
-            hWarning(henriClaude) << "JSON tool_use invalide:"
+            hWarning(exoClaude) << "JSON tool_use invalide:"
                                   << err.errorString();
         }
 
@@ -648,7 +657,12 @@ void ClaudeAPI::trySplitSentences()
 
     // Extraire la phrase complète (tout avant le dernier split + le délimiteur)
     QString sentence = m_sentenceBuffer.left(lastSplit).trimmed();
-    m_sentenceBuffer = m_sentenceBuffer.mid(lastSplit).trimmed();
+    // Strip only leading whitespace (the split-point space) — preserve trailing
+    // to avoid merging tokens (e.g. "fait " + "0°C" → "fait0°C")
+    m_sentenceBuffer = m_sentenceBuffer.mid(lastSplit);
+    int i = 0;
+    while (i < m_sentenceBuffer.size() && m_sentenceBuffer.at(i).isSpace()) ++i;
+    if (i > 0) m_sentenceBuffer = m_sentenceBuffer.mid(i);
 
     if (!sentence.isEmpty()) {
         hClaude() << "Sentence ready (streaming):" << sentence.left(60);
@@ -938,7 +952,7 @@ bool ClaudeAPI::checkRateLimit()
     }
 
     if (m_requestTimestamps.size() >= RATE_LIMIT_PER_MIN) {
-        hWarning(henriClaude) << "Rate limit:"
+        hWarning(exoClaude) << "Rate limit:"
                               << m_requestTimestamps.size()
                               << "requêtes dans la dernière minute";
         return false;
@@ -965,7 +979,7 @@ bool ClaudeAPI::validateJsonResponse(const QJsonObject &obj) const
 
     // Réponse normale : doit avoir "content" et "role"
     if (!obj.contains(QStringLiteral("content"))) {
-        hWarning(henriClaude) << "Réponse sans champ 'content'";
+        hWarning(exoClaude) << "Réponse sans champ 'content'";
         return false;
     }
 
@@ -1178,6 +1192,189 @@ QJsonArray ClaudeAPI::buildEXOTools()
             schema));
     }
 
+    // ── search_web : recherche web ──────────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject queryProp;
+        queryProp[QStringLiteral("type")] = QStringLiteral("string");
+        queryProp[QStringLiteral("description")] =
+            QStringLiteral("La requête de recherche web");
+        props[QStringLiteral("query")] = queryProp;
+
+        QJsonObject freshProp;
+        freshProp[QStringLiteral("type")] = QStringLiteral("string");
+        freshProp[QStringLiteral("description")] =
+            QStringLiteral("Filtre temporel: day, week, month, year (optionnel)");
+        QJsonArray freshEnum;
+        freshEnum.append(QStringLiteral("day"));
+        freshEnum.append(QStringLiteral("week"));
+        freshEnum.append(QStringLiteral("month"));
+        freshEnum.append(QStringLiteral("year"));
+        freshProp[QStringLiteral("enum")] = freshEnum;
+        props[QStringLiteral("freshness")] = freshProp;
+
+        QJsonObject maxProp;
+        maxProp[QStringLiteral("type")] = QStringLiteral("integer");
+        maxProp[QStringLiteral("description")] =
+            QStringLiteral("Nombre max de résultats (défaut: 5, max: 10)");
+        maxProp[QStringLiteral("minimum")] = 1;
+        maxProp[QStringLiteral("maximum")] = 10;
+        props[QStringLiteral("max_results")] = maxProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("query"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("search_web"),
+            QStringLiteral("Rechercher des informations sur le web via DuckDuckGo. "
+                           "Utiliser pour les questions d'actualité, faits récents, "
+                           "ou quand tu as besoin de données à jour."),
+            schema));
+    }
+
+    // ── get_news : actualités ───────────────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject topicProp;
+        topicProp[QStringLiteral("type")] = QStringLiteral("string");
+        topicProp[QStringLiteral("description")] =
+            QStringLiteral("Sujet des actualités: general, tech, science, world");
+        QJsonArray topicEnum;
+        topicEnum.append(QStringLiteral("general"));
+        topicEnum.append(QStringLiteral("tech"));
+        topicEnum.append(QStringLiteral("science"));
+        topicEnum.append(QStringLiteral("world"));
+        topicProp[QStringLiteral("enum")] = topicEnum;
+        props[QStringLiteral("topic")] = topicProp;
+
+        QJsonObject regionProp;
+        regionProp[QStringLiteral("type")] = QStringLiteral("string");
+        regionProp[QStringLiteral("description")] =
+            QStringLiteral("Région: fr (français) ou en (anglais). Défaut: fr");
+        props[QStringLiteral("region")] = regionProp;
+
+        QJsonObject timeProp;
+        timeProp[QStringLiteral("type")] = QStringLiteral("string");
+        timeProp[QStringLiteral("description")] =
+            QStringLiteral("Période: 24h ou 7d. Défaut: 24h");
+        props[QStringLiteral("timeframe")] = timeProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("get_news"),
+            QStringLiteral("Obtenir les dernières actualités par sujet et région. "
+                           "Utiliser quand l'utilisateur demande les news, l'actu, "
+                           "ce qui se passe dans le monde."),
+            schema));
+    }
+
+    // ── get_summary : encyclopédie Wikipedia ────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject topicProp;
+        topicProp[QStringLiteral("type")] = QStringLiteral("string");
+        topicProp[QStringLiteral("description")] =
+            QStringLiteral("Le sujet à rechercher sur Wikipedia");
+        props[QStringLiteral("topic")] = topicProp;
+
+        QJsonObject langProp;
+        langProp[QStringLiteral("type")] = QStringLiteral("string");
+        langProp[QStringLiteral("description")] =
+            QStringLiteral("Langue: fr ou en. Défaut: fr");
+        props[QStringLiteral("lang")] = langProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("topic"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("get_summary"),
+            QStringLiteral("Obtenir un résumé encyclopédique depuis Wikipedia. "
+                           "Utiliser pour les questions de culture générale, "
+                           "histoire, science, biographies, géographie."),
+            schema));
+    }
+
+    // ── calculate : calculatrice ────────────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject exprProp;
+        exprProp[QStringLiteral("type")] = QStringLiteral("string");
+        exprProp[QStringLiteral("description")] =
+            QStringLiteral("Expression mathématique (ex: sqrt(144), 2**10, sin(pi/4))");
+        props[QStringLiteral("expression")] = exprProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("expression"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("calculate"),
+            QStringLiteral("Évaluer une expression mathématique. Supporte: "
+                           "arithmétique, trigonométrie, logarithmes, puissances, factorielles."),
+            schema));
+    }
+
+    // ── convert : convertisseur d'unités ────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject valProp;
+        valProp[QStringLiteral("type")] = QStringLiteral("number");
+        valProp[QStringLiteral("description")] =
+            QStringLiteral("La valeur numérique à convertir");
+        props[QStringLiteral("value")] = valProp;
+
+        QJsonObject fromProp;
+        fromProp[QStringLiteral("type")] = QStringLiteral("string");
+        fromProp[QStringLiteral("description")] =
+            QStringLiteral("Unité source (ex: km, lb, °C, l, kwh)");
+        props[QStringLiteral("from_unit")] = fromProp;
+
+        QJsonObject toProp;
+        toProp[QStringLiteral("type")] = QStringLiteral("string");
+        toProp[QStringLiteral("description")] =
+            QStringLiteral("Unité cible (ex: mi, kg, °F, gal, j)");
+        props[QStringLiteral("to_unit")] = toProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("value"));
+        required.append(QStringLiteral("from_unit"));
+        required.append(QStringLiteral("to_unit"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("convert"),
+            QStringLiteral("Convertir une valeur entre unités. Supporte: "
+                           "longueur, masse, vitesse, température, volume, "
+                           "surface, temps, données, énergie."),
+            schema));
+    }
+
     hClaude() << "Outils EXO construits:" << tools.size() << "outils";
     return tools;
 }
@@ -1190,7 +1387,7 @@ void ClaudeAPI::setError(const QString &error)
 {
     ++m_totalErrors;
     m_lastError = error;
-    hWarning(henriClaude) << error;
+    hWarning(exoClaude) << error;
     emit errorOccurred(error);
 }
 

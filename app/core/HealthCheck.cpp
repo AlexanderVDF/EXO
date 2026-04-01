@@ -25,6 +25,12 @@ void HealthCheck::configure(ConfigManager *config)
     setupService("wakeword", QUrl(config->getString("WakeWord", "server_url",          "ws://localhost:8770")));
     setupService("memory",   QUrl(config->getString("Memory",   "semantic_server_url", "ws://localhost:8771")));
     setupService("nlu",      QUrl(config->getString("NLU",      "server_url",          "ws://localhost:8772")));
+
+    // Microservices outils
+    setupService("websearch", QUrl(config->getString("Tools",    "websearch_url",       "ws://localhost:8773")));
+    setupService("news",      QUrl(config->getString("Tools",    "news_url",            "ws://localhost:8774")));
+    setupService("knowledge", QUrl(config->getString("Tools",    "knowledge_url",       "ws://localhost:8775")));
+    setupService("tools",     QUrl(config->getString("Tools",    "tools_url",           "ws://localhost:8776")));
 }
 
 void HealthCheck::start(int intervalMs)
@@ -74,6 +80,11 @@ QString HealthCheck::vadStatus() const      { return healthToString(m_services.v
 QString HealthCheck::wakewordStatus() const { return healthToString(m_services.value("wakeword").health); }
 QString HealthCheck::memoryStatus() const   { return healthToString(m_services.value("memory").health); }
 QString HealthCheck::nluStatus() const      { return healthToString(m_services.value("nlu").health); }
+
+QString HealthCheck::serviceStatus(const QString &name) const
+{
+    return healthToString(m_services.value(name).health);
+}
 
 QString HealthCheck::overallStatus() const
 {

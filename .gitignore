@@ -89,3 +89,10 @@ rtaudio/
 # Auto-generated context
 .exo_context/
 context.md
+
+# Generated documentation site
+docs_site/
+
+# Temporary script outputs
+scripts/_audit_result.json
+scripts/_benchmark*.wav

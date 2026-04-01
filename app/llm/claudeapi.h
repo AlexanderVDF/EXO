@@ -210,8 +210,8 @@ private:
     // ── Constantes ───────────────────────────────────
     static constexpr const char *API_URL       = "https://api.anthropic.com/v1/messages";
     static constexpr const char *API_VERSION   = "2023-06-01";
-    static constexpr int    DEFAULT_TIMEOUT    = 30000;
-    static constexpr int    DEFAULT_MAX_TOKENS = 4096;
+    static constexpr int    DEFAULT_TIMEOUT    = 15000;  // v5.2: 15s (was 30s)
+    static constexpr int    DEFAULT_MAX_TOKENS = 1024;   // v5.2: 1024 (was 4096) — voice responses are short
     static constexpr double DEFAULT_TEMP       = 0.7;
     static constexpr int    MAX_RETRIES        = 3;
     static constexpr int    RATE_LIMIT_PER_MIN = 50;

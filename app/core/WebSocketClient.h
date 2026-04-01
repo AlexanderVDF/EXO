@@ -71,11 +71,15 @@ private slots:
 private:
     void scheduleReconnect();
     void setState(State s);
+    void createSocket();
+    void destroySocket();
+    void disconnectSocket();
 
     QString     m_name;       // for log prefix, e.g. "STT", "VAD"
     QWebSocket *m_ws = nullptr;
     QUrl        m_url;
     State       m_state = State::Disconnected;
+    bool        m_closing = false;
 
     // reconnection
     bool m_reconnectEnabled   = true;
