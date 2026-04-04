@@ -35,6 +35,7 @@ except ImportError:
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [NLU] %(message)s")
@@ -272,6 +273,7 @@ async def handle_client(ws):
 async def main(host: str, port: int, model: Optional[str]):
     # Prevent duplicate instances
     ensure_single_instance(port, "nlu_server")
+    _v9 = init_v9("nlu_server", port)
 
     if model:
         _try_load_transformer(model)

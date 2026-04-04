@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Add python/ to path for shared modules
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 from integrations.home_bridge import HomeBridge
 from integrations.ha_entities import EntityManager
@@ -171,6 +172,7 @@ async def main() -> None:
 
     # Prevent duplicate instances
     ensure_single_instance(8765, "exo_server")
+    _v9 = init_v9("exo_server", 8765)
 
     # Initialize HA bridge + managers
     bridge = HomeBridge()

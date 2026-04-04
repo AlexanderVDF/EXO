@@ -33,6 +33,7 @@ import numpy as np
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(
     level=logging.INFO,
@@ -240,6 +241,7 @@ async def main() -> None:
 
     # Prevent duplicate instances
     ensure_single_instance(args.port, "wakeword_server")
+    _v9 = init_v9("wakeword_server", args.port)
 
     engine = WakeWordEngine(models=args.models, threshold=args.threshold)
     engine.load()

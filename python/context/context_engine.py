@@ -49,6 +49,7 @@ except ImportError:
 # Singleton guard
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [Context] %(message)s")
 log = logging.getLogger("context_engine")
@@ -470,6 +471,7 @@ async def main() -> None:
     args = parser.parse_args()
 
     ensure_single_instance(args.port, "context_engine")
+    _v9 = init_v9("context_engine", args.port)
 
     engine = ContextEngine()
     log.info("ContextEngine initialized")

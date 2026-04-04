@@ -23,6 +23,7 @@ import websockets
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 from domotique.models import (
     Capability, Device, DeviceSource, DeviceType,
@@ -461,6 +462,7 @@ async def main() -> None:
     args = parser.parse_args()
 
     ensure_single_instance(args.port, "homegraph")
+    _v9 = init_v9("homegraph", args.port)
 
     hg = HomeGraphManager()
 

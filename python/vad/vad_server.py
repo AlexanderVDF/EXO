@@ -33,6 +33,7 @@ import torch
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(
     level=logging.INFO,
@@ -233,6 +234,7 @@ async def main() -> None:
 
     # Prevent duplicate instances
     ensure_single_instance(args.port, "vad_server")
+    _v9 = init_v9("vad_server", args.port)
 
     vad = SileroVAD()
     vad.threshold = args.threshold

@@ -37,6 +37,7 @@ import numpy as np
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 # ---------------------------------------------------------------------------
 # PyTorch compat: Coqui TTS uses torch.inference_mode() internally, but
@@ -921,6 +922,7 @@ async def main() -> None:
 
     # Prevent duplicate instances
     ensure_single_instance(args.port, "tts_server")
+    _v9 = init_v9("tts_server", args.port)
 
     logger.info("[Latency] TTS target: < 1200 ms")
     logger.info("[Latency] Pipeline vocal complet target: < 2500 ms")

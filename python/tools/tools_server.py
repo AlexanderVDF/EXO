@@ -29,6 +29,7 @@ except ImportError:
 # Singleton guard
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [Tools] %(message)s")
 log = logging.getLogger("tools_server")
@@ -362,6 +363,7 @@ async def handle_client(ws: Any) -> None:
 
 async def main() -> None:
     ensure_single_instance(PORT, "tools_server")
+    _v9 = init_v9("tools_server", PORT)
     log.info("Démarrage Tools Server sur le port %d", PORT)
 
     async with websockets.serve(handle_client, "0.0.0.0", PORT):

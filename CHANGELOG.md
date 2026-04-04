@@ -5,6 +5,27 @@
 
 ---
 
+## v9.0 — Observability, Resilience & Security — 30 mars 2026
+
+### Ajouté
+- **LogManager** (`python/shared/log_manager.py`) — structured JSON logging, correlation IDs (request_id, session_id), RotatingFileHandler, singleton par service
+- **MetricsManager** (`python/shared/metrics_manager.py`) — Counter, Gauge, Histogram, Timer, built-in uptime/requests/errors, snapshot export
+- **TraceManager** (`python/shared/trace_manager.py`) — Span/Trace model, distributed tracing, 200-entry history, JSON export
+- **ErrorManager** (`python/shared/error_manager.py`) — ErrorCategory (10 catégories), ExoError + sous-classes typées, RETRY_POLICIES, TIMEOUT_POLICIES, with_retry/with_timeout/with_fallback decorators
+- **ConfigManager** (`python/shared/config_manager.py`) — config centralisée, dot-notation get/set, hot-reload file watcher, deep merge avec defaults, 12 sections
+- **SecurityManager** (`python/shared/security_manager.py`) — PERMISSION_DEFAULTS (4 modules × 10+ actions), AuditLog JSONL append-only, check_permission/authorize/export
+- **Resilience** (`python/shared/resilience.py`) — CircuitBreaker (closed→open→half_open), @resilient combined decorator (retry+backoff+timeout+fallback+circuit_breaker)
+- **BaseService** (`python/shared/base_service.py`) — classe unifiée intégrant tous les modules v9, health_check(), handle_ws_message() pour protocol v9, begin_request()/end_request() instrumentation, init_v9() one-liner factory
+- **Intégration v9 dans 25 microservices** — import + init_v9() dans tous les serveurs (8765–8790)
+- **125 nouveaux tests** — test_v9_observability (40), test_v9_resilience (31), test_v9_security (22), test_v9_config (15), test_v9_integration (17)
+- Total tests : **565 passés** (440 existants + 125 nouveaux)
+
+### Modifié
+- Tous les 25 serveurs Python : ajout `from shared.base_service import init_v9` + `_v9 = init_v9(...)` dans main()
+- `python/shared/__init__.py` — docstring v9
+
+---
+
 ## v8.1 — Ultra-Low Latency — 30 mars 2026
 
 ### Ajouté

@@ -35,6 +35,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [FileService] %(message)s")
 log = logging.getLogger("file_service")
@@ -213,6 +214,7 @@ async def main() -> None:
     args = parser.parse_args()
 
     ensure_single_instance(args.port, "file_service")
+    _v9 = init_v9("file_service", args.port)
 
     service = FileService(Path(args.sandbox))
     log.info("FileService initialized")

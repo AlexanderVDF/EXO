@@ -39,6 +39,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [System] %(message)s")
 log = logging.getLogger("system_service")
@@ -210,6 +211,7 @@ async def main() -> None:
     args = parser.parse_args()
 
     ensure_single_instance(args.port, "system_service")
+    _v9 = init_v9("system_service", args.port)
 
     service = SystemService()
     log.info("SystemService initialized (psutil: %s)", HAS_PSUTIL)

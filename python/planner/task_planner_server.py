@@ -50,6 +50,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [Planner] %(message)s")
 log = logging.getLogger("task_planner")
@@ -660,6 +661,7 @@ async def main() -> None:
     args = parser.parse_args()
 
     ensure_single_instance(args.port, "task_planner")
+    _v9 = init_v9("task_planner", args.port)
 
     planner = TaskPlanner()
     log.info("TaskPlanner initialized")

@@ -1,4 +1,4 @@
-# PROMPT MAÎTRE — EXO v8.1
+# PROMPT MAÎTRE — EXO v9.0
 
 > **Source de vérité unique** • 30 mars 2026
 > Ce document EST l'architecture. Il n'y a rien d'autre.
@@ -11,7 +11,7 @@
 | Champ | Valeur |
 |-------|--------|
 | Nom | EXO Assistant |
-| Version | 8.1 (Ultra-Low Latency) |
+| Version | 9.0 (Observability & Résilience) |
 | Phonétique | /ɛɡ.zɔ/ ou /ɛk.so/ |
 | Wakewords | `EXO`, `EXO!`, `EXO?` |
 | Nature | Assistant vocal IA offline-first, Windows natif |
@@ -584,7 +584,7 @@ Konva (2D plans), Three.js (3D), vis-network (topologie), Phosphor Icons.
 
 ## 10. TESTS
 
-**440 tests** : 7 CTest C++ + 433 pytest Python
+**565 tests** : 7 CTest C++ + 558 pytest Python
 
 | Type | Durée | Commande |
 |------|-------|----------|
@@ -651,7 +651,39 @@ Objectif : connexion TCP/TLS pré-établie → latence 1er token réduite.
 
 ---
 
-## 12. INVARIANTS & CONTRAINTES
+## 12. OBSERVABILITY, RÉSILIENCE & SÉCURITÉ (v9.0)
+
+### 12.1 Modules partagés (`python/shared/`)
+
+| Module | Rôle |
+|--------|------|
+| `log_manager.py` | Logging structuré JSON, rotation, correlation IDs |
+| `metrics_manager.py` | Counters, Gauges, Histograms, Timers |
+| `trace_manager.py` | Tracing distribué (traces + spans) |
+| `error_manager.py` | Catégories d'erreurs, retry, timeout, fallback |
+| `config_manager.py` | Config centralisée dot-notation, hot-reload |
+| `security_manager.py` | Permissions par domaine, audit log JSONL |
+| `supervisor_manager.py` | Health checks, watchdog, auto-restart |
+| `resilience.py` | CircuitBreaker, décorateur `@resilient` |
+| `base_service.py` | Fondation unifiée, `init_v9()` factory |
+
+### 12.2 Intégration
+
+Chaque microservice (25 au total) intègre v9 via :
+```python
+from shared.base_service import init_v9
+_v9 = init_v9("service_name", port)
+```
+
+Messages WS standards gérés par BaseService : `ping`, `health`, `metrics`, `traces`, `errors`.
+
+### 12.3 CircuitBreaker
+
+États : CLOSED → OPEN (après N échecs) → HALF_OPEN (après cooldown). Registre global `get_breaker(name)`.
+
+---
+
+## 13. INVARIANTS & CONTRAINTES
 
 ### Invariants absolus
 
@@ -678,7 +710,7 @@ STT (Vulkan) : 1–2 Go. TTS (CUDA) : 2–4 Go.
 
 ---
 
-## 13. RÈGLES COPILOT
+## 14. RÈGLES COPILOT
 
 ### Style
 
@@ -705,7 +737,7 @@ hDebug(cat), hWarning(cat), hCritical(cat)
 
 ---
 
-## 14. LIMITATIONS CONNUES
+## 15. LIMITATIONS CONNUES
 
 | Composant | Limitation | Contournement |
 |-----------|-----------|---------------|
@@ -724,7 +756,7 @@ hDebug(cat), hWarning(cat), hCritical(cat)
 
 ---
 
-## 15. ÉVOLUTIONS (v9)
+## 16. ÉVOLUTIONS (v10)
 
 | Objectif | Statut |
 |----------|--------|
@@ -741,7 +773,7 @@ hDebug(cat), hWarning(cat), hCritical(cat)
 
 ---
 
-## 16. INSTALLATION
+## 17. INSTALLATION
 
 ### Prérequis
 
@@ -790,4 +822,4 @@ pip install "aiohttp>=3.9" "websockets>=12" "pytest>=8" "pytest-asyncio>=0.23"
 ---
 
 > **Ce document est la seule vérité.** Toute modification d'architecture doit être reflétée ici.
-> Dernière mise à jour : 30 mars 2026 — EXO v8.1
+> Dernière mise à jour : 30 mars 2026 — EXO v9.0

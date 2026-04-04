@@ -25,6 +25,7 @@ import websockets
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 log = logging.getLogger("network_map_service")
 logging.basicConfig(level=logging.INFO,
@@ -317,6 +318,7 @@ async def main() -> None:
     args = parser.parse_args()
 
     ensure_single_instance(args.port, "network_map_service")
+    _v9 = init_v9("network_map_service", args.port)
 
     svc = NetworkMapService()
     log.info("OUI entries: %d", len(svc._oui))

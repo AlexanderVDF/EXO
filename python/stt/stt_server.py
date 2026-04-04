@@ -40,6 +40,7 @@ import numpy as np
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
+from shared.base_service import init_v9
 
 logging.basicConfig(
     level=logging.INFO,
@@ -602,6 +603,7 @@ async def main() -> None:
 
     # Prevent duplicate instances
     ensure_single_instance(args.port, "stt_server")
+    _v9 = init_v9("stt_server", args.port)
 
     # Apply noise reduction config
     nr_strength = args.noise_reduction

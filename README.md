@@ -1,6 +1,6 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 8.1** | Mars 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
+**Version 9.0** | Mars 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
@@ -26,6 +26,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 - 🏠 **Domotique** — Intégration Home Assistant (13 actions LLM)
 - 🎨 **Interface premium** — QML style VS Code + Fluent Design + React web
 - ⚡ **Ultra-Low Latency (v8.1)** — ContextCache, LatencyMetrics, warmup/keepalive ClaudeAPI
+- 🛡️ **Observability & Résilience (v9.0)** — LogManager, MetricsManager, TraceManager, ErrorManager, ConfigManager, SecurityManager, CircuitBreaker, BaseService
 
 ---
 
@@ -33,7 +34,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        EXO Assistant v8.1                          │
+│                        EXO Assistant v9.0                          │
 ├──────────────┬──────────────────────────────────────────────────────┤
 │              │                                                      │
 │  Interface   │   ┌─────────────┐    ┌──────────────────────────┐   │
@@ -105,7 +106,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 | 🎛 DSP | Réduction de bruit spectrale + chaîne audio complète |
 | 🏠 Domotique | Home Assistant — 13 actions LLM (lumières, médias, clima) |
 | 🌤 Météo | OpenWeatherMap + géolocalisation |
-| 🧪 Tests | 440 tests automatisés (7 CTest + 433 pytest) |
+| 🧪 Tests | 565 tests automatisés (7 CTest + 558 pytest) |
 
 ---
 
@@ -320,7 +321,7 @@ La documentation est dans [`docs/`](docs/) :
 
 ## Roadmap
 
-### ✅ Réalisé (v8.1)
+### ✅ Réalisé (v9.0)
 - RtAudio WASAPI — capture audio faible latence
 - Interface QML 19 composants VS Code + Fluent Design
 - Pipeline vocal VoicePipeline v4 (FSM, VAD, StreamingSTT)
@@ -336,7 +337,11 @@ La documentation est dans [`docs/`](docs/) :
 - **ContextCache** — cache in-process avec TTL par clé + refresh arrière-plan
 - **LatencyMetrics** — instrumentation pipeline 9 timestamps, 6 métriques dérivées
 - **ClaudeAPI warmup/keepalive** — connexion TCP/TLS pré-établie, latence 1er token réduite
-- 440 tests automatisés (7 CTest + 433 pytest)
+- 565 tests automatisés (7 CTest + 558 pytest)
+- Observabilité complète (logging structuré, métriques, tracing distribué)
+- Résilience (retry, timeout, fallback, circuit breaker)
+- Sécurité (permissions, audit log)
+- Config centralisée avec hot-reload
 
 ### 🔄 À venir
 - Google Calendar — agenda intelligent
@@ -370,4 +375,4 @@ Ce projet est sous licence **MIT**. Voir [LICENSE](LICENSE) pour les détails.
 
 ---
 
-**EXO** — C++ / Qt 6.9.3 · Python · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Ultra-Low Latency v8.1
+**EXO** — C++ / Qt 6.9.3 · Python · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Observability & Résilience v9.0
