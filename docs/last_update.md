@@ -4,34 +4,26 @@
 
 | Champ | Valeur |
 |-------|--------|
-| **Commit** | `e2df79c` |
-| **Date** | 2026-04-04 18:07:25 +0200 |
+| **Commit** | `fad6f66` |
+| **Date** | 2026-04-04 18:33:46 +0200 |
 | **Auteur** | EXO Developer |
-| **Message** | feat(domotique): v2 — cache, discovery, events, scenarios, services v2, GUI v2 |
+| **Message** | v11.0 NetworkMap v2 — scan complet (ARP+mDNS+SSDP+Ping), topologie, classification, vendor lookup, latence, resilience, GUI dynamique — 689 tests |
 
 ## Fichiers modifiés
 
 ```
 M	CHANGELOG.md
-M	docs/architecture/graph.md
 M	docs/last_update.md
-M	docs/modules.md
-M	docs/pipeline.md
-M	docs/services.md
-M	python/domotique/camera_service.py
-A	python/domotique/discovery_manager.py
-A	python/domotique/domotic_cache.py
-M	python/domotique/domotic_service.py
-M	python/domotique/echo_service.py
-A	python/domotique/event_manager.py
 M	python/domotique/homegraph_server.py
-M	python/domotique/models.py
-M	python/domotique/samsung_service.py
-A	python/domotique/scenario_manager.py
-M	python/domotique/voltalis_service.py
+A	python/network/arp_scanner.py
+A	python/network/device_classifier.py
+A	python/network/mdns_scanner.py
+A	python/network/network_map_manager.py
 M	python/network/network_map_service.py
-M	qml/pages/MaisonPage.qml
+A	python/network/ping_scanner.py
+A	python/network/ssdp_scanner.py
+A	python/network/topology_builder.py
+A	python/network/vendor_lookup.py
 M	qml/pages/ReseauPage.qml
-A	qml/pages/ScenariosPage.qml
 M	tests/python/test_domotique.py
 ```

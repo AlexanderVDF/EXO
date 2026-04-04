@@ -19,14 +19,14 @@ class TestMemoryEntry:
     """Tests de la structure MemoryEntry."""
 
     def test_create_entry(self):
-        from memory_server import MemoryEntry
+        from memory_hierarchy import MemoryEntry
 
         entry = MemoryEntry(
+            id="test-id-123",
             text="Le ciel est bleu",
             importance=0.8,
             tags=["test", "couleur"],
             category="fact",
-            entry_id="test-id-123",
         )
         assert entry.text == "Le ciel est bleu"
         assert entry.importance == 0.8
@@ -34,14 +34,14 @@ class TestMemoryEntry:
         assert entry.category == "fact"
 
     def test_entry_to_dict(self):
-        from memory_server import MemoryEntry
+        from memory_hierarchy import MemoryEntry
 
         entry = MemoryEntry(
+            id="abc123",
             text="test memory",
             importance=0.5,
             tags=["tag1"],
             category="general",
-            entry_id="abc123",
         )
         d = entry.to_dict()
         assert d["id"] == "abc123"

@@ -14,8 +14,9 @@ class TestMemoryTiers:
     """Tests du système de tiers mémoire v8."""
 
     def test_entry_has_tier(self):
-        from memory_server import MemoryEntry
+        from memory_hierarchy import MemoryEntry
         entry = MemoryEntry(
+            id="tier-1",
             text="Test",
             importance=0.5,
             tags=["test"],
@@ -24,8 +25,9 @@ class TestMemoryTiers:
         assert hasattr(entry, "tier")
 
     def test_entry_default_tier_stm(self):
-        from memory_server import MemoryEntry
+        from memory_hierarchy import MemoryEntry
         entry = MemoryEntry(
+            id="tier-2",
             text="Nouveau souvenir",
             importance=0.5,
             tags=[],
@@ -34,8 +36,9 @@ class TestMemoryTiers:
         assert entry.tier == "stm"
 
     def test_entry_tier_in_dict(self):
-        from memory_server import MemoryEntry
+        from memory_hierarchy import MemoryEntry
         entry = MemoryEntry(
+            id="tier-3",
             text="Test",
             importance=0.5,
             tags=["test"],
@@ -46,8 +49,9 @@ class TestMemoryTiers:
         assert d["tier"] == "stm"
 
     def test_entry_with_explicit_tier(self):
-        from memory_server import MemoryEntry
+        from memory_hierarchy import MemoryEntry
         entry = MemoryEntry(
+            id="tier-4",
             text="Old memory",
             importance=0.9,
             tags=["important"],
