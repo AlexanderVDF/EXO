@@ -37,6 +37,16 @@ from integrations.ha_areas import AreaManager
 from integrations.ha_actions import ActionDispatcher, TOOL_DEFINITIONS
 from integrations.ha_sync import SyncManager
 
+# v8.2 — Ultra-Low Latency modules
+from llm_warmup import LLMWarmup
+from fused_pipeline import FusedPipeline, PipelineState
+from tts_predictive import TTSPredictive
+from context_cache import ContextCache, CacheDomain
+from cpu_gpu_orchestrator import CPUGPUOrchestrator
+from pipeline_profiler import PipelineProfiler
+from pipeline_resilience import PipelineResilience
+from pipeline_v9 import PipelineV9Integration
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -65,8 +75,9 @@ def _load_env() -> None:
 class GUIServer:
     """WebSocket server that the React GUI connects to (ws://localhost:8765)."""
 
-    def __init__(self, sync: SyncManager) -> None:
+    def __init__(self, sync: SyncManager, pipeline_mgr: "PipelineManager") -> None:
         self._sync = sync
+        self._pipeline = pipeline_mgr
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -145,6 +156,10 @@ class GUIServer:
                 "is_speech": is_speech,
             })
 
+        elif msg_type == "pipeline_metrics":
+            metrics = self._pipeline.metrics()
+            await ws.send(json.dumps({"type": "pipeline_metrics", **metrics}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -161,6 +176,59 @@ class GUIServer:
         if text:
             self._text = text
         await self.broadcast({"state": state, "volume": self._volume, "text": text})
+
+
+# ---------------------------------------------------------------------------
+# Pipeline Manager v8.2
+# ---------------------------------------------------------------------------
+
+class PipelineManager:
+    """Coordonne tous les modules ultra-low latency v8.2.
+
+    Regroupe : warmup, fused pipeline, TTS prédictif, cache,
+    CPU/GPU orchestrator, profiler, résilience, intégration v9.
+    """
+
+    def __init__(self) -> None:
+        self.warmup = LLMWarmup()
+        self.pipeline = FusedPipeline()
+        self.tts_pred = TTSPredictive()
+        self.cache = ContextCache()
+        self.cpu_gpu = CPUGPUOrchestrator()
+        self.profiler = PipelineProfiler()
+        self.resilience = PipelineResilience()
+        self.v9 = PipelineV9Integration("pipeline")
+
+    async def startup(self) -> None:
+        """Initialisation au démarrage du serveur."""
+        # Priorité process
+        self.cpu_gpu.init_process(high_priority=True)
+        self.cpu_gpu.probe_gpu()
+
+        # Warmup LLM (si send_fn configuré)
+        result = await self.warmup.warmup()
+        logger.info("Pipeline warmup: %s", result.get("status", "skip"))
+
+        # KeepAlive en arrière-plan
+        self.warmup.start_keepalive()
+        logger.info("Pipeline v8.2 initialisé")
+
+    def shutdown(self) -> None:
+        """Arrêt propre."""
+        self.warmup.stop_keepalive()
+        logger.info("Pipeline v8.2 arrêté")
+
+    def metrics(self) -> dict[str, Any]:
+        """Métriques agrégées de tous les modules v8.2."""
+        return {
+            "warmup": self.warmup.metrics(),
+            "pipeline": self.pipeline.metrics(),
+            "tts_predictive": self.tts_pred.metrics(),
+            "cache": self.cache.metrics(),
+            "cpu_gpu": self.cpu_gpu.metrics(),
+            "profiler": self.profiler.metrics(),
+            "resilience": self.resilience.metrics(),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -182,8 +250,11 @@ async def main() -> None:
     actions = ActionDispatcher(bridge, entities, devices, areas)
     sync = SyncManager(bridge, entities, devices, areas)
 
+    # Pipeline Manager v8.2
+    pipeline_mgr = PipelineManager()
+
     # GUI server
-    gui = GUIServer(sync)
+    gui = GUIServer(sync, pipeline_mgr)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
@@ -192,6 +263,9 @@ async def main() -> None:
         ping_interval=None, ping_timeout=None,
     )
     logger.info("EXO GUI WebSocket server running on ws://localhost:8765")
+
+    # Start Pipeline v8.2
+    await pipeline_mgr.startup()
 
     # Start HA bridge in background
     ha_token = os.environ.get("HA_TOKEN", "")
@@ -223,6 +297,7 @@ async def main() -> None:
         pass
     finally:
         logger.info("Shutting down...")
+        pipeline_mgr.shutdown()
         gui_server.close()
         await gui_server.wait_closed()
         await bridge.stop()
