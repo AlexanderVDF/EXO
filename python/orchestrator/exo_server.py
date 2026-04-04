@@ -50,6 +50,18 @@ from pipeline_v9 import PipelineV9Integration
 # v10 — Agent cognitif
 from agent_manager import AgentManager
 
+# v11 — Auto-apprentissage & auto-optimisation
+from meta_memory import MetaMemory
+from auto_governance import AutoGovernance
+from learning_engine import LearningEngine
+from feedback_engine import FeedbackEngine
+from self_diagnosis_engine import SelfDiagnosisEngine
+from optimization_engine import OptimizationEngine
+from auto_tuning_engine import AutoTuningEngine
+from meta_planner import MetaPlanner
+from meta_supervisor import MetaSupervisor
+from auto_explanation import AutoExplanation
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -79,10 +91,12 @@ class GUIServer:
     """WebSocket server that the React GUI connects to (ws://localhost:8765)."""
 
     def __init__(self, sync: SyncManager, pipeline_mgr: "PipelineManager",
-                 agent_mgr: AgentManager | None = None) -> None:
+                 agent_mgr: AgentManager | None = None,
+                 v11: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
+        self._v11 = v11 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -187,6 +201,139 @@ class GUIServer:
                 metrics = self._agent.get_metrics()
                 await ws.send(json.dumps({"type": "agent_metrics", **metrics}))
 
+        # ── v11 — Auto-apprentissage & auto-optimisation ─────
+        elif msg_type == "v11_learn":
+            eng = self._v11.get("learning")
+            if eng:
+                entry_id = eng.learn(msg.get("event", {}))
+                await ws.send(json.dumps({"type": "v11_learn_result",
+                                          "entry_id": entry_id}))
+
+        elif msg_type == "v11_feedback":
+            eng = self._v11.get("feedback")
+            if eng:
+                fb_type = msg.get("feedback_type", "positive")
+                event = msg.get("event", {})
+                method = getattr(eng, f"feedback_{fb_type}", None)
+                if method:
+                    method(event)
+                await ws.send(json.dumps({"type": "v11_feedback_ack",
+                                          "feedback_type": fb_type}))
+
+        elif msg_type == "v11_optimize":
+            eng = self._v11.get("optimization")
+            if eng:
+                result = eng.optimize_all()
+                await ws.send(json.dumps({"type": "v11_optimize_result",
+                                          **result}))
+
+        elif msg_type == "v11_diagnose":
+            eng = self._v11.get("diagnosis")
+            if eng:
+                report = eng.diagnose()
+                await ws.send(json.dumps({"type": "v11_diagnose_result",
+                                          **report}))
+
+        elif msg_type == "v11_tune":
+            eng = self._v11.get("tuning")
+            if eng:
+                param = msg.get("parameter", "")
+                value = msg.get("value", 0)
+                ok = eng.tune(param, float(value))
+                await ws.send(json.dumps({"type": "v11_tune_result",
+                                          "parameter": param, "applied": ok}))
+
+        elif msg_type == "v11_auto_tune":
+            eng = self._v11.get("tuning")
+            if eng:
+                result = eng.auto_tune_all()
+                await ws.send(json.dumps({"type": "v11_auto_tune_result",
+                                          **result}))
+
+        elif msg_type == "v11_explain":
+            eng = self._v11.get("explanation")
+            if eng:
+                kind = msg.get("kind", "decision")
+                if kind == "decision":
+                    text = eng.explain_decision(msg.get("action", ""),
+                                                msg.get("context"))
+                elif kind == "learning":
+                    text = eng.explain_learning(msg.get("entry_id", ""))
+                elif kind == "tuning":
+                    text = eng.explain_tuning(msg.get("parameter", ""))
+                elif kind == "diagnosis":
+                    text = eng.explain_diagnosis(msg.get("report", {}))
+                elif kind == "optimization":
+                    text = eng.explain_optimization(msg.get("record", {}))
+                else:
+                    text = ""
+                await ws.send(json.dumps({"type": "v11_explain_result",
+                                          "explanation": text}))
+
+        elif msg_type == "v11_stats":
+            stats = {}
+            for name, mod in self._v11.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v11_stats", **stats}))
+
+        elif msg_type == "v11_governance":
+            eng = self._v11.get("governance")
+            if eng:
+                sub = msg.get("sub", "rules")
+                if sub == "rules":
+                    await ws.send(json.dumps({"type": "v11_governance_result",
+                                              "rules": eng.get_rules()}))
+                elif sub == "set_rules":
+                    eng.set_rules(msg.get("rules", {}))
+                    await ws.send(json.dumps({"type": "v11_governance_ack"}))
+                elif sub == "set_limits":
+                    eng.set_limits(msg.get("limits", {}))
+                    await ws.send(json.dumps({"type": "v11_governance_ack"}))
+                elif sub == "set_permissions":
+                    eng.set_permissions(msg.get("permissions", {}))
+                    await ws.send(json.dumps({"type": "v11_governance_ack"}))
+                elif sub == "audit":
+                    log = eng.get_audit_log(msg.get("limit", 50))
+                    await ws.send(json.dumps({"type": "v11_governance_audit",
+                                              "audit": log}))
+
+        elif msg_type == "v11_supervisor":
+            eng = self._v11.get("supervisor")
+            if eng:
+                sub = msg.get("sub", "drift")
+                if sub == "drift":
+                    report = eng.get_drift_report()
+                    await ws.send(json.dumps({"type": "v11_supervisor_drift",
+                                              **report}))
+                elif sub == "enforce":
+                    result = eng.enforce_rules()
+                    await ws.send(json.dumps({"type": "v11_supervisor_enforce",
+                                              **result}))
+                elif sub == "rollback":
+                    entry_id = msg.get("entry_id", "")
+                    ok = eng.rollback_learning(entry_id)
+                    await ws.send(json.dumps({"type": "v11_supervisor_rollback",
+                                              "entry_id": entry_id,
+                                              "success": ok}))
+
+        elif msg_type == "v11_memory":
+            mem = self._v11.get("meta_memory")
+            if mem:
+                sub = msg.get("sub", "stats")
+                if sub == "stats":
+                    await ws.send(json.dumps({"type": "v11_memory_stats",
+                                              **mem.get_stats()}))
+                elif sub == "search":
+                    results = mem.meta_get(msg.get("query", ""))
+                    await ws.send(json.dumps({"type": "v11_memory_results",
+                                              "results": results}))
+                elif sub == "list":
+                    entries = mem.list_entries(
+                        msg.get("category"), msg.get("limit", 50))
+                    await ws.send(json.dumps({"type": "v11_memory_list",
+                                              "entries": entries}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -284,8 +431,40 @@ async def main() -> None:
     agent_mgr = AgentManager()
     logger.info("AgentManager v10 initialized")
 
+    # ── v11 — Auto-apprentissage & auto-optimisation ─────────
+    meta_memory = MetaMemory()
+    governance = AutoGovernance(meta_memory)
+    learning = LearningEngine(meta_memory, governance)
+    feedback = FeedbackEngine(learning)
+
+    # Optional v10 deps for diagnosis/optimization/planning
+    task_memory = getattr(agent_mgr, "_task_memory", None)
+    task_optimizer = getattr(agent_mgr, "_task_optimizer", None)
+
+    diagnosis = SelfDiagnosisEngine(meta_memory, task_memory, task_optimizer)
+    optimization = OptimizationEngine(meta_memory, diagnosis)
+    tuning = AutoTuningEngine(meta_memory, governance)
+    planner = MetaPlanner(meta_memory, task_optimizer)
+    supervisor = MetaSupervisor(meta_memory, learning, governance)
+    explanation = AutoExplanation(meta_memory)
+
+    v11_modules = {
+        "meta_memory": meta_memory,
+        "governance": governance,
+        "learning": learning,
+        "feedback": feedback,
+        "diagnosis": diagnosis,
+        "optimization": optimization,
+        "tuning": tuning,
+        "planner": planner,
+        "supervisor": supervisor,
+        "explanation": explanation,
+    }
+    logger.info("EXO v11 self-learning modules initialized (%d modules)",
+                len(v11_modules))
+
     # GUI server
-    gui = GUIServer(sync, pipeline_mgr, agent_mgr)
+    gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
