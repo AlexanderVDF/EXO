@@ -84,6 +84,16 @@ Rectangle {
             level: sidebar.micLevel
         }
 
+        // ── v8: Orb Visualizer ──
+        ExoOrbVisualizer {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: 80
+            Layout.preferredHeight: 80
+            orbSize: 80
+            state: sidebar.currentStatus
+            audioLevel: sidebar.micLevel
+        }
+
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 1
@@ -106,7 +116,9 @@ Rectangle {
                         { name: "settings", icon: "icons/settings.svg", label: "Paramètres" },
                         { name: "history",  icon: "icons/history.svg",  label: "Historique" },
                         { name: "logs",     icon: "icons/logs.svg",     label: "Logs" },
-                        { name: "pipeline", icon: "icons/pipeline.svg", label: "Pipeline" }
+                        { name: "pipeline", icon: "icons/pipeline.svg", label: "Pipeline" },
+                        { name: "maison",   icon: "icons/maison.svg",   label: "Maison" },
+                        { name: "reseau",   icon: "icons/reseau.svg",   label: "Réseau" }
                     ]
 
                     delegate: Rectangle {
@@ -187,7 +199,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: "EXO v4.2"
+                text: "EXO v8.0"
                 font.family: Theme.fontMono
                 font.pixelSize: Theme.fontMicro
                 color: Theme.textMuted

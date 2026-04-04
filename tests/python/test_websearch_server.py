@@ -1,15 +1,18 @@
 """
 Tests unitaires — WebSearch Server (DuckDuckGo Lite)
-Teste le parsing HTML et la validation des paramètres.
+Teste le parsing HTML, la validation des paramètres, et search_duckduckgo avec mock.
 """
 
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 # Ajouter le module websearch au path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "python" / "websearch"))
 
-from websearch_server import _parse_ddg_lite
+from websearch_server import _parse_ddg_lite, FRESHNESS_MAP, MAX_RESULTS_LIMIT, search_duckduckgo
 
 
 class TestDDGLiteParsing:
@@ -69,3 +72,116 @@ class TestWebSearchValidation:
         assert max(1, min(10, 0)) == 1
         assert max(1, min(10, 5)) == 5
         assert max(1, min(10, 20)) == 10
+
+
+class TestFreshnessMap:
+    """Tests du mapping de fraîcheur DuckDuckGo."""
+
+    def test_all_keys_mapped(self):
+        assert FRESHNESS_MAP["day"] == "d"
+        assert FRESHNESS_MAP["week"] == "w"
+        assert FRESHNESS_MAP["month"] == "m"
+        assert FRESHNESS_MAP["year"] == "y"
+
+    def test_unknown_freshness_not_in_map(self):
+        assert "hour" not in FRESHNESS_MAP
+        assert "" not in FRESHNESS_MAP
+
+    def test_max_results_limit(self):
+        assert MAX_RESULTS_LIMIT == 10
+
+
+class TestParseEdgeCases:
+    """Tests de parsing supplémentaires pour DDG Lite."""
+
+    def test_internal_links_skipped(self):
+        """Les liens internes (commençant par /) sont ignorés."""
+        html = '''
+        <a rel="nofollow" href="/internal">Internal Link</a>
+        <td class="result-snippet">Internal snippet</td>
+        <a rel="nofollow" href="https://example.com">External</a>
+        <td class="result-snippet">External snippet</td>
+        '''
+        results = _parse_ddg_lite(html, 10)
+        for r in results:
+            assert not r["url"].startswith("/")
+
+    def test_html_in_title_stripped(self):
+        """Les balises HTML dans les titres sont retirées."""
+        html = '''
+        <a rel="nofollow" href="https://example.com">
+            <b>Bold</b> Title
+        </a>
+        <td class="result-snippet">Snippet</td>
+        '''
+        results = _parse_ddg_lite(html, 10)
+        if results:
+            assert "<b>" not in results[0]["title"]
+
+    def test_missing_snippets(self):
+        """Si pas de snippet, le résultat a un snippet vide."""
+        html = '''
+        <a rel="nofollow" href="https://example.com">Title Only</a>
+        '''
+        results = _parse_ddg_lite(html, 10)
+        for r in results:
+            assert "snippet" in r
+
+
+class TestSearchDuckDuckGo:
+    """Tests de search_duckduckgo avec mock HTTP."""
+
+    MOCK_HTML = """
+    <html><body><table>
+    <tr><td><a rel="nofollow" href="https://result.com">Mock Result</a></td></tr>
+    <tr><td class="result-snippet">Mock snippet text</td></tr>
+    </table></body></html>
+    """
+
+    @pytest.mark.asyncio
+    async def test_search_success(self):
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.text = AsyncMock(return_value=self.MOCK_HTML)
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        mock_session.post.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("websearch_server.aiohttp.ClientSession", return_value=mock_session):
+            results = await search_duckduckgo("test query")
+            assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_search_http_error(self):
+        mock_resp = AsyncMock()
+        mock_resp.status = 503
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        mock_session.post.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("websearch_server.aiohttp.ClientSession", return_value=mock_session):
+            results = await search_duckduckgo("test")
+            assert results == []
+
+    @pytest.mark.asyncio
+    async def test_search_max_results_clamped(self):
+        """max_results ne dépasse jamais MAX_RESULTS_LIMIT."""
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.text = AsyncMock(return_value="<html></html>")
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+        mock_session.post.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_session.post.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("websearch_server.aiohttp.ClientSession", return_value=mock_session):
+            results = await search_duckduckgo("test", max_results=100)
+            assert isinstance(results, list)

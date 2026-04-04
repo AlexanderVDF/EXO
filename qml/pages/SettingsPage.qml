@@ -83,13 +83,13 @@ Rectangle {
 
                                 onAccepted: {
                                     if (typeof configManager !== 'undefined')
-                                        configManager.setUserValue("WakeWord", "keyword", text)
+                                        configManager.setWakeWord(text)
                                     if (typeof voiceManager !== 'undefined')
                                         voiceManager.setWakeWord(text)
                                 }
                                 onActiveFocusChanged: {
                                     if (!activeFocus && typeof configManager !== 'undefined') {
-                                        configManager.setUserValue("WakeWord", "keyword", text)
+                                        configManager.setWakeWord(text)
                                         if (typeof voiceManager !== 'undefined')
                                             voiceManager.setWakeWord(text)
                                     }
@@ -731,11 +731,11 @@ Rectangle {
                             from: 0.0
                             to: 0.05
                             stepSize: 0.001
-                            value: 0.005
+                            value: 0.001
 
                             Component.onCompleted: {
                                 if (typeof configManager !== 'undefined') {
-                                    var v = parseFloat(configManager.getString("Audio", "noise_gate", "0.005"))
+                                    var v = parseFloat(configManager.getString("Audio", "noise_gate", "0.001"))
                                     if (!isNaN(v)) value = v
                                 }
                             }
@@ -793,11 +793,11 @@ Rectangle {
 
                         Switch {
                             id: agcSwitch
-                            checked: false
+                            checked: true
 
                             Component.onCompleted: {
                                 if (typeof configManager !== 'undefined')
-                                    checked = configManager.getBool("Audio", "agc_enabled", false)
+                                    checked = configManager.getBool("Audio", "agc_enabled", true)
                             }
                             onToggled: {
                                 if (typeof configManager !== 'undefined')

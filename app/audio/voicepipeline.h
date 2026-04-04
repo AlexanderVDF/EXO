@@ -24,6 +24,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cmath>
+#include <QVariantList>
 #include "core/PipelineEvent.h"
 
 // ─────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ public:
 private:
     // High-pass Butterworth 2nd-order state
     void recomputeHP();
-    float m_hpCutoff   = 150.0f;
+    float m_hpCutoff   = 80.0f;   // 80 Hz: preserves male fundamental (was 150 Hz)
     int   m_sampleRate = 16000;
     // biquad coefficients  a0 is normalized to 1
     double m_b0=1, m_b1=0, m_b2=0, m_a1=0, m_a2=0;
@@ -140,7 +141,7 @@ private:
     bool   m_noiseCalibrated = false;
     int    m_calibrationFrames = 0;
     static constexpr int CALIBRATION_WINDOW = 15;   // ~300 ms @ 20 ms chunks (v5.2: halved for faster startup)
-    static constexpr int SPEECH_HANG_FRAMES = 8;    // v5.2: 8 frames (~160ms) — faster speech-end detection
+    static constexpr int SPEECH_HANG_FRAMES = 45;   // v7: 45 frames (~900ms @ 20ms) — tolerates natural pauses mid-sentence
     static constexpr int SPEECH_START_FRAMES = 2;    // require N consecutive speech frames
 
     // Silero VAD via WebSocketClient
@@ -294,6 +295,8 @@ signals:
     void statusChanged(const QString &status);
     void voiceError(const QString &error);
     void audioLevel(float rms, float vadScore);
+    void micPcmForVisualization(const QVariantList &samples);
+    void ttsPcmForVisualization(const QVariantList &samples);
     void audioUnavailable();
     void audioReady();
 
@@ -329,6 +332,7 @@ private:
     void broadcastState();
     void broadcastAudioLevel(float rms, float vadScore);
     QString analyzeAudioFallback(const std::vector<int16_t> &pcm);
+    static QVariantList downsampleForVisualization(const int16_t *samples, int count, int targetCount = 256);
 
     // ── state ──
     PipelineState m_state = PipelineState::Idle;

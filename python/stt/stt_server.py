@@ -95,7 +95,7 @@ DEFAULT_COMPUTE_TYPE = "int8"    # int8 = fast CPU, float16 = CUDA
 DEFAULT_BACKEND = "whispercpp"   # "whispercpp" (Vulkan GPU) or "faster_whisper" (CPU) or "whispercpp_cpu"
 DEFAULT_THREADS = 6              # Optimised for RTX 3070 + Ryzen 5600
 SAMPLE_RATE = 16000
-NOISE_REDUCTION_STRENGTH = 0.7   # 0.0 = off, 1.0 = max
+NOISE_REDUCTION_STRENGTH = 0.3   # 0.0 = off, 1.0 = max (light: C++ AGC already normalises)
 
 # ---------------------------------------------------------------------------
 # Hallucination filter
@@ -521,13 +521,13 @@ class STTSession:
         # ── DSP: Noise reduction ──
         pcm = _apply_noise_reduction(pcm, SAMPLE_RATE, NOISE_REDUCTION_STRENGTH)
 
-        # ── Gain normalization: boost quiet audio to ~80% peak ──
+        # ── Gain normalization: gentle boost (C++ AGC already normalises) ──
         peak = int(np.max(np.abs(pcm)))
         if peak > 0:
             target_peak = int(32768 * 0.8)  # -2 dBFS
             if peak < target_peak:
                 gain = target_peak / peak
-                gain = min(gain, 40.0)  # cap at ~32 dB boost
+                gain = min(gain, 6.0)  # cap at ~16 dB (C++ AGC handles most of it)
                 pcm = np.clip(pcm.astype(np.float64) * gain, -32768, 32767).astype(np.int16)
 
         # ── DEBUG: PCM statistics ──

@@ -273,6 +273,7 @@ public:
 signals:
     void ttsStarted();
     void ttsChunk(const QByteArray &pcm);
+    void ttsPcmForVisualization(const QVariantList &samples);
     void ttsFinished();
     void speakingChanged();
     void ttsError(const QString &msg);
@@ -340,6 +341,7 @@ private:
     QElapsedTimer m_lastSpeechEnd;
     QElapsedTimer m_speakRequestTime;
     bool m_firstChunkReceived = false;
+    bool m_firstAudioPumped = false;  // v8.1: first audio written to sink
 
     // ── WebSocket ──
     QWebSocket *m_ws = nullptr;

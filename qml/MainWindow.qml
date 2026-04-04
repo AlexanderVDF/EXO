@@ -66,6 +66,14 @@ ApplicationWindow {
             mainWindow.micLevel = rms
         }
 
+        function onMicPcmForVisualization(samples) {
+            micWaveform.updateSamples(samples)
+        }
+
+        function onTtsPcmForVisualization(samples) {
+            ttsWaveform.updateSamples(samples)
+        }
+
         function onPartialTranscript(text) {
             mainWindow.partialTranscript = text
         }
@@ -149,6 +157,12 @@ ApplicationWindow {
                     break
                 case "pipeline":
                     centralStack.currentIndex = 4
+                    break
+                case "maison":
+                    centralStack.currentIndex = 5
+                    break
+                case "reseau":
+                    centralStack.currentIndex = 6
                     break
                 }
             }
@@ -244,6 +258,16 @@ ApplicationWindow {
                 PipelinePage {
                     id: pipelinePage
                 }
+
+                // Index 5 : Maison (Domotique v1)
+                MaisonPage {
+                    id: maisonPage
+                }
+
+                // Index 6 : Réseau (Domotique v1)
+                ReseauPage {
+                    id: reseauPage
+                }
             }
 
             // ── Fallback clavier (quand pas de micro) ──
@@ -330,6 +354,39 @@ ApplicationWindow {
                 }
 
                 Behavior on height { NumberAnimation { duration: 200 } }
+            }
+
+            // ── Waveform Visualizers ──
+            AudioWaveformView {
+                id: micWaveform
+                Layout.fillWidth: true
+                Layout.preferredHeight: 64
+                waveColor: "#00FF88"
+                amplitude: 0.45
+                thickness: 2.0
+                glowAmount: 0.018
+                active: mainWindow.appStatus === "Listening"
+                        || mainWindow.appStatus === "DetectingSpeech"
+                visible: mainWindow.appStatus === "Listening"
+                         || mainWindow.appStatus === "DetectingSpeech"
+                         || micFadeOut.running
+
+                Behavior on opacity { NumberAnimation { id: micFadeOut; duration: 400 } }
+            }
+
+            AudioWaveformView {
+                id: ttsWaveform
+                Layout.fillWidth: true
+                Layout.preferredHeight: 64
+                waveColor: "#00AEEF"
+                amplitude: 0.5
+                thickness: 2.2
+                glowAmount: 0.02
+                active: mainWindow.appStatus === "Speaking"
+                visible: mainWindow.appStatus === "Speaking"
+                         || ttsFadeOut.running
+
+                Behavior on opacity { NumberAnimation { id: ttsFadeOut; duration: 400 } }
             }
 
             // ── Bottom bar ──

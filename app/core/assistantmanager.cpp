@@ -9,6 +9,8 @@
 #include "utils/WeatherManager.h"
 #include "PipelineEvent.h"
 #include "PipelineTracer.h"
+#include "ContextCache.h"
+#include "LatencyMetrics.h"
 #include <QQmlContext>
 #include <QTimer>
 #include <QTime>
@@ -161,8 +163,8 @@ void AssistantManager::initializeComponents()
     m_voicePipeline->setTTSRate(m_configManager->getString("TTS", "rate", "1.0").toFloat());
 
     // Audio preprocessing from config
-    m_voicePipeline->setNoiseGate(m_configManager->getString("Audio", "noise_gate", "0.005").toFloat());
-    m_voicePipeline->setAGC(m_configManager->getBool("Audio", "agc_enabled", false));
+    m_voicePipeline->setNoiseGate(m_configManager->getString("Audio", "noise_gate", "0.001").toFloat());
+    m_voicePipeline->setAGC(m_configManager->getBool("Audio", "agc_enabled", true));
 
     // Configure STT language from config
     m_voicePipeline->setSTTLanguage(m_configManager->getSTTLanguage());
@@ -205,6 +207,40 @@ void AssistantManager::initializeComponents()
     // === Pipeline Tracer ===
     PipelineTracer::instance();
     hAssistant() << "PipelineTracer initialisé — analyse post-interaction activée";
+
+    // === v8.1 ULL: Context Cache ===
+    m_contextCache = new ContextCache(this);
+    // Weather: 60s TTL, DateTime: 10s, HA state: 30s
+    m_contextCache->addRefreshRule("weather", 60000);
+    m_contextCache->addRefreshRule("datetime", 10000);
+    m_contextCache->addRefreshRule("ha_state", 30000);
+    m_contextCache->startBackgroundRefresh();
+    connect(m_contextCache, &ContextCache::refreshNeeded, this, [this](const QString &key) {
+        // Pre-fill cache with fresh data
+        if (key == "datetime") {
+            QJsonObject dt;
+            dt["date"] = QDate::currentDate().toString(Qt::ISODate);
+            dt["time"] = QTime::currentTime().toString("HH:mm:ss");
+            dt["day_name"] = QLocale(QLocale::French).dayName(QDate::currentDate().dayOfWeek());
+            m_contextCache->set(key, dt, 10000);
+        }
+        // weather and ha_state will be refreshed by their respective providers
+    });
+    // Pre-fill datetime immediately
+    {
+        QJsonObject dt;
+        dt["date"] = QDate::currentDate().toString(Qt::ISODate);
+        dt["time"] = QTime::currentTime().toString("HH:mm:ss");
+        dt["day_name"] = QLocale(QLocale::French).dayName(QDate::currentDate().dayOfWeek());
+        m_contextCache->set("datetime", dt, 10000);
+    }
+    hAssistant() << "ContextCache initialisé avec règles de rafraîchissement";
+
+    // === v8.1 ULL: LLM Warmup + KeepAlive ===
+    if (m_claudeApi && m_claudeApi->isReady()) {
+        m_claudeApi->initWarmup();
+        m_claudeApi->startKeepAlive(240000);  // 4 min keepalive
+    }
 
     // === Health Check ===
     m_healthCheck = new HealthCheck(this);
@@ -400,7 +436,16 @@ void AssistantManager::sendMessage(const QString &message)
         "Si un outil est nécessaire, tu l'appelles immédiatement sans commentaire. "
         "Outils disponibles : ha_turn_on, ha_turn_off, ha_toggle, ha_set_brightness, "
         "ha_set_temperature, ha_get_state (Home Assistant), "
-        "get_weather (météo), get_datetime (date/heure).\n\n"
+        "get_weather (météo), get_datetime (date/heure), "
+        "remember_info (mémoriser), recall_info (se souvenir), "
+        "get_context (contexte actuel), create_plan (plan multi-étapes), "
+        "search_web, get_news, get_summary, calculate, convert.\n\n"
+
+        "MÉMOIRE v7 : Tu utilises remember_info pour stocker les préférences, "
+        "faits personnels et souvenirs importants de l'utilisateur. "
+        "Tu utilises recall_info pour retrouver des informations passées. "
+        "Tu utilises get_context quand tu as besoin de connaître le moment, "
+        "l'activité ou l'état des modules.\n\n"
 
         "SÉCURITÉ : Tu ne fais jamais d'hallucination factuelle. "
         "Si tu ne sais pas, tu réponds simplement et brièvement."
@@ -514,6 +559,21 @@ void AssistantManager::onClaudeResponse(const QString &response)
     if (m_memoryManager && !m_lastUserMessage.isEmpty()) {
         m_memoryManager->addConversation(m_lastUserMessage, response);
         m_memoryManager->analyzeAndMaybeStore(m_lastUserMessage);
+    }
+
+    // v7: notifier le ContextEngine de l'interaction
+    if (!m_lastUserMessage.isEmpty()) {
+        auto *ctxWs = m_toolSockets.value(QStringLiteral("context"));
+        if (ctxWs && ctxWs->isValid()) {
+            QJsonObject interaction;
+            interaction[QStringLiteral("action")] = QStringLiteral("add_interaction");
+            QJsonObject params;
+            params[QStringLiteral("user")] = m_lastUserMessage;
+            params[QStringLiteral("assistant")] = response.left(200);
+            interaction[QStringLiteral("params")] = params;
+            ctxWs->sendTextMessage(QString::fromUtf8(
+                QJsonDocument(interaction).toJson(QJsonDocument::Compact)));
+        }
         m_lastUserMessage.clear();
     }
 }
@@ -548,12 +608,22 @@ void AssistantManager::onToolCall(const QString &toolUseId,
 
     // ── Outils locaux (pas besoin du backend Python) ─────
     if (toolName == QLatin1String("get_weather")) {
+        // v8.1: cache check
+        if (m_contextCache && m_contextCache->has("weather")) {
+            result = m_contextCache->get("weather");
+            result[QStringLiteral("cached")] = true;
+            m_claudeApi->sendToolResult(toolUseId, result);
+            return;
+        }
         // Résolution locale via WeatherManager
         if (m_weatherManager) {
             result[QStringLiteral("status")] = QStringLiteral("success");
             result[QStringLiteral("temperature")] = m_weatherManager->temperature();
             result[QStringLiteral("description")] = m_weatherManager->description();
             result[QStringLiteral("city")] = m_configManager->getWeatherCity();
+            // v8.1: cache result
+            if (m_contextCache)
+                m_contextCache->set("weather", result, 60000);
         } else {
             result[QStringLiteral("status")] = QStringLiteral("error");
             result[QStringLiteral("message")] = QStringLiteral("Service météo non disponible");
@@ -563,11 +633,21 @@ void AssistantManager::onToolCall(const QString &toolUseId,
     }
 
     if (toolName == QLatin1String("get_datetime")) {
+        // v8.1: cache check
+        if (m_contextCache && m_contextCache->has("datetime")) {
+            result = m_contextCache->get("datetime");
+            result[QStringLiteral("cached")] = true;
+            m_claudeApi->sendToolResult(toolUseId, result);
+            return;
+        }
         result[QStringLiteral("status")] = QStringLiteral("success");
         result[QStringLiteral("date")] = QDate::currentDate().toString(Qt::ISODate);
         result[QStringLiteral("time")] = QTime::currentTime().toString(QStringLiteral("HH:mm:ss"));
         result[QStringLiteral("day")] = QLocale(QStringLiteral("fr_FR"))
             .dayName(QDate::currentDate().dayOfWeek());
+        // v8.1: cache result
+        if (m_contextCache)
+            m_contextCache->set("datetime", result, 10000);
         m_claudeApi->sendToolResult(toolUseId, result);
         return;
     }
@@ -627,6 +707,100 @@ void AssistantManager::onToolCall(const QString &toolUseId,
         return;
     }
 
+    // ── Outils v7 : Mémoire intelligente ─────────────────
+    if (toolName == QLatin1String("remember_info")) {
+        dispatchToolToService(QStringLiteral("memory"), toolUseId,
+                              QStringLiteral("add"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("recall_info")) {
+        dispatchToolToService(QStringLiteral("memory"), toolUseId,
+                              QStringLiteral("search"), arguments);
+        return;
+    }
+
+    // ── Outils v7 : Contexte et planification ────────────
+    if (toolName == QLatin1String("get_context")) {
+        dispatchToolToService(QStringLiteral("context"), toolUseId,
+                              QStringLiteral("get_context"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("create_plan")) {
+        dispatchToolToService(QStringLiteral("planner"), toolUseId,
+                              QStringLiteral("create_plan"), arguments);
+        return;
+    }
+
+    // ── Outils v8 : Agent autonome ───────────────────
+    if (toolName == QLatin1String("execute_plan")) {
+        dispatchToolToService(QStringLiteral("executor"), toolUseId,
+                              QStringLiteral("execute_plan"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("verify_result")) {
+        dispatchToolToService(QStringLiteral("verifier"), toolUseId,
+                              QStringLiteral("verify_result"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("summarize_conversation")) {
+        dispatchToolToService(QStringLiteral("memory"), toolUseId,
+                              QStringLiteral("summarize_history"), arguments);
+        return;
+    }
+
+    // ── Outils v8 : Fichiers ─────────────────────────
+    if (toolName == QLatin1String("file_read")) {
+        dispatchToolToService(QStringLiteral("files"), toolUseId,
+                              QStringLiteral("file_read"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("file_write")) {
+        dispatchToolToService(QStringLiteral("files"), toolUseId,
+                              QStringLiteral("file_write"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("file_list")) {
+        dispatchToolToService(QStringLiteral("files"), toolUseId,
+                              QStringLiteral("file_list"), arguments);
+        return;
+    }
+
+    // ── Outils v8 : Calendrier ───────────────────────
+    if (toolName == QLatin1String("calendar_add")) {
+        dispatchToolToService(QStringLiteral("calendar"), toolUseId,
+                              QStringLiteral("calendar_add"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("calendar_list")) {
+        dispatchToolToService(QStringLiteral("calendar"), toolUseId,
+                              QStringLiteral("calendar_list"), arguments);
+        return;
+    }
+
+    // ── Outils v8 : Système ──────────────────────────
+    if (toolName == QLatin1String("system_info")) {
+        dispatchToolToService(QStringLiteral("system"), toolUseId,
+                              QStringLiteral("system_info"), arguments);
+        return;
+    }
+
+    // ── Outils Domotique v1 ─────────────────────────
+    if (toolName == QLatin1String("domotic_action")) {
+        dispatchToolToService(QStringLiteral("homegraph"), toolUseId,
+                              QStringLiteral("domotic_action"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("domotic_query")) {
+        dispatchToolToService(QStringLiteral("homegraph"), toolUseId,
+                              QStringLiteral("domotic_query"), arguments);
+        return;
+    }
+    if (toolName == QLatin1String("network_scan")) {
+        dispatchToolToService(QStringLiteral("network"), toolUseId,
+                              QStringLiteral("scan"), arguments);
+        return;
+    }
+
     // ── Outil inconnu ────────────────────────────────
     hWarning(exoAssistant) << "Tool inconnu:" << toolName;
     result[QStringLiteral("status")] = QStringLiteral("error");
@@ -653,6 +827,24 @@ void AssistantManager::initToolSockets()
         { QStringLiteral("news"),      QStringLiteral("Tools"), QStringLiteral("news_url"),      QStringLiteral("ws://localhost:8774") },
         { QStringLiteral("knowledge"), QStringLiteral("Tools"), QStringLiteral("knowledge_url"), QStringLiteral("ws://localhost:8775") },
         { QStringLiteral("tools"),     QStringLiteral("Tools"), QStringLiteral("tools_url"),     QStringLiteral("ws://localhost:8776") },
+        // v7 services
+        { QStringLiteral("context"),   QStringLiteral("Tools"), QStringLiteral("context_url"),   QStringLiteral("ws://localhost:8777") },
+        { QStringLiteral("planner"),   QStringLiteral("Tools"), QStringLiteral("planner_url"),   QStringLiteral("ws://localhost:8778") },
+        { QStringLiteral("memory"),    QStringLiteral("Memory"), QStringLiteral("semantic_server_url"), QStringLiteral("ws://localhost:8771") },
+        // v8 services
+        { QStringLiteral("executor"),  QStringLiteral("Tools"), QStringLiteral("executor_url"),  QStringLiteral("ws://localhost:8779") },
+        { QStringLiteral("verifier"),  QStringLiteral("Tools"), QStringLiteral("verifier_url"),  QStringLiteral("ws://localhost:8780") },
+        { QStringLiteral("files"),     QStringLiteral("Tools"), QStringLiteral("files_url"),     QStringLiteral("ws://localhost:8781") },
+        { QStringLiteral("calendar"),  QStringLiteral("Tools"), QStringLiteral("calendar_url"),  QStringLiteral("ws://localhost:8782") },
+        { QStringLiteral("system"),    QStringLiteral("Tools"), QStringLiteral("system_url"),    QStringLiteral("ws://localhost:8783") },
+        // Domotique v1 services
+        { QStringLiteral("homegraph"), QStringLiteral("Domotique"), QStringLiteral("homegraph_url"), QStringLiteral("ws://localhost:8784") },
+        { QStringLiteral("domotic"),   QStringLiteral("Domotique"), QStringLiteral("domotic_url"),   QStringLiteral("ws://localhost:8785") },
+        { QStringLiteral("camera"),    QStringLiteral("Domotique"), QStringLiteral("camera_url"),    QStringLiteral("ws://localhost:8786") },
+        { QStringLiteral("samsung"),   QStringLiteral("Domotique"), QStringLiteral("samsung_url"),   QStringLiteral("ws://localhost:8787") },
+        { QStringLiteral("voltalis"),  QStringLiteral("Domotique"), QStringLiteral("voltalis_url"),  QStringLiteral("ws://localhost:8788") },
+        { QStringLiteral("echo"),      QStringLiteral("Domotique"), QStringLiteral("echo_url"),      QStringLiteral("ws://localhost:8789") },
+        { QStringLiteral("network"),   QStringLiteral("Domotique"), QStringLiteral("network_url"),   QStringLiteral("ws://localhost:8790") },
     };
 
     for (const auto &svc : services) {

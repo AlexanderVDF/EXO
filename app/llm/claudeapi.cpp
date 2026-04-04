@@ -1,6 +1,7 @@
 #include "ClaudeAPI.h"
 #include "core/LogManager.h"
 #include "core/PipelineEvent.h"
+#include "core/LatencyMetrics.h"
 
 #include <QNetworkRequest>
 #include <QJsonDocument>
@@ -330,6 +331,8 @@ void ClaudeAPI::startRequest(const QByteArray &payload, bool stream)
     ++m_totalRequests;
     m_requestTimestamps.append(QDateTime::currentMSecsSinceEpoch());
 
+    LatencyMetrics::instance()->markLlmRequest();
+
     // Nettoyer l'ancienne reply si elle existe encore
     // (ex: sendToolResult pendant que la 1ère requête est encore ouverte)
     if (m_currentReply) {
@@ -539,6 +542,7 @@ void ClaudeAPI::handleContentBlockDelta(const QJsonObject &data)
 
         // First token event
         if (m_accumulatedText.length() == text.length()) {
+            LatencyMetrics::instance()->markLlmFirstToken();
             PIPELINE_EVENT(PipelineModule::Claude, EventType::FirstToken,
                            {{"token", text.left(20)}});
         }
@@ -603,6 +607,7 @@ void ClaudeAPI::handleMessageStop()
               << m_accumulatedText.length() << "caractères";
 
     setStreaming(false);
+    LatencyMetrics::instance()->markLlmComplete();
 
     // Flush remaining sentence buffer for TTS
     flushSentenceBuffer();
@@ -1375,6 +1380,456 @@ QJsonArray ClaudeAPI::buildEXOTools()
             schema));
     }
 
+    // ═══════════════════════════════════════════════════
+    //  Outils EXO v7 — Intelligence contextuelle + Agent
+    // ═══════════════════════════════════════════════════
+
+    // ── remember_info : stocker une information en mémoire ──
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject textProp;
+        textProp[QStringLiteral("type")] = QStringLiteral("string");
+        textProp[QStringLiteral("description")] =
+            QStringLiteral("L'information à mémoriser (préférence, fait, souvenir)");
+        props[QStringLiteral("text")] = textProp;
+
+        QJsonObject tagsProp;
+        tagsProp[QStringLiteral("type")] = QStringLiteral("string");
+        tagsProp[QStringLiteral("description")] =
+            QStringLiteral("Tags séparés par des virgules (ex: preference,food,alex)");
+        props[QStringLiteral("tags")] = tagsProp;
+
+        QJsonObject importanceProp;
+        importanceProp[QStringLiteral("type")] = QStringLiteral("number");
+        importanceProp[QStringLiteral("description")] =
+            QStringLiteral("Importance de 0.0 à 1.0 (défaut: 0.5)");
+        importanceProp[QStringLiteral("minimum")] = 0.0;
+        importanceProp[QStringLiteral("maximum")] = 1.0;
+        props[QStringLiteral("importance")] = importanceProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("text"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("remember_info"),
+            QStringLiteral("Mémoriser une information importante sur l'utilisateur "
+                           "(préférences, faits personnels, souvenirs). Utiliser quand "
+                           "l'utilisateur partage quelque chose à retenir."),
+            schema));
+    }
+
+    // ── recall_info : rechercher dans la mémoire ────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject queryProp;
+        queryProp[QStringLiteral("type")] = QStringLiteral("string");
+        queryProp[QStringLiteral("description")] =
+            QStringLiteral("La requête pour rechercher dans les souvenirs");
+        props[QStringLiteral("query")] = queryProp;
+
+        QJsonObject topKProp;
+        topKProp[QStringLiteral("type")] = QStringLiteral("integer");
+        topKProp[QStringLiteral("description")] =
+            QStringLiteral("Nombre de résultats (défaut: 3, max: 10)");
+        topKProp[QStringLiteral("minimum")] = 1;
+        topKProp[QStringLiteral("maximum")] = 10;
+        props[QStringLiteral("top_k")] = topKProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("query"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("recall_info"),
+            QStringLiteral("Rechercher dans la mémoire sémantique. Utiliser quand "
+                           "l'utilisateur fait référence à quelque chose de passé ou "
+                           "quand tu as besoin de contexte personnalisé."),
+            schema));
+    }
+
+    // ── get_context : obtenir le contexte actuel ────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+        schema[QStringLiteral("properties")] = QJsonObject();
+
+        tools.append(buildToolSchema(
+            QStringLiteral("get_context"),
+            QStringLiteral("Obtenir le contexte actuel (heure, activité probable, "
+                           "modules actifs, tâches en cours, interactions récentes). "
+                           "Utiliser pour adapter la réponse au moment et à la situation."),
+            schema));
+    }
+
+    // ── create_plan : créer un plan multi-étapes ────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject goalProp;
+        goalProp[QStringLiteral("type")] = QStringLiteral("string");
+        goalProp[QStringLiteral("description")] =
+            QStringLiteral("L'objectif à atteindre");
+        props[QStringLiteral("goal")] = goalProp;
+
+        QJsonObject stepsProp;
+        stepsProp[QStringLiteral("type")] = QStringLiteral("array");
+        stepsProp[QStringLiteral("description")] =
+            QStringLiteral("Liste des étapes [{description, tool, params, depends_on}]");
+        QJsonObject stepItemSchema;
+        stepItemSchema[QStringLiteral("type")] = QStringLiteral("object");
+        QJsonObject stepItemProps;
+        QJsonObject descProp;
+        descProp[QStringLiteral("type")] = QStringLiteral("string");
+        stepItemProps[QStringLiteral("description")] = descProp;
+        QJsonObject toolProp;
+        toolProp[QStringLiteral("type")] = QStringLiteral("string");
+        stepItemProps[QStringLiteral("tool")] = toolProp;
+        stepItemSchema[QStringLiteral("properties")] = stepItemProps;
+        stepsProp[QStringLiteral("items")] = stepItemSchema;
+        props[QStringLiteral("steps")] = stepsProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        QJsonArray required;
+        required.append(QStringLiteral("goal"));
+        required.append(QStringLiteral("steps"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("create_plan"),
+            QStringLiteral("Créer un plan multi-étapes pour atteindre un objectif complexe. "
+                           "Chaque étape spécifie un outil EXO et ses paramètres. "
+                           "Utiliser pour des tâches nécessitant plusieurs actions séquentielles."),
+            schema));
+    }
+
+    // ── v8: execute_plan : exécuter un plan ─────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject planIdProp;
+        planIdProp[QStringLiteral("type")] = QStringLiteral("string");
+        planIdProp[QStringLiteral("description")] =
+            QStringLiteral("L'identifiant du plan à exécuter");
+        props[QStringLiteral("plan_id")] = planIdProp;
+
+        QJsonObject planProp;
+        planProp[QStringLiteral("type")] = QStringLiteral("object");
+        planProp[QStringLiteral("description")] =
+            QStringLiteral("Le plan complet avec ses étapes");
+        props[QStringLiteral("plan")] = planProp;
+
+        schema[QStringLiteral("properties")] = props;
+        QJsonArray required;
+        required.append(QStringLiteral("plan_id"));
+        required.append(QStringLiteral("plan"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("execute_plan"),
+            QStringLiteral("Exécuter un plan multi-étapes créé avec create_plan. "
+                           "L'exécution est automatique avec gestion des erreurs et retries."),
+            schema));
+    }
+
+    // ── v8: verify_result : vérifier un résultat ────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject stepProp;
+        stepProp[QStringLiteral("type")] = QStringLiteral("object");
+        stepProp[QStringLiteral("description")] =
+            QStringLiteral("L'étape dont on vérifie le résultat");
+        props[QStringLiteral("step")] = stepProp;
+
+        QJsonObject resultProp;
+        resultProp[QStringLiteral("type")] = QStringLiteral("object");
+        resultProp[QStringLiteral("description")] =
+            QStringLiteral("Le résultat à vérifier");
+        props[QStringLiteral("result")] = resultProp;
+
+        QJsonObject goalProp;
+        goalProp[QStringLiteral("type")] = QStringLiteral("string");
+        goalProp[QStringLiteral("description")] =
+            QStringLiteral("L'objectif attendu");
+        props[QStringLiteral("goal")] = goalProp;
+
+        schema[QStringLiteral("properties")] = props;
+        QJsonArray required;
+        required.append(QStringLiteral("step"));
+        required.append(QStringLiteral("result"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("verify_result"),
+            QStringLiteral("Vérifier la validité et la cohérence d'un résultat d'exécution."),
+            schema));
+    }
+
+    // ── v8: summarize_conversation : résumer ────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject msgsProp;
+        msgsProp[QStringLiteral("type")] = QStringLiteral("array");
+        msgsProp[QStringLiteral("description")] =
+            QStringLiteral("Messages de la conversation [{role, content}]");
+        props[QStringLiteral("messages")] = msgsProp;
+
+        schema[QStringLiteral("properties")] = props;
+        QJsonArray required;
+        required.append(QStringLiteral("messages"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("summarize_conversation"),
+            QStringLiteral("Extraire et mémoriser les faits clés d'une conversation. "
+                           "Les informations sont stockées en mémoire à moyen terme."),
+            schema));
+    }
+
+    // ── v8: file_read : lire un fichier ─────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject pathProp;
+        pathProp[QStringLiteral("type")] = QStringLiteral("string");
+        pathProp[QStringLiteral("description")] =
+            QStringLiteral("Chemin relatif du fichier dans le dossier EXO_Files");
+        props[QStringLiteral("path")] = pathProp;
+
+        schema[QStringLiteral("properties")] = props;
+        QJsonArray required;
+        required.append(QStringLiteral("path"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("file_read"),
+            QStringLiteral("Lire le contenu d'un fichier dans le dossier sécurisé."),
+            schema));
+    }
+
+    // ── v8: file_write : écrire un fichier ──────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject pathProp;
+        pathProp[QStringLiteral("type")] = QStringLiteral("string");
+        pathProp[QStringLiteral("description")] =
+            QStringLiteral("Chemin relatif du fichier");
+        props[QStringLiteral("path")] = pathProp;
+
+        QJsonObject contentProp;
+        contentProp[QStringLiteral("type")] = QStringLiteral("string");
+        contentProp[QStringLiteral("description")] =
+            QStringLiteral("Contenu à écrire dans le fichier");
+        props[QStringLiteral("content")] = contentProp;
+
+        schema[QStringLiteral("properties")] = props;
+        QJsonArray required;
+        required.append(QStringLiteral("path"));
+        required.append(QStringLiteral("content"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("file_write"),
+            QStringLiteral("Écrire du contenu dans un fichier du dossier sécurisé."),
+            schema));
+    }
+
+    // ── v8: file_list : lister des fichiers ─────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject pathProp;
+        pathProp[QStringLiteral("type")] = QStringLiteral("string");
+        pathProp[QStringLiteral("description")] =
+            QStringLiteral("Chemin du répertoire à lister (vide = racine)");
+        props[QStringLiteral("path")] = pathProp;
+
+        QJsonObject patternProp;
+        patternProp[QStringLiteral("type")] = QStringLiteral("string");
+        patternProp[QStringLiteral("description")] =
+            QStringLiteral("Pattern de filtrage (ex: *.txt)");
+        props[QStringLiteral("pattern")] = patternProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("file_list"),
+            QStringLiteral("Lister les fichiers dans un répertoire du dossier sécurisé."),
+            schema));
+    }
+
+    // ── v8: calendar_add : ajouter un événement ─────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject titleProp;
+        titleProp[QStringLiteral("type")] = QStringLiteral("string");
+        titleProp[QStringLiteral("description")] =
+            QStringLiteral("Titre de l'événement");
+        props[QStringLiteral("title")] = titleProp;
+
+        QJsonObject dateProp;
+        dateProp[QStringLiteral("type")] = QStringLiteral("string");
+        dateProp[QStringLiteral("description")] =
+            QStringLiteral("Date au format YYYY-MM-DD");
+        props[QStringLiteral("date")] = dateProp;
+
+        QJsonObject timeProp;
+        timeProp[QStringLiteral("type")] = QStringLiteral("string");
+        timeProp[QStringLiteral("description")] =
+            QStringLiteral("Heure au format HH:MM (optionnel)");
+        props[QStringLiteral("time")] = timeProp;
+
+        QJsonObject durProp;
+        durProp[QStringLiteral("type")] = QStringLiteral("integer");
+        durProp[QStringLiteral("description")] =
+            QStringLiteral("Durée en minutes (défaut: 60)");
+        props[QStringLiteral("duration_min")] = durProp;
+
+        schema[QStringLiteral("properties")] = props;
+        QJsonArray required;
+        required.append(QStringLiteral("title"));
+        required.append(QStringLiteral("date"));
+        schema[QStringLiteral("required")] = required;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("calendar_add"),
+            QStringLiteral("Ajouter un événement au calendrier d'Alex."),
+            schema));
+    }
+
+    // ── v8: calendar_list : lister les événements ───
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+
+        QJsonObject props;
+        QJsonObject fromProp;
+        fromProp[QStringLiteral("type")] = QStringLiteral("string");
+        fromProp[QStringLiteral("description")] =
+            QStringLiteral("Date de début YYYY-MM-DD (optionnel)");
+        props[QStringLiteral("from")] = fromProp;
+
+        QJsonObject toProp;
+        toProp[QStringLiteral("type")] = QStringLiteral("string");
+        toProp[QStringLiteral("description")] =
+            QStringLiteral("Date de fin YYYY-MM-DD (optionnel)");
+        props[QStringLiteral("to")] = toProp;
+
+        schema[QStringLiteral("properties")] = props;
+
+        tools.append(buildToolSchema(
+            QStringLiteral("calendar_list"),
+            QStringLiteral("Lister les événements du calendrier d'Alex sur une période."),
+            schema));
+    }
+
+    // ── v8: system_info : infos système ─────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+        schema[QStringLiteral("properties")] = QJsonObject();
+
+        tools.append(buildToolSchema(
+            QStringLiteral("system_info"),
+            QStringLiteral("Obtenir les informations système (CPU, RAM, disque, réseau). "
+                           "Utiliser quand Alex demande des infos sur son PC."),
+            schema));
+    }
+
+    // ── Domotique v1: domotic_action ──────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+        QJsonObject props;
+        props[QStringLiteral("device_name")] = QJsonObject{
+            {QStringLiteral("type"), QStringLiteral("string")},
+            {QStringLiteral("description"), QStringLiteral("Nom de l'appareil (ex: 'salon', 'caméra entrée', 'TV').")}
+        };
+        props[QStringLiteral("command")] = QJsonObject{
+            {QStringLiteral("type"), QStringLiteral("string")},
+            {QStringLiteral("description"), QStringLiteral("Action: turn_on, turn_off, set_volume, set_source, set_mode, tts, get_snapshot, set_brightness, set_color.")}
+        };
+        props[QStringLiteral("value")] = QJsonObject{
+            {QStringLiteral("type"), QStringLiteral("string")},
+            {QStringLiteral("description"), QStringLiteral("Valeur optionnelle (volume, source, mode, couleur, texte TTS).")}
+        };
+        schema[QStringLiteral("properties")] = props;
+        schema[QStringLiteral("required")] = QJsonArray{QStringLiteral("device_name"), QStringLiteral("command")};
+
+        tools.append(buildToolSchema(
+            QStringLiteral("domotic_action"),
+            QStringLiteral("Contrôler un appareil connecté (lumière, TV, radiateur, caméra, enceinte). "
+                           "Utiliser quand Alex demande d'allumer, éteindre, régler un appareil."),
+            schema));
+    }
+
+    // ── Domotique v1: domotic_query ──────────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+        QJsonObject props;
+        props[QStringLiteral("query")] = QJsonObject{
+            {QStringLiteral("type"), QStringLiteral("string")},
+            {QStringLiteral("description"), QStringLiteral("Question sur la maison: 'quels appareils sont allumés ?', 'état du salon', 'consommation chauffage'.")}
+        };
+        props[QStringLiteral("room")] = QJsonObject{
+            {QStringLiteral("type"), QStringLiteral("string")},
+            {QStringLiteral("description"), QStringLiteral("Pièce optionnelle pour filtrer (salon, chambre, cuisine…).")}
+        };
+        schema[QStringLiteral("properties")] = props;
+        schema[QStringLiteral("required")] = QJsonArray{QStringLiteral("query")};
+
+        tools.append(buildToolSchema(
+            QStringLiteral("domotic_query"),
+            QStringLiteral("Interroger l'état de la maison connectée. "
+                           "Utiliser quand Alex pose des questions sur ses appareils, pièces ou sa consommation."),
+            schema));
+    }
+
+    // ── Domotique v1: network_scan ──────────────────
+    {
+        QJsonObject schema;
+        schema[QStringLiteral("type")] = QStringLiteral("object");
+        schema[QStringLiteral("properties")] = QJsonObject();
+
+        tools.append(buildToolSchema(
+            QStringLiteral("network_scan"),
+            QStringLiteral("Scanner le réseau local pour détecter tous les appareils connectés. "
+                           "Utiliser quand Alex demande la carte réseau ou les appareils connectés au WiFi."),
+            schema));
+    }
+
     hClaude() << "Outils EXO construits:" << tools.size() << "outils";
     return tools;
 }
@@ -1406,5 +1861,75 @@ void ClaudeAPI::setStreaming(bool on)
     if (m_isStreaming != on) {
         m_isStreaming = on;
         emit streamingChanged();
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+//  v8.1 ULL: Warmup & KeepAlive
+// ═══════════════════════════════════════════════════════
+
+void ClaudeAPI::initWarmup()
+{
+    if (m_warmupInProgress || m_warmedUp) return;
+    if (!m_isReady || m_apiKey.isEmpty()) {
+        hClaude() << "initWarmup: clé API manquante, abandon";
+        return;
+    }
+
+    m_warmupInProgress = true;
+    hClaude() << "Warmup LLM — envoi d'un ping léger à Claude…";
+
+    // Construire un payload minimal (non-streaming, 1 token max)
+    QJsonObject payload;
+    payload[QStringLiteral("model")] = m_model;
+    payload[QStringLiteral("max_tokens")] = 1;
+    payload[QStringLiteral("stream")] = false;
+    QJsonArray messages;
+    QJsonObject msg;
+    msg[QStringLiteral("role")] = QStringLiteral("user");
+    msg[QStringLiteral("content")] = QStringLiteral("ping");
+    messages.append(msg);
+    payload[QStringLiteral("messages")] = messages;
+
+    QByteArray data = QJsonDocument(payload).toJson(QJsonDocument::Compact);
+    QNetworkRequest request = buildHttpRequest();
+
+    QNetworkReply *reply = m_networkManager->post(request, data);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        m_warmupInProgress = false;
+
+        if (reply->error() == QNetworkReply::NoError) {
+            m_warmedUp = true;
+            hClaude() << "Warmup LLM terminé — connexion pré-chauffée";
+        } else {
+            hWarning(exoClaude) << "Warmup échoué:" << reply->errorString();
+        }
+    });
+}
+
+void ClaudeAPI::startKeepAlive(int intervalMs)
+{
+    if (!m_keepAliveTimer) {
+        m_keepAliveTimer = new QTimer(this);
+        m_keepAliveTimer->setTimerType(Qt::VeryCoarseTimer);
+        connect(m_keepAliveTimer, &QTimer::timeout, this, [this]() {
+            // Ne pas envoyer de keepalive pendant une requête active
+            if (m_currentReply || !m_isReady) return;
+
+            hClaude() << "KeepAlive ping…";
+            initWarmup();
+            m_warmedUp = false; // Force un vrai ping
+        });
+    }
+    m_keepAliveTimer->start(qMax(30000, intervalMs));
+    hClaude() << "KeepAlive activé — intervalle:" << intervalMs / 1000 << "s";
+}
+
+void ClaudeAPI::stopKeepAlive()
+{
+    if (m_keepAliveTimer) {
+        m_keepAliveTimer->stop();
+        hClaude() << "KeepAlive désactivé";
     }
 }

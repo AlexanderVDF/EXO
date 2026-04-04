@@ -4,6 +4,7 @@
 #include "TTSBackendXTTS.h"
 #include "core/LogManager.h"
 #include "core/PipelineEvent.h"
+#include "core/LatencyMetrics.h"
 
 #include <QCoreApplication>
 #include <QRegularExpression>
@@ -749,6 +750,7 @@ void TTSManager::onWorkerStarted(const QString &text)
 {
     m_speaking = true;
     m_firstChunkReceived = false;
+    m_firstAudioPumped = false;
     PIPELINE_EVENT(PipelineModule::TTS, EventType::WorkerStarted,
                    {{"text_preview", text.left(50)}});
     emit ttsStarted();
@@ -767,6 +769,7 @@ void TTSManager::onWorkerChunk(const QByteArray &pcm)
 
     if (!m_firstChunkReceived) {
         m_firstChunkReceived = true;
+        LatencyMetrics::instance()->markTtsFirstChunk();
         hVoice() << "[Latency] TTS first-chunk C++:" << m_speakRequestTime.elapsed() << "ms";
         PIPELINE_EVENT(PipelineModule::AudioOutput, EventType::PcmChunk,
                        {{"bytes", pcm.size()}, {"first", true}});
@@ -789,6 +792,30 @@ void TTSManager::onWorkerChunk(const QByteArray &pcm)
 
     broadcastWaveform(processed);
     emit ttsChunk(processed);
+
+    // ── Emit downsampled PCM for QML waveform visualization ──
+    {
+        const int sampleCount = processed.size() / static_cast<int>(sizeof(int16_t));
+        const auto *pcmSamples = reinterpret_cast<const int16_t *>(processed.constData());
+        constexpr int TARGET = 256;
+        QVariantList vizSamples;
+        vizSamples.reserve(TARGET);
+        if (sampleCount > 0) {
+            const float step = static_cast<float>(sampleCount) / TARGET;
+            for (int i = 0; i < TARGET; ++i) {
+                const int start = static_cast<int>(i * step);
+                const int end   = std::min(static_cast<int>((i + 1) * step), sampleCount);
+                float sum = 0.0f;
+                for (int j = start; j < end; ++j)
+                    sum += pcmSamples[j] / 32768.0f;
+                vizSamples.append(sum / std::max(1, end - start));
+            }
+        } else {
+            for (int i = 0; i < TARGET; ++i)
+                vizSamples.append(0.0f);
+        }
+        emit ttsPcmForVisualization(vizSamples);
+    }
 }
 
 void TTSManager::onWorkerFinished()
@@ -905,8 +932,14 @@ void TTSManager::pumpBuffer()
                                      m_ringBuffer.availableRead(),
                                      static_cast<int>(sizeof(buf))});
         const int actual = m_ringBuffer.read(buf, toRead);
-        if (actual > 0)
+        if (actual > 0) {
             m_sinkIO->write(buf, actual);
+            if (!m_firstAudioPumped) {
+                m_firstAudioPumped = true;
+                LatencyMetrics::instance()->markTtsFirstAudio();
+                hVoice() << "[Latency] TTS first audio to sink:" << m_speakRequestTime.elapsed() << "ms";
+            }
+        }
         return;
     }
 
@@ -981,6 +1014,8 @@ void TTSManager::finalizeSpeech()
     emit statusChanged("Prêt");
     broadcastState("idle");
     hVoice() << "[Latency] TTS total speech:" << m_speakRequestTime.elapsed() << "ms";
+    LatencyMetrics::instance()->markResponseDone();
+    LatencyMetrics::instance()->finalize();
     hVoice() << "TTS terminé — sink persistant reste actif";
 }
 

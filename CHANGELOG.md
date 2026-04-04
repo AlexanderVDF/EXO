@@ -5,6 +5,26 @@
 
 ---
 
+## v8.1 — Ultra-Low Latency — 30 mars 2026
+
+### Ajouté
+- **ContextCache** (`app/core/ContextCache.h/.cpp`) — cache in-process avec TTL par clé, éviction automatique (timer 10 s), refresh en arrière-plan via signaux Qt, thread-safe (QMutex)
+- **LatencyMetrics** (`app/core/LatencyMetrics.h/.cpp`) — singleton d'instrumentation pipeline, 9 timestamps (sttStart → responseDone), 6 métriques dérivées (perceivedLatency, endToEnd…), historique rolling 100 snapshots, `getLatencyReport()` exposé au QML
+- **ClaudeAPI warmup** — `initWarmup()` envoie un ping léger non-streaming au démarrage (1 token max), `startKeepAlive()` maintient la connexion TCP chaude (timer 240 s)
+- **Instrumentation pipeline** — marks LatencyMetrics dans VoicePipeline (sttStart, sttPartialFirst, sttFinal), ClaudeAPI (llmRequest, llmFirstToken, llmComplete), TTSManager (ttsFirstChunk, ttsFirstAudio, responseDone + finalize)
+- **Cache tool calls** — AssistantManager wrappe `get_weather` (TTL 60 s) et `get_datetime` (TTL 10 s) via ContextCache, évite les appels réseau redondants
+- **27 nouveaux tests** (`tests/python/test_ull.py`) — TestContextCache (11), TestLatencySnapshot (5), TestWarmupKeepAlive (6), TestCacheIntegration (5)
+- Total tests : **440 passés** (413 existants + 27 nouveaux)
+
+### Modifié
+- `ClaudeAPI.h/.cpp` — ajout warmup/keepalive + 3 marks latency
+- `VoicePipeline.cpp` — ajout 3 marks latency (sttStart, sttPartialFirst, sttFinal)
+- `TTSManager.h/.cpp` — ajout `m_firstAudioPumped` flag + 3 marks latency + finalize
+- `AssistantManager.h/.cpp` — intégration ContextCache + warmup/keepalive init
+- `CMakeLists.txt` — ajout ContextCache.cpp/.h et LatencyMetrics.cpp/.h
+
+---
+
 ## v5.2 — 29 mars 2026
 
 ### Corrigé

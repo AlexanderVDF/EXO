@@ -1,5 +1,6 @@
 #include "VoicePipeline.h"
 #include "core/LogManager.h"
+#include "core/LatencyMetrics.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -149,7 +150,29 @@ void AudioPreprocessor::process(int16_t *samples, int count)
     }
     float rms = static_cast<float>(std::sqrt(sumSq / count));
 
-    // ---- 3. Noise gate ----
+    // ---- 3. AGC (envelope follower) — BEFORE noise gate ----
+    // Must amplify first, otherwise quiet mic signals are gated out
+    if (m_agcEnabled && rms > 1e-6f) {
+        constexpr float TARGET = 0.15f;  // target RMS ~ -16 dBFS
+        float desired = TARGET / rms;
+        // faster convergence for quiet signals
+        float alpha = (desired > m_agcGain) ? 0.15f : 0.05f;
+        m_agcGain += alpha * (desired - m_agcGain);
+        m_agcGain = std::clamp(m_agcGain, 0.1f, 10.0f);  // cap at 20 dB to limit noise amplification
+        for (int i = 0; i < count; ++i) {
+            float v = samples[i] * m_agcGain;
+            samples[i] = static_cast<int16_t>(std::clamp(v, -32768.0f, 32767.0f));
+        }
+        // Recompute RMS after AGC for accurate noise gate
+        sumSq = 0.0;
+        for (int i = 0; i < count; ++i) {
+            double s = samples[i] / 32768.0;
+            sumSq += s * s;
+        }
+        rms = static_cast<float>(std::sqrt(sumSq / count));
+    }
+
+    // ---- 4. Noise gate (on AGC-amplified signal) ----
     if (rms < m_gateThreshold) {
         if (!m_gateOpen) {
             std::memset(samples, 0, count * sizeof(int16_t));
@@ -165,26 +188,12 @@ void AudioPreprocessor::process(int16_t *samples, int count)
         m_gateOpen = true;
     }
 
-    // ---- 4. RMS normalization (optional) ----
+    // ---- 5. RMS normalization (optional) ----
     if (m_normTarget > 0.0f && rms > 1e-6f) {
         float gain = m_normTarget / rms;
         gain = std::min(gain, 10.0f);  // cap at 20 dB boost
         for (int i = 0; i < count; ++i) {
             float v = samples[i] * gain;
-            samples[i] = static_cast<int16_t>(std::clamp(v, -32768.0f, 32767.0f));
-        }
-    }
-
-    // ---- 5. AGC (envelope follower) ----
-    if (m_agcEnabled && rms > 1e-6f) {
-        constexpr float TARGET = 0.15f;  // target RMS ~ -16 dBFS
-        float desired = TARGET / rms;
-        // faster convergence for quiet signals
-        float alpha = (desired > m_agcGain) ? 0.15f : 0.05f;
-        m_agcGain += alpha * (desired - m_agcGain);
-        m_agcGain = std::clamp(m_agcGain, 0.1f, 30.0f);
-        for (int i = 0; i < count; ++i) {
-            float v = samples[i] * m_agcGain;
             samples[i] = static_cast<int16_t>(std::clamp(v, -32768.0f, 32767.0f));
         }
     }
@@ -723,6 +732,8 @@ void VoicePipeline::initTTS(const QString &ttsServerUrl)
             this, &VoicePipeline::onTtsFinished);
     connect(m_ttsManager, &TTSManager::ttsError,
             this, &VoicePipeline::onTtsError);
+    connect(m_ttsManager, &TTSManager::ttsPcmForVisualization,
+            this, &VoicePipeline::ttsPcmForVisualization);
 
     hVoice() << "TTSManager initialisé avec DSP pipeline";
     hVoice() << "[Pipeline] GPU STT/TTS: RTX 3070";
@@ -1114,6 +1125,9 @@ void VoicePipeline::processAudioChunk(const int16_t *samples, int count)
     broadcastAudioLevel(rms, vadScore);
     emit audioLevel(rms, vadScore);
 
+    // ── Emit downsampled PCM for QML waveform visualization ──
+    emit micPcmForVisualization(downsampleForVisualization(samples, count));
+
     switch (m_state) {
     case PipelineState::Idle:
         // Send audio to OpenWakeWord server for neural wake word detection
@@ -1174,6 +1188,7 @@ void VoicePipeline::handleVAD(const int16_t *samples, int count, float vadScore)
         m_utteranceTimer->start(UTTERANCE_TIMEOUT_MS);
 
         // Start streaming STT immediately
+        LatencyMetrics::instance()->markSttStart();
         if (m_stt && m_stt->isConnected()) {
             m_stt->startUtterance();
             m_sttStreaming = true;
@@ -1417,6 +1432,7 @@ void VoicePipeline::onVADSpeechEnded()
 
 void VoicePipeline::onSTTPartial(const QString &text)
 {
+    LatencyMetrics::instance()->markSttPartialFirst();
     PIPELINE_EVENT(PipelineModule::STT, EventType::PartialTranscript,
                    {{"text", text.left(100)}});
     emit partialTranscript(text);
@@ -1443,6 +1459,7 @@ void VoicePipeline::onSTTPartial(const QString &text)
 void VoicePipeline::onSTTFinal(const QString &text)
 {
     m_transcribeTimer->stop();
+    LatencyMetrics::instance()->markSttFinal();
     hVoice() << "[Latency] STT final received";
     hVoice() << "=== onSTTFinal ===" << text.left(80)
              << "state=" << static_cast<int>(m_state)
@@ -1684,4 +1701,30 @@ QString VoicePipeline::analyzeAudioFallback(const std::vector<int16_t> &pcm)
     // Return a generic marker that AssistantManager can handle
     // In production, this path should not be used — Whisper should be available
     return QStringLiteral("[commande_vocale:%1ms]").arg(durationMs);
+}
+
+// ── Downsample PCM for QML waveform visualization ────
+
+QVariantList VoicePipeline::downsampleForVisualization(const int16_t *samples, int count, int targetCount)
+{
+    QVariantList result;
+    result.reserve(targetCount);
+
+    if (count <= 0) {
+        for (int i = 0; i < targetCount; ++i)
+            result.append(0.0f);
+        return result;
+    }
+
+    const float step = static_cast<float>(count) / targetCount;
+    for (int i = 0; i < targetCount; ++i) {
+        // Average samples in this bin for anti-aliased downsampling
+        const int start = static_cast<int>(i * step);
+        const int end   = std::min(static_cast<int>((i + 1) * step), count);
+        float sum = 0.0f;
+        for (int j = start; j < end; ++j)
+            sum += samples[j] / 32768.0f;
+        result.append(sum / std::max(1, end - start));
+    }
+    return result;
 }

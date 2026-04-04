@@ -1,6 +1,6 @@
-# PROMPT MAÎTRE — EXO v5.2
+# PROMPT MAÎTRE — EXO v8.1
 
-> **Source de vérité unique** • 29 mars 2026
+> **Source de vérité unique** • 30 mars 2026
 > Ce document EST l'architecture. Il n'y a rien d'autre.
 > Toute information absente de ce document n'existe pas.
 
@@ -11,7 +11,7 @@
 | Champ | Valeur |
 |-------|--------|
 | Nom | EXO Assistant |
-| Version | 5.2 |
+| Version | 8.1 (Ultra-Low Latency) |
 | Phonétique | /ɛɡ.zɔ/ ou /ɛk.so/ |
 | Wakewords | `EXO`, `EXO!`, `EXO?` |
 | Nature | Assistant vocal IA offline-first, Windows natif |
@@ -108,6 +108,8 @@
 | Singleton settings | `configmanager.h` | QSettings INI, 3 fichiers config |
 | Observer pattern | `assistantmanager.h` | Signaux Qt cross-module |
 | Command pattern | `claudeapi.h` | 8 Function Calling tools |
+| In-process cache | `contextcache.h` | TTL par clé, refresh arrière-plan |
+| Instrumentation | `latencymetrics.h` | 9 timestamps pipeline, métriques dérivées |
 | Cascade fallback | `ttsmanager.h` | XTTS → Qt TTS → Erreur |
 
 ### 3.4 Ownership mémoire C++
@@ -133,7 +135,9 @@ AssistantManager (QObject root)
 │   │   ├── TTSBackendXTTS (→ tts_server :8767)
 │   │   └── TTSBackendQt (fallback)
 │   └── TTSDSPProcessor (EQ→Comp→Norm→Fade→Clip)
-├── ClaudeAPI (SSE + Function Calling)
+├── ClaudeAPI (SSE + Function Calling + warmup/keepalive)
+├── ContextCache (TTL per-key, background refresh)
+├── LatencyMetrics (9 timestamps, 6 métriques dérivées)
 ├── WeatherManager (OpenWeatherMap)
 ├── AIMemoryManager (FAISS)
 ├── ServiceManager (lancement Python)
@@ -194,6 +198,7 @@ IDLE → DETECTING_SPEECH → LISTENING → TRANSCRIBING → THINKING → SPEAKI
 | TTS 1er chunk | 200 – 500 ms |
 | DSP sortie | < 1 ms |
 | RTF STT (AMD RX 6750 XT) | 0.08 – 0.23 |
+| Perceived latency (v8.1 ULL) | tTtsFirstAudio − tSttFinal |
 
 ---
 
@@ -579,12 +584,12 @@ Konva (2D plans), Three.js (3D), vis-network (topologie), Phosphor Icons.
 
 ## 10. TESTS
 
-**180 tests** : 7 CTest C++ + 173 pytest Python
+**440 tests** : 7 CTest C++ + 433 pytest Python
 
 | Type | Durée | Commande |
 |------|-------|----------|
 | C++ (CTest) | ~0.6 s | `ctest --test-dir build -C Release` |
-| Python (pytest) | ~2.2 s | `pytest tests/` |
+| Python (pytest) | ~3 s | `pytest tests/ --ignore=tests/e2e_tools_test.py` |
 
 Build tests : `cmake -DBUILD_TESTS=ON`
 
@@ -600,7 +605,53 @@ Répertoires : `tests/cpp/`, `tests/integration/`, `tests/performance/`, `tests/
 
 ---
 
-## 11. INVARIANTS & CONTRAINTES
+## 11. ULTRA-LOW LATENCY (v8.1)
+
+### 11.1 ContextCache
+
+Cache in-process avec TTL par clé. Thread-safe (QMutex). Éviction automatique toutes les 10 s.
+
+| Clé | TTL | Usage |
+|-----|-----|-------|
+| `weather` | 60 s | Résultat `get_weather` |
+| `datetime` | 10 s | Résultat `get_datetime` |
+| `ha_state` | 30 s | État Home Assistant |
+
+Signals : `cacheHit`, `cacheMiss`, `refreshNeeded`, `entryExpired`.
+
+Refresh en arrière-plan : `addRefreshRule(key, intervalMs)` → émet `refreshNeeded` quand TTL proche de l'expiration.
+
+### 11.2 LatencyMetrics
+
+Singleton d'instrumentation pipeline. 9 timestamps par interaction, 6 métriques dérivées.
+
+| Timestamp | Posé dans |
+|-----------|-----------|
+| `tSttStart` | VoicePipeline (handleVAD) |
+| `tSttPartialFirst` | VoicePipeline (onSTTPartial) |
+| `tSttFinal` | VoicePipeline (onSTTFinal) |
+| `tLlmRequest` | ClaudeAPI (startRequest) |
+| `tLlmFirstToken` | ClaudeAPI (handleContentBlockDelta) |
+| `tLlmComplete` | ClaudeAPI (handleMessageStop) |
+| `tTtsFirstChunk` | TTSManager (onWorkerChunk) |
+| `tTtsFirstAudio` | TTSManager (pumpBuffer) |
+| `tResponseDone` | TTSManager (finalizeSpeech) |
+
+Métriques dérivées : `sttLatency`, `llmFirstTokenLatency`, `llmTotalLatency`, `ttsLatency`, `perceivedLatency` (tTtsFirstAudio − tSttFinal), `endToEnd`.
+
+Historique : 100 snapshots max. `averages(lastN)` pour moyennes glissantes. `getLatencyReport()` exposé QML.
+
+### 11.3 ClaudeAPI Warmup & KeepAlive
+
+- `initWarmup()` — ping léger non-streaming au démarrage (1 token max, `max_tokens=1`)
+- `startKeepAlive(240000)` — timer VeryCoarseTimer, renvoie un warmup toutes les 4 min
+- `stopKeepAlive()` — arrête le timer
+
+Objectif : connexion TCP/TLS pré-établie → latence 1er token réduite.
+
+---
+
+## 12. INVARIANTS & CONTRAINTES
 
 ### Invariants absolus
 
@@ -627,7 +678,7 @@ STT (Vulkan) : 1–2 Go. TTS (CUDA) : 2–4 Go.
 
 ---
 
-## 12. RÈGLES COPILOT
+## 13. RÈGLES COPILOT
 
 ### Style
 
@@ -654,7 +705,7 @@ hDebug(cat), hWarning(cat), hCritical(cat)
 
 ---
 
-## 13. LIMITATIONS CONNUES
+## 14. LIMITATIONS CONNUES
 
 | Composant | Limitation | Contournement |
 |-----------|-----------|---------------|
@@ -673,7 +724,7 @@ hDebug(cat), hWarning(cat), hCritical(cat)
 
 ---
 
-## 14. ÉVOLUTIONS (v6)
+## 15. ÉVOLUTIONS (v9)
 
 | Objectif | Statut |
 |----------|--------|
@@ -690,7 +741,7 @@ hDebug(cat), hWarning(cat), hCritical(cat)
 
 ---
 
-## 15. INSTALLATION
+## 16. INSTALLATION
 
 ### Prérequis
 
@@ -739,4 +790,4 @@ pip install "aiohttp>=3.9" "websockets>=12" "pytest>=8" "pytest-asyncio>=0.23"
 ---
 
 > **Ce document est la seule vérité.** Toute modification d'architecture doit être reflétée ici.
-> Dernière mise à jour : 29 mars 2026 — EXO v5.2
+> Dernière mise à jour : 30 mars 2026 — EXO v8.1

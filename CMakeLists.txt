@@ -37,6 +37,8 @@ set(SOURCES
     app/core/LogManager.cpp
     app/core/PipelineEvent.cpp
     app/core/PipelineTracer.cpp
+    app/core/ContextCache.cpp
+    app/core/LatencyMetrics.cpp
     app/core/WebSocketClient.cpp
     app/core/HealthCheck.cpp
     app/core/ServiceManager.cpp
@@ -60,6 +62,8 @@ set(HEADERS
     app/core/PipelineEvent.h
     app/core/PipelineTypes.h
     app/core/PipelineTracer.h
+    app/core/ContextCache.h
+    app/core/LatencyMetrics.h
     app/core/WebSocketClient.h
     app/core/HealthCheck.h
     app/core/ServiceManager.h
@@ -141,6 +145,7 @@ qt_add_qml_module(RaspberryAssistant
         qml/components/ExoTranscriptView.qml
         qml/components/ExoResponseView.qml
         qml/components/ExoSplashScreen.qml
+        qml/components/AudioWaveformView.qml
     RESOURCES
         qml/theme/qmldir
         qml/components/qmldir

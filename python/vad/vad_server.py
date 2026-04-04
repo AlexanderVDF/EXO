@@ -62,7 +62,7 @@ class SileroVAD:
         self._speech_frames = 0
         self._silence_frames = 0
         self._speech_start_frames = 2
-        self._speech_hang_frames = 10  # ~320ms at 32ms chunks (optimized for ultra-low latency)
+        self._speech_hang_frames = 25  # ~800ms at 32ms chunks — tolerates natural mid-sentence pauses
 
     def load(self) -> None:
         """Load Silero VAD model."""

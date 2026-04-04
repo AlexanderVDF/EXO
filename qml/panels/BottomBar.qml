@@ -79,7 +79,21 @@ Rectangle {
                     { label: "VAD", key: "vad" },
                     { label: "WW",  key: "wakeword" },
                     { label: "MEM", key: "memory" },
-                    { label: "NLU", key: "nlu" }
+                    { label: "NLU", key: "nlu" },
+                    { label: "CTX", key: "context" },
+                    { label: "PLN", key: "planner" },
+                    { label: "EXE", key: "executor" },
+                    { label: "VER", key: "verifier" },
+                    { label: "FIL", key: "files" },
+                    { label: "CAL", key: "calendar" },
+                    { label: "SYS", key: "system" },
+                    { label: "HG",  key: "homegraph" },
+                    { label: "DOM", key: "domotic" },
+                    { label: "CAM", key: "camera" },
+                    { label: "SAM", key: "samsung" },
+                    { label: "VOL", key: "voltalis" },
+                    { label: "ECH", key: "echo" },
+                    { label: "NET", key: "network" }
                 ]
 
                 Row {

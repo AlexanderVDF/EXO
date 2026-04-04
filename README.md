@@ -1,6 +1,6 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 5.2** | Mars 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
+**Version 8.1** | Mars 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
@@ -25,7 +25,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 - 🧠 **Mémoire persistante** — 3 couches (court/long/sémantique) + FAISS vectoriel
 - 🏠 **Domotique** — Intégration Home Assistant (13 actions LLM)
 - 🎨 **Interface premium** — QML style VS Code + Fluent Design + React web
-- ⚡ **Temps réel** — Pipeline audio DSP, VAD neural, wake-word neural
+- ⚡ **Ultra-Low Latency (v8.1)** — ContextCache, LatencyMetrics, warmup/keepalive ClaudeAPI
 
 ---
 
@@ -33,7 +33,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        EXO Assistant v4.2                          │
+│                        EXO Assistant v8.1                          │
 ├──────────────┬──────────────────────────────────────────────────────┤
 │              │                                                      │
 │  Interface   │   ┌─────────────┐    ┌──────────────────────────┐   │
@@ -88,7 +88,6 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 ### Interface
 
 - **QML** — 18 composants style VS Code + Fluent Design (Sidebar, Transcript, Response, Visualizer GPU ShaderEffect GLSL 60 FPS, Settings, History, etc.)
-- **React** — Interface web alternative (React 18 + Vite, dans `gui/`)
 
 ---
 
@@ -99,13 +98,14 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 | 🎙 Reconnaissance vocale | Whisper.cpp Vulkan GPU — RTF 0.08–0.23 |
 | 🗣 Synthèse vocale | XTTS v2 — 58 voix, multilingue, streaming PCM16 |
 | 🧠 LLM | Claude API SSE + 8 Function Calling |
+| ⚡ Ultra-Low Latency | ContextCache (TTL), LatencyMetrics (9 timestamps), warmup/keepalive |
 | 💾 Mémoire | 3 couches (court/long/sémantique) + FAISS vectoriel |
 | 🔊 VAD | Silero neural + mode hybride (builtin/silero/hybrid) |
 | 👂 Wake word | OpenWakeWord neural + détection transcript |
 | 🎛 DSP | Réduction de bruit spectrale + chaîne audio complète |
 | 🏠 Domotique | Home Assistant — 13 actions LLM (lumières, médias, clima) |
 | 🌤 Météo | OpenWeatherMap + géolocalisation |
-| 🧪 Tests | 180 tests automatisés (7 CTest + 173 pytest) |
+| 🧪 Tests | 440 tests automatisés (7 CTest + 433 pytest) |
 
 ---
 
@@ -120,7 +120,6 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 | Python | 3.11+ | Microservices IA (venv `.venv_stt_tts`) |
 | Python | 3.13+ | Orchestrator (venv `.venv`) |
 | GPU | Vulkan compatible | STT (Whisper.cpp) + TTS (CUDA) |
-| Node.js | 22+ | GUI React (optionnel) |
 
 > **Modèles & données** — Stockés sur `D:\EXO\` (modèles Whisper, XTTS, FAISS, wakeword, cache HuggingFace).
 
@@ -289,8 +288,7 @@ EXO/
 │   └── shared/                    Modules partagés
 │
 ├── qml/                          Interface QML (19 composants VS Code)
-├── gui/                          Interface React 18 + Vite
-├── docs/                         Documentation (7 catégories)
+├── docs/                         Documentation
 ├── config/                       Configuration (assistant.conf)
 ├── rtaudio/                      RtAudio WASAPI (sous-module statique)
 ├── resources/                    Polices, icônes
@@ -306,25 +304,23 @@ EXO/
 
 ## 📖 Documentation
 
-L'intégralité de la documentation est organisée dans [`docs/`](docs/README.md) :
+La documentation est dans [`docs/`](docs/) :
 
-| Catégorie | Contenu |
-|-----------|---------|
-| [`core/`](docs/README.md#-architecture--spécifications--core) | Architecture, spécifications, index des modules (9 fichiers) |
-| [`guides/`](docs/README.md#-guides-techniques--guides) | Guides STT, TTS, audio pipeline, tests (4 fichiers) |
-| [`ui/`](docs/README.md#-interface--ui) | Design system v4.2 |
-| [`audits/`](docs/README.md#-audits--audits) | Rapports d'audit (Mars 2026, Juillet 2025) |
-| [`reports/`](docs/README.md#-rapports-techniques--reports) | Rapports techniques ponctuels |
-| [`prompts/`](docs/README.md#-prompts-historiques--prompts) | 12 prompts Copilot historiques |
-| [`archives/`](docs/README.md#-archives--archives) | Scripts legacy, backups |
-
-Voir aussi : [COPILOT_MASTER_DIRECTIVE.md](COPILOT_MASTER_DIRECTIVE.md) — Directives permanentes pour GitHub Copilot.
+| Fichier / Dossier | Contenu |
+|-------------------|--------|
+| `architecture/` | Schémas d'architecture |
+| `audits/` | Rapports d'audit |
+| `modules.md` | Index des modules |
+| `pipeline.md` | Pipeline vocal |
+| `services.md` | Microservices Python |
+| `CHANGELOG.md` | Historique des versions |
+| `PLAN_IMPLEMENTATION.md` | Plan d'implémentation |
 
 ---
 
 ## Roadmap
 
-### ✅ Réalisé (v4.2)
+### ✅ Réalisé (v8.1)
 - RtAudio WASAPI — capture audio faible latence
 - Interface QML 19 composants VS Code + Fluent Design
 - Pipeline vocal VoicePipeline v4 (FSM, VAD, StreamingSTT)
@@ -337,7 +333,10 @@ Voir aussi : [COPILOT_MASTER_DIRECTIVE.md](COPILOT_MASTER_DIRECTIVE.md) — Dire
 - NLU local (classification d'intention)
 - Visualizer GPU ShaderEffect GLSL 60 FPS
 - Intégration Home Assistant (13 actions LLM)
-- 180 tests automatisés (7 CTest + 173 pytest)
+- **ContextCache** — cache in-process avec TTL par clé + refresh arrière-plan
+- **LatencyMetrics** — instrumentation pipeline 9 timestamps, 6 métriques dérivées
+- **ClaudeAPI warmup/keepalive** — connexion TCP/TLS pré-établie, latence 1er token réduite
+- 440 tests automatisés (7 CTest + 433 pytest)
 
 ### 🔄 À venir
 - Google Calendar — agenda intelligent
@@ -352,7 +351,7 @@ Voir aussi : [COPILOT_MASTER_DIRECTIVE.md](COPILOT_MASTER_DIRECTIVE.md) — Dire
 
 1. Fork le repo
 2. Créer une branche (`git checkout -b feature/ma-fonctionnalite`)
-3. Lire [COPILOT_MASTER_DIRECTIVE.md](COPILOT_MASTER_DIRECTIVE.md) pour les conventions
+3. Lire `PROMPT_MAITRE.md` pour les conventions
 4. Lancer les tests : `ctest --test-dir build` + `pytest tests/python/`
 5. Commit (`git commit -m "feat: description"`)
 6. Push + Pull Request
@@ -371,4 +370,4 @@ Ce projet est sous licence **MIT**. Voir [LICENSE](LICENSE) pour les détails.
 
 ---
 
-**EXO v4.2** — C++ / Qt 6.9.3 · Python · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord
+**EXO** — C++ / Qt 6.9.3 · Python · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Ultra-Low Latency v8.1

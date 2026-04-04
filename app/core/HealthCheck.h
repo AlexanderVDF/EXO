@@ -38,6 +38,8 @@ class HealthCheck : public QObject
     Q_PROPERTY(QString wakewordStatus READ wakewordStatus NOTIFY healthChanged)
     Q_PROPERTY(QString memoryStatus READ memoryStatus NOTIFY healthChanged)
     Q_PROPERTY(QString nluStatus   READ nluStatus   NOTIFY healthChanged)
+    Q_PROPERTY(QString contextStatus READ contextStatus NOTIFY healthChanged)
+    Q_PROPERTY(QString plannerStatus READ plannerStatus NOTIFY healthChanged)
     Q_PROPERTY(QString overallStatus READ overallStatus NOTIFY healthChanged)
     Q_PROPERTY(bool allHealthy READ allHealthy NOTIFY healthChanged)
 
@@ -63,6 +65,8 @@ public:
     QString wakewordStatus() const;
     QString memoryStatus() const;
     QString nluStatus() const;
+    QString contextStatus() const;
+    QString plannerStatus() const;
     QString overallStatus() const;
     bool allHealthy() const;
 

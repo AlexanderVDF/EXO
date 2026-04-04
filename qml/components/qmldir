@@ -16,3 +16,6 @@ ExoVisualizer 1.0 ExoVisualizer.qml
 ExoTranscriptView 1.0 ExoTranscriptView.qml
 ExoResponseView 1.0 ExoResponseView.qml
 ExoSplashScreen 1.0 ExoSplashScreen.qml
+ExoOrbVisualizer 1.0 ExoOrbVisualizer.qml
+ExoPlanProgress 1.0 ExoPlanProgress.qml
+ExoContextPanel 1.0 ExoContextPanel.qml

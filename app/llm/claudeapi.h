@@ -54,6 +54,12 @@ public:
     void setTopK(int topK);
     void setTimeout(int timeoutMs);
 
+    // ── v8.1 ULL: Warmup & KeepAlive ─────────────────
+    void initWarmup();
+    void startKeepAlive(int intervalMs = 240000);
+    void stopKeepAlive();
+    bool isWarmedUp() const { return m_warmedUp; }
+
     // ── État ─────────────────────────────────────────
     bool isReady() const { return m_isReady; }
     bool isStreaming() const { return m_isStreaming; }
@@ -199,6 +205,11 @@ private:
     int        m_retryCount    = 0;
     QByteArray m_lastPayload;
     bool       m_lastStreamFlag = true;
+
+    // ── v8.1 ULL: Warmup & KeepAlive ─────────────────
+    QTimer    *m_keepAliveTimer = nullptr;
+    bool       m_warmedUp = false;
+    bool       m_warmupInProgress = false;
 
     // ── Rate limiting ────────────────────────────────
     QList<qint64> m_requestTimestamps;

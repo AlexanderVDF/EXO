@@ -15,6 +15,7 @@ class WeatherManager;
 class VoicePipeline;
 class AIMemoryManager;
 class AudioDeviceManager;
+class ContextCache;
 
 Q_DECLARE_METATYPE(ConfigManager*)
 
@@ -111,4 +112,7 @@ private:
     // Microservices outils (WebSocket)
     QMap<QString, QWebSocket*> m_toolSockets;
     QMap<QString, QString> m_pendingToolCalls;  // service → toolUseId
+
+    // v8.1 ULL: Context cache
+    ContextCache *m_contextCache = nullptr;
 };

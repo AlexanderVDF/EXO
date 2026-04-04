@@ -43,10 +43,108 @@
     "args": []
   },
   {
+    "name": "Context",
+    "port": 8777,
+    "venv": ".venv_stt_tts",
+    "script": "python/context/context_engine.py",
+    "args": []
+  },
+  {
+    "name": "Planner",
+    "port": 8778,
+    "venv": ".venv_stt_tts",
+    "script": "python/planner/task_planner_server.py",
+    "args": []
+  },
+  {
+    "name": "Executor",
+    "port": 8779,
+    "venv": ".venv_stt_tts",
+    "script": "python/executor/task_executor_server.py",
+    "args": []
+  },
+  {
+    "name": "Verifier",
+    "port": 8780,
+    "venv": ".venv_stt_tts",
+    "script": "python/verifier/task_verifier_server.py",
+    "args": []
+  },
+  {
+    "name": "FileService",
+    "port": 8781,
+    "venv": ".venv_stt_tts",
+    "script": "python/tools/file_service.py",
+    "args": []
+  },
+  {
+    "name": "Calendar",
+    "port": 8782,
+    "venv": ".venv_stt_tts",
+    "script": "python/tools/calendar_service.py",
+    "args": []
+  },
+  {
+    "name": "System",
+    "port": 8783,
+    "venv": ".venv_stt_tts",
+    "script": "python/tools/system_service.py",
+    "args": []
+  },
+  {
     "name": "Orchestrator",
     "port": 8765,
     "venv": ".venv",
     "script": "python/orchestrator/exo_server.py",
+    "args": []
+  },
+  {
+    "name": "HomeGraph",
+    "port": 8784,
+    "venv": ".venv_stt_tts",
+    "script": "python/domotique/homegraph_server.py",
+    "args": []
+  },
+  {
+    "name": "Domotic",
+    "port": 8785,
+    "venv": ".venv_stt_tts",
+    "script": "python/domotique/domotic_service.py",
+    "args": []
+  },
+  {
+    "name": "Camera",
+    "port": 8786,
+    "venv": ".venv_stt_tts",
+    "script": "python/domotique/camera_service.py",
+    "args": []
+  },
+  {
+    "name": "Samsung",
+    "port": 8787,
+    "venv": ".venv_stt_tts",
+    "script": "python/domotique/samsung_service.py",
+    "args": []
+  },
+  {
+    "name": "Voltalis",
+    "port": 8788,
+    "venv": ".venv_stt_tts",
+    "script": "python/domotique/voltalis_service.py",
+    "args": []
+  },
+  {
+    "name": "Echo",
+    "port": 8789,
+    "venv": ".venv_stt_tts",
+    "script": "python/domotique/echo_service.py",
+    "args": []
+  },
+  {
+    "name": "NetworkMap",
+    "port": 8790,
+    "venv": ".venv_stt_tts",
+    "script": "python/network/network_map_service.py",
     "args": []
   }
 ]
