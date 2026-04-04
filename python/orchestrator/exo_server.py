@@ -47,6 +47,9 @@ from pipeline_profiler import PipelineProfiler
 from pipeline_resilience import PipelineResilience
 from pipeline_v9 import PipelineV9Integration
 
+# v10 — Agent cognitif
+from agent_manager import AgentManager
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -75,9 +78,11 @@ def _load_env() -> None:
 class GUIServer:
     """WebSocket server that the React GUI connects to (ws://localhost:8765)."""
 
-    def __init__(self, sync: SyncManager, pipeline_mgr: "PipelineManager") -> None:
+    def __init__(self, sync: SyncManager, pipeline_mgr: "PipelineManager",
+                 agent_mgr: AgentManager | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
+        self._agent = agent_mgr
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -159,6 +164,28 @@ class GUIServer:
         elif msg_type == "pipeline_metrics":
             metrics = self._pipeline.metrics()
             await ws.send(json.dumps({"type": "pipeline_metrics", **metrics}))
+
+        # v10 — Agent actions
+        elif msg_type == "agent_process":
+            if self._agent:
+                text = msg.get("text", "")
+                result = await self._agent.process_intent(text)
+                await ws.send(json.dumps({"type": "agent_result", **result}))
+
+        elif msg_type == "agent_health":
+            if self._agent:
+                health = await self._agent.health_check()
+                await ws.send(json.dumps({"type": "agent_health", **health}))
+
+        elif msg_type == "agent_state":
+            if self._agent:
+                state = self._agent.get_state()
+                await ws.send(json.dumps({"type": "agent_state", **state}))
+
+        elif msg_type == "agent_metrics":
+            if self._agent:
+                metrics = self._agent.get_metrics()
+                await ws.send(json.dumps({"type": "agent_metrics", **metrics}))
 
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
@@ -253,8 +280,12 @@ async def main() -> None:
     # Pipeline Manager v8.2
     pipeline_mgr = PipelineManager()
 
+    # Agent Manager v10
+    agent_mgr = AgentManager()
+    logger.info("AgentManager v10 initialized")
+
     # GUI server
-    gui = GUIServer(sync, pipeline_mgr)
+    gui = GUIServer(sync, pipeline_mgr, agent_mgr)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server

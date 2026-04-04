@@ -34,7 +34,7 @@
 
 - `tests/performance/test_performance.py`
 
-### python/ (33 fichier(s))
+### python/ (35 fichier(s))
 
 - `tests/python/test_actions.py`
 - `tests/python/test_areas.py`
@@ -49,9 +49,11 @@
 - `tests/python/test_home_bridge.py`
 - `tests/python/test_knowledge_server.py`
 - `tests/python/test_memory_server.py`
+- `tests/python/test_memory_v2.py`
 - `tests/python/test_memory_v8.py`
 - `tests/python/test_news_server.py`
 - `tests/python/test_nlu_server.py`
+- `tests/python/test_pipeline_v82.py`
 - `tests/python/test_stt_server.py`
 - `tests/python/test_sync.py`
 - `tests/python/test_system_service.py`
@@ -70,4 +72,4 @@
 - `tests/python/test_vad_server.py`
 - `tests/python/test_websearch_server.py`
 
-**Total : 42 fichier(s) de test**
+**Total : 44 fichier(s) de test**

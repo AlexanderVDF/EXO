@@ -1,35 +1,27 @@
 #!/usr/bin/env python3
 """
-EXO v8 — ContextEngine v2 Server (WebSocket)
+EXO v10 — ContextEngine v3 Server (WebSocket)
 Port 8777 — Conscience contextuelle dynamique enrichie
 
-v8 enrichments:
-  - Location awareness (configurable, no GPS)
-  - Implicit preference detection from interactions
-  - Task-aware context (current plan state)
-  - Memory × context relevance scoring with embeddings
-  - Conversation topic tracking
-  - Energy/mood estimation from interaction patterns
+v10 enrichments (ContextEngine v3):
+  - All v8 features (location, preferences, topic, energy, plan tracking)
+  - build_agent_context(intent) — full agent context for cognitive processing
+  - inject_context(prompt) — inject context into LLM prompt
+  - Agent state awareness (current cognitive state)
+  - Task history integration
 
 Protocol WebSocket :
   → JSON {"action":"get_context"}
-  ← JSON {"ok":true,"data":{"temporal":{...},"activity":{...},"modules":{...},
-           "location":{...},"conversation_topic":"...","energy_level":"...",...}}
+  ← JSON {"ok":true,"data":{"temporal":{...},"activity":{...},...}}
 
-  → JSON {"action":"update_context","params":{"event":"...","data":{...}}}
-  ← JSON {"ok":true}
+  → JSON {"action":"build_agent_context","params":{"intent":"..."}}
+  ← JSON {"ok":true,"data":{"temporal":{...},"tasks":{...},"preferences":{...},...}}
 
-  → JSON {"action":"score_relevance","params":{"memory_text":"...","top_k":5}}
+  → JSON {"action":"inject_context","params":{"prompt":"..."}}
+  ← JSON {"ok":true,"data":{"enriched_prompt":"..."}}
+
+  → JSON {"action":"score_relevance","params":{"memory_text":"..."}}
   ← JSON {"ok":true,"data":{"score":0.72}}
-
-  → JSON {"action":"detect_preferences","params":{"text":"..."}}
-  ← JSON {"ok":true,"data":{"detected":[...]}}
-
-  → JSON {"action":"set_location","params":{"city":"Paris","country":"FR"}}
-  ← JSON {"ok":true}
-
-  → JSON {"action":"get_topic"}
-  ← JSON {"ok":true,"data":{"topic":"météo","confidence":0.8}}
 """
 
 import asyncio
@@ -118,7 +110,7 @@ def get_probable_activity(hour: int) -> str:
 # ─────────────────────────────────────────────────────
 
 class ContextEngine:
-    """Stateful context engine tracking user activity and environment (v8)."""
+    """Stateful context engine tracking user activity and environment (v10/v3)."""
 
     def __init__(self) -> None:
         self._events: list[dict] = []
@@ -133,6 +125,8 @@ class ContextEngine:
         self._topic_confidence: float = 0.0
         self._implicit_preferences: dict[str, float] = {}  # category → score
         self._current_plan: dict | None = None
+        self._agent_state: str = "idle"
+        self._task_history: list[dict] = []
 
     def get_context(self) -> dict:
         """Build complete context snapshot (v8: enriched)."""
@@ -333,6 +327,87 @@ class ContextEngine:
 
         return min(1.0, score)
 
+    # ── v10: Agent Context Builder ─────────────────
+
+    def build_agent_context(self, intent: str = "") -> dict:
+        """Build a rich agent context combining all available information.
+
+        Used by the AgentManager before sending to LLM or planning.
+        Combines temporal, tasks, preferences, environment, history, and intent.
+        """
+        base = self.get_context()
+
+        # Active tasks summary
+        tasks_summary = {
+            "active": base.get("active_tasks", []),
+            "current_plan": base.get("current_plan"),
+            "recent_history": self._task_history[-5:] if self._task_history else [],
+        }
+
+        # Intent analysis
+        intent_ctx = {}
+        if intent:
+            intent_lower = intent.lower()
+            # Detect relevant preferences for this intent
+            relevant_prefs = {}
+            for cat, score in self._implicit_preferences.items():
+                for kw in PREFERENCE_PATTERNS.get(cat, []):
+                    if kw in intent_lower:
+                        relevant_prefs[cat] = score
+                        break
+            intent_ctx = {
+                "raw": intent,
+                "relevant_preferences": relevant_prefs,
+                "topic_match": self._conversation_topic if self._conversation_topic and self._conversation_topic in intent_lower else "",
+            }
+
+        return {
+            "temporal": base["temporal"],
+            "activity": base["activity"],
+            "location": base["location"],
+            "tasks": tasks_summary,
+            "preferences": base["preferences"],
+            "implicit_preferences": base["implicit_preferences"],
+            "energy_level": base["energy_level"],
+            "conversation_topic": base["conversation_topic"],
+            "agent_state": self._agent_state,
+            "intent": intent_ctx,
+            "modules": base["modules"],
+        }
+
+    def inject_context(self, prompt: str) -> str:
+        """Inject contextual information into an LLM prompt.
+
+        Prepends a concise context block to the prompt so the LLM
+        is aware of temporal, environmental, and user state.
+        """
+        ctx = self.get_context()
+        temporal = ctx["temporal"]
+        parts = [
+            f"[Contexte: {temporal['day_name']} {temporal['date']} {temporal['time']}",
+            f"Saison: {temporal['season']}",
+        ]
+        if ctx.get("location", {}).get("city"):
+            parts.append(f"Lieu: {ctx['location']['city']}")
+        if ctx.get("conversation_topic"):
+            parts.append(f"Sujet: {ctx['conversation_topic']}")
+        if ctx.get("energy_level"):
+            parts.append(f"\u00c9nergie: {ctx['energy_level']}")
+        if ctx.get("current_plan"):
+            plan_goal = ctx["current_plan"].get("goal", "")
+            parts.append(f"Plan actif: {plan_goal}")
+
+        context_line = " | ".join(parts) + "]"
+        return f"{context_line}\n\n{prompt}"
+
+    def set_agent_state(self, state: str) -> None:
+        self._agent_state = state
+
+    def add_task_history(self, task: dict) -> None:
+        self._task_history.append(task)
+        if len(self._task_history) > 100:
+            self._task_history = self._task_history[-100:]
+
     def _seconds_since_last_interaction(self) -> float:
         if not self._interactions:
             return 9999.0
@@ -440,6 +515,27 @@ async def handle_client(ws, engine: ContextEngine) -> None:
                     engine.set_current_plan(params.get("plan"))
                     await ws.send(json.dumps({"ok": True}))
 
+                # ── v10: Agent context actions ─────────
+
+                elif action == "build_agent_context":
+                    ctx = engine.build_agent_context(params.get("intent", ""))
+                    await ws.send(json.dumps({"ok": True, "data": ctx}))
+
+                elif action == "inject_context":
+                    enriched = engine.inject_context(params.get("prompt", ""))
+                    await ws.send(json.dumps({
+                        "ok": True,
+                        "data": {"enriched_prompt": enriched},
+                    }))
+
+                elif action == "set_agent_state":
+                    engine.set_agent_state(params.get("state", "idle"))
+                    await ws.send(json.dumps({"ok": True}))
+
+                elif action == "add_task_history":
+                    engine.add_task_history(params.get("task", {}))
+                    await ws.send(json.dumps({"ok": True}))
+
                 else:
                     await ws.send(json.dumps({
                         "ok": False,
@@ -465,7 +561,7 @@ async def handle_client(ws, engine: ContextEngine) -> None:
 
 async def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="EXO v7 Context Engine Server")
+    parser = argparse.ArgumentParser(description="EXO v10 Context Engine v3 Server")
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()

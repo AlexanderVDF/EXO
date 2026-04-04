@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """
-EXO v4.2 — NLU Local Server (WebSocket)
-Port 8772 — Compréhension locale des commandes simples
+EXO v10 — IntentEngine v3 / NLU Server (WebSocket)
+Port 8772 — Compréhension avancée des intentions
 
-Modèles supportés (par ordre de recommandation) :
-  1. Qwen2.5-1.5B-Instruct (excellent en français, léger)
-  2. Phi-3-mini-4k-instruct (rapide, multi-langue)
-  3. Fallback regex-based (toujours disponible)
-
-Pipeline :
-  transcript → NLU → { intent, entities, confidence }
-  Si confidence > seuil → exécution directe (pas de Claude)
-  Sinon → passage à Claude pour requêtes complexes
+IntentEngine v3 :
+  - Classification fine des intentions (7 types)
+  - Extraction des objectifs, contraintes, préférences, dépendances
+  - Détection des intentions implicites
+  - Fallback regex (toujours disponible)
 
 Protocol WebSocket :
-  → JSON {"action":"classify","text":"allume la lumière du salon"}
-  ← JSON {"type":"nlu_result","intent":"home_control","entities":{"device":"lumière","room":"salon","action":"on"},"confidence":0.92,"use_claude":false}
+  → {"action":"classify","text":"..."}           ← classification simple
+  → {"action":"parse_intent","text":"..."}        ← intent complète v3
+  → {"action":"extract_goals","text":"..."}       ← objectifs
+  → {"action":"extract_constraints","text":"..."}  ← contraintes
+  → {"action":"extract_preferences","text":"..."}  ← préférences
 """
 
 import asyncio
@@ -24,8 +23,10 @@ import logging
 import re
 import sys
 import argparse
+from dataclasses import dataclass, field, asdict
+from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 try:
     import websockets
@@ -191,6 +192,195 @@ class RegexNLU:
 
 
 # ─────────────────────────────────────────────────────
+#  IntentEngine v3 — Classification avancée
+# ─────────────────────────────────────────────────────
+
+class IntentType(str, Enum):
+    SIMPLE = "action_simple"
+    COMPLEX = "action_complex"
+    SCENARIO = "scenario"
+    MULTI_STEP = "multi_step"
+    CONDITIONAL = "conditional"
+    PARALLEL = "parallel"
+    RECURRING = "recurring"
+
+
+@dataclass
+class Intent:
+    """Résultat d'analyse d'intention complète."""
+    text: str
+    intent: str = "unknown"
+    intent_type: str = IntentType.SIMPLE.value
+    confidence: float = 0.0
+    entities: dict = field(default_factory=dict)
+    goals: list = field(default_factory=list)
+    constraints: list = field(default_factory=list)
+    preferences: list = field(default_factory=list)
+    dependencies: list = field(default_factory=list)
+    implicit_intents: list = field(default_factory=list)
+    use_claude: bool = True
+    engine: str = "regex"
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+# Patterns pour détection du type d'intention
+_MULTI_STEP_PATTERNS = [
+    re.compile(r"(d'abord|ensuite|puis|après|enfin|finalement)", re.I),
+    re.compile(r"(étape|step)\s*\d+", re.I),
+]
+_CONDITIONAL_PATTERNS = [
+    re.compile(r"(si|quand|lorsque|à condition|seulement si|dans le cas)", re.I),
+]
+_PARALLEL_PATTERNS = [
+    re.compile(r"(en même temps|simultanément|pendant que|et aussi|en parallèle)", re.I),
+]
+_RECURRING_PATTERNS = [
+    re.compile(r"(tous les|chaque|chaque jour|toutes les|hebdomadaire|quotidien)", re.I),
+    re.compile(r"(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)s?\b", re.I),
+]
+_SCENARIO_PATTERNS = [
+    re.compile(r"(scénario|routine|automatisation|programme|séquence)", re.I),
+    re.compile(r"(mode|ambiance)\s+(cinéma|nuit|matin|soirée|travail|détente)", re.I),
+]
+_COMPLEX_PATTERNS = [
+    re.compile(r"(recherche|analyse|compare|résume|explique|planifie)", re.I),
+    re.compile(r"(et|puis)\s+(aussi|ensuite|après)", re.I),
+]
+
+# Patterns pour extraction des contraintes
+_CONSTRAINT_PATTERNS = [
+    (re.compile(r"(avant|d'ici|pas plus tard que)\s+(\d{1,2}[h:]\d{0,2}|\d{1,2}\s*heures?)", re.I), "temporal"),
+    (re.compile(r"(maximum|max|pas plus de|moins de)\s+(\d+)", re.I), "limit"),
+    (re.compile(r"(sans|sauf|excepté|hormis)\s+(.{3,30}?)(?:\.|,|$)", re.I), "exclusion"),
+    (re.compile(r"(uniquement|seulement|que)\s+(.{3,30}?)(?:\.|,|$)", re.I), "restriction"),
+]
+
+# Patterns pour extraction des préférences
+_PREFERENCE_PATTERNS = [
+    (re.compile(r"(je préfère|j'aime mieux|plutôt|de préférence)\s+(.{3,40}?)(?:\.|,|$)", re.I), "preference"),
+    (re.compile(r"(en français|en anglais|en [a-zé]+)\b", re.I), "language"),
+    (re.compile(r"(rapide|rapidement|vite|lentement|doucement)", re.I), "speed"),
+]
+
+# Patterns pour extraction des objectifs
+_GOAL_PATTERNS = [
+    (re.compile(r"(je veux|je voudrais|j'aimerais|peux-tu|pourr(?:ais|iez)-(?:tu|vous))\s+(.{5,80}?)(?:\.|!|\?|$)", re.I), "explicit_goal"),
+    (re.compile(r"(fais|fait|lance|démarre|commence|exécute)\s+(.{3,50}?)(?:\.|,|$)", re.I), "imperative_goal"),
+]
+
+# Intentions implicites
+_IMPLICIT_INTENT_MAP = {
+    "weather": ["time"],  # météo → souvent aussi l'heure
+    "home_control": [],
+    "music": [],
+    "reminder": ["time"],
+    "timer": [],
+    "greeting": [],
+    "goodbye": [],
+}
+
+
+class IntentEngine:
+    """IntentEngine v3 — Moteur d'intention avancé."""
+
+    def __init__(self, nlu: RegexNLU):
+        self._nlu = nlu
+
+    def parse_intent(self, text: str) -> Intent:
+        """Analyse complète de l'intention."""
+        base = self._nlu.classify(text)
+        intent = Intent(
+            text=text,
+            intent=base["intent"],
+            confidence=base["confidence"],
+            entities=base["entities"],
+            use_claude=base["use_claude"],
+            engine=base["engine"],
+        )
+        intent.intent_type = self._detect_type(text)
+        intent.goals = self.extract_goals(text)
+        intent.constraints = self.extract_constraints(text)
+        intent.preferences = self.extract_preferences(text)
+        intent.dependencies = self._extract_dependencies(text)
+        intent.implicit_intents = self._detect_implicit(intent.intent, text)
+        # Action complexe si multi-step / conditionnel / parallèle
+        if intent.intent_type != IntentType.SIMPLE.value:
+            intent.use_claude = True
+        return intent
+
+    def _detect_type(self, text: str) -> str:
+        """Détecte le type d'intention."""
+        for pat in _SCENARIO_PATTERNS:
+            if pat.search(text):
+                return IntentType.SCENARIO.value
+        for pat in _MULTI_STEP_PATTERNS:
+            if pat.search(text):
+                return IntentType.MULTI_STEP.value
+        for pat in _CONDITIONAL_PATTERNS:
+            if pat.search(text):
+                return IntentType.CONDITIONAL.value
+        for pat in _PARALLEL_PATTERNS:
+            if pat.search(text):
+                return IntentType.PARALLEL.value
+        for pat in _RECURRING_PATTERNS:
+            if pat.search(text):
+                return IntentType.RECURRING.value
+        for pat in _COMPLEX_PATTERNS:
+            if pat.search(text):
+                return IntentType.COMPLEX.value
+        return IntentType.SIMPLE.value
+
+    def extract_goals(self, text: str) -> list[dict]:
+        """Extrait les objectifs explicites et implicites."""
+        goals = []
+        for pat, gtype in _GOAL_PATTERNS:
+            m = pat.search(text)
+            if m:
+                goals.append({"type": gtype, "text": m.group(2).strip()})
+        if not goals and len(text) > 3:
+            goals.append({"type": "inferred", "text": text.strip()})
+        return goals
+
+    def extract_constraints(self, text: str) -> list[dict]:
+        """Extrait les contraintes."""
+        constraints = []
+        for pat, ctype in _CONSTRAINT_PATTERNS:
+            m = pat.search(text)
+            if m:
+                constraints.append({"type": ctype, "value": m.group(2).strip()})
+        return constraints
+
+    def extract_preferences(self, text: str) -> list[dict]:
+        """Extrait les préférences utilisateur."""
+        prefs = []
+        for pat, ptype in _PREFERENCE_PATTERNS:
+            m = pat.search(text)
+            if m:
+                val = m.group(2).strip() if m.lastindex >= 2 else m.group(1).strip()
+                prefs.append({"type": ptype, "value": val})
+        return prefs
+
+    def _extract_dependencies(self, text: str) -> list[dict]:
+        """Extrait les dépendances inter-actions."""
+        deps = []
+        dep_pats = [
+            (re.compile(r"(après avoir|une fois que|quand)\s+(.{5,50}?)(?:,|\.|$)", re.I), "sequential"),
+            (re.compile(r"(il faut d'abord|avant de|avant que)\s+(.{5,50}?)(?:,|\.|$)", re.I), "prerequisite"),
+        ]
+        for pat, dtype in dep_pats:
+            m = pat.search(text)
+            if m:
+                deps.append({"type": dtype, "condition": m.group(2).strip()})
+        return deps
+
+    def _detect_implicit(self, intent: str, text: str) -> list[str]:
+        """Détecte les intentions implicites."""
+        return list(_IMPLICIT_INTENT_MAP.get(intent, []))
+
+
+# ─────────────────────────────────────────────────────
 #  Transformer-based NLU (optional, better accuracy)
 # ─────────────────────────────────────────────────────
 
@@ -220,6 +410,7 @@ def _try_load_transformer(model_name: str):
 # ─────────────────────────────────────────────────────
 
 regex_nlu = RegexNLU()
+intent_engine = IntentEngine(regex_nlu)
 CONFIDENCE_THRESHOLD = 0.65  # above this → direct action (skip Claude)
 
 
@@ -256,6 +447,40 @@ async def handle_client(ws):
                 result = regex_nlu.classify(text)
                 result["type"] = "nlu_result"
                 await ws.send(json.dumps(result, ensure_ascii=False))
+
+            elif action == "parse_intent":
+                text = msg.get("text", "").strip()
+                if not text:
+                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    continue
+                intent = intent_engine.parse_intent(text)
+                resp = intent.to_dict()
+                resp["type"] = "intent_result"
+                await ws.send(json.dumps(resp, ensure_ascii=False))
+
+            elif action == "extract_goals":
+                text = msg.get("text", "").strip()
+                if not text:
+                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    continue
+                goals = intent_engine.extract_goals(text)
+                await ws.send(json.dumps({"type": "goals", "goals": goals}, ensure_ascii=False))
+
+            elif action == "extract_constraints":
+                text = msg.get("text", "").strip()
+                if not text:
+                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    continue
+                constraints = intent_engine.extract_constraints(text)
+                await ws.send(json.dumps({"type": "constraints", "constraints": constraints}, ensure_ascii=False))
+
+            elif action == "extract_preferences":
+                text = msg.get("text", "").strip()
+                if not text:
+                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    continue
+                prefs = intent_engine.extract_preferences(text)
+                await ws.send(json.dumps({"type": "preferences", "preferences": prefs}, ensure_ascii=False))
 
             elif action == "list_intents":
                 intents = list(INTENTS.keys())

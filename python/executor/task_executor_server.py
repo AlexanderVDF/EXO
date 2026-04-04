@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-EXO v8 — TaskExecutor Server (WebSocket)
-Port 8779 — Exécution séquentielle/parallèle des plans
+EXO v10 — TaskExecutor Server (WebSocket)
+Port 8779 — Exécution séquentielle/parallèle des plans avec pause/resume
 
 Reçoit un plan du TaskPlanner et orchestre l'exécution des étapes
-via les microservices existants. Gère erreurs, retries et replanning.
+via les microservices existants. Gère erreurs, retries, pause/resume et replanning.
 
 Protocol WebSocket :
   → {"action":"execute_plan","params":{"plan_id":"...","plan":{...}}}
@@ -12,6 +12,12 @@ Protocol WebSocket :
   ← {"type":"step_started","plan_id":"...","step_index":0}
   ← {"type":"step_completed","plan_id":"...","step_index":0,"result":{...}}
   ← {"type":"plan_completed","plan_id":"...","status":"completed","results":[...]}
+
+  → {"action":"pause","params":{"plan_id":"..."}}
+  ← {"ok":true}
+
+  → {"action":"resume","params":{"plan_id":"..."}}
+  ← {"ok":true}
 
   → {"action":"abort","params":{"plan_id":"..."}}
   ← {"ok":true}
@@ -69,6 +75,9 @@ class ExecutionState:
         self.errors: dict[int, str] = {}
         self.started_at = time.time()
         self.aborted = False
+        self.paused = False
+        self._pause_event = asyncio.Event()
+        self._pause_event.set()  # not paused initially
 
     def to_dict(self) -> dict:
         steps = self.plan.get("steps", [])
@@ -113,6 +122,8 @@ class TaskExecutor:
             # Determine final status
             if state.aborted:
                 state.status = "aborted"
+            elif state.paused:
+                state.status = "paused"
             elif state.errors:
                 state.status = "partial" if state.results else "failed"
             else:
@@ -140,6 +151,10 @@ class TaskExecutor:
         for step in steps:
             if state.aborted:
                 break
+            # Wait if paused
+            await state._pause_event.wait()
+            if state.aborted:
+                break
             if step.get("is_composite"):
                 continue
             if step.get("status") in ("completed", "skipped"):
@@ -163,6 +178,10 @@ class TaskExecutor:
                      and s.get("status") not in ("completed", "skipped")]
 
         while remaining and not state.aborted:
+            # Wait if paused
+            await state._pause_event.wait()
+            if state.aborted:
+                break
             # Find steps with all dependencies satisfied
             batch = []
             for step in remaining:
@@ -286,6 +305,27 @@ class TaskExecutor:
         if not state:
             return False
         state.aborted = True
+        state._pause_event.set()  # unblock if paused
+        return True
+
+    def pause(self, plan_id: str) -> bool:
+        state = self._executions.get(plan_id)
+        if not state or state.status != "running":
+            return False
+        state.paused = True
+        state.status = "paused"
+        state._pause_event.clear()
+        log.info("Plan %s paused", plan_id)
+        return True
+
+    def resume(self, plan_id: str) -> bool:
+        state = self._executions.get(plan_id)
+        if not state or not state.paused:
+            return False
+        state.paused = False
+        state.status = "running"
+        state._pause_event.set()
+        log.info("Plan %s resumed", plan_id)
         return True
 
     def get_status(self, plan_id: str) -> dict | None:
@@ -299,7 +339,7 @@ class TaskExecutor:
 
 async def handle_client(ws, executor: TaskExecutor) -> None:
     log.info("Executor client connected")
-    await ws.send(json.dumps({"type": "ready", "service": "task_executor", "version": "v8"}))
+    await ws.send(json.dumps({"type": "ready", "service": "task_executor", "version": "v10"}))
 
     try:
         async for raw in ws:
@@ -335,6 +375,16 @@ async def handle_client(ws, executor: TaskExecutor) -> None:
                     ok = executor.abort(plan_id)
                     await ws.send(json.dumps({"ok": ok}))
 
+                elif action == "pause":
+                    plan_id = params.get("plan_id", "")
+                    ok = executor.pause(plan_id)
+                    await ws.send(json.dumps({"ok": ok}))
+
+                elif action == "resume":
+                    plan_id = params.get("plan_id", "")
+                    ok = executor.resume(plan_id)
+                    await ws.send(json.dumps({"ok": ok}))
+
                 elif action == "status":
                     plan_id = params.get("plan_id", "")
                     status = executor.get_status(plan_id)
@@ -365,7 +415,7 @@ async def handle_client(ws, executor: TaskExecutor) -> None:
 
 async def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="EXO v8 Task Executor Server")
+    parser = argparse.ArgumentParser(description="EXO v10 Task Executor Server")
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()

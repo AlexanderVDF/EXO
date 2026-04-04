@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-EXO v8 — TaskPlanner Server (WebSocket) — HTN Decomposition
-Port 8778 — Agent multi-étapes avec planification hiérarchique
+EXO v10 — TaskPlanner Server (WebSocket) — HTN Decomposition
+Port 8778 — Planification hiérarchique avec expected outcomes
 
 Décompose un objectif complexe en plan multi-étapes via HTN
 (Hierarchical Task Network) avec DAG de dépendances et optimisation.
@@ -105,6 +105,9 @@ class PlanStep:
     sub_steps: list[int] = field(default_factory=list)  # child step indices (HTN)
     parent_step: int | None = None  # parent step index (HTN)
     is_composite: bool = False  # True if this is a composite HTN task
+    # v10 fields
+    expected_outcome: str = ""  # what success looks like
+    conditions: list[str] = field(default_factory=list)  # preconditions
 
     def to_dict(self) -> dict:
         d = {
@@ -129,6 +132,10 @@ class PlanStep:
             d["sub_steps"] = self.sub_steps
         if self.parent_step is not None:
             d["parent_step"] = self.parent_step
+        if self.expected_outcome:
+            d["expected_outcome"] = self.expected_outcome
+        if self.conditions:
+            d["conditions"] = self.conditions
         return d
 
 
@@ -248,6 +255,12 @@ class TaskPlanner:
                 priority=s.get("priority", 0),
             )
             plan_steps.append(step)
+
+        # v10: enrich steps with expected_outcome and conditions
+        for i, s in enumerate(steps[:MAX_STEPS]):
+            if i < len(plan_steps):
+                plan_steps[i].expected_outcome = s.get("expected_outcome", "")
+                plan_steps[i].conditions = s.get("conditions", [])
 
         # Auto-detect strategy from DAG if adaptive
         if strategy == ExecutionStrategy.ADAPTIVE:
@@ -477,6 +490,29 @@ class TaskPlanner:
             return ExecutionStrategy.SEQUENTIAL
         return ExecutionStrategy.PARALLEL
 
+    def refine(self, plan_id: str, optimizations: dict | None = None) -> bool:
+        """v10: Affine un plan existant (reorder, remove redundant, add expected_outcomes)."""
+        plan = self._plans.get(plan_id)
+        if not plan or plan.status != PlanStatus.PENDING:
+            return False
+
+        if optimizations:
+            # Update expected_outcomes
+            outcomes = optimizations.get("expected_outcomes", {})
+            for idx_str, outcome in outcomes.items():
+                idx = int(idx_str)
+                if idx < len(plan.steps):
+                    plan.steps[idx].expected_outcome = outcome
+            # Update priorities
+            priorities = optimizations.get("priorities", {})
+            for idx_str, prio in priorities.items():
+                idx = int(idx_str)
+                if idx < len(plan.steps):
+                    plan.steps[idx].priority = prio
+
+        log.info("Plan %s refined", plan_id)
+        return True
+
     def _evict_old(self) -> None:
         if len(self._plans) <= MAX_PLANS:
             return
@@ -497,7 +533,7 @@ class TaskPlanner:
 
 async def handle_client(ws, planner: TaskPlanner) -> None:
     log.info("Planner client connected")
-    await ws.send(json.dumps({"type": "ready", "service": "task_planner", "version": "v8"}))
+    await ws.send(json.dumps({"type": "ready", "service": "task_planner", "version": "v10"}))
 
     try:
         async for raw in ws:
@@ -633,6 +669,15 @@ async def handle_client(ws, planner: TaskPlanner) -> None:
                     ok = planner.cancel_plan(params.get("plan_id", ""))
                     await ws.send(json.dumps({"ok": ok}))
 
+                elif action == "refine":
+                    plan_id = params.get("plan_id", "")
+                    optimizations = params.get("optimizations", {})
+                    refined = planner.refine(plan_id, optimizations)
+                    if refined:
+                        await ws.send(json.dumps({"ok": True, "data": refined.to_dict()}))
+                    else:
+                        await ws.send(json.dumps({"ok": False, "error": "Plan not found"}))
+
                 else:
                     await ws.send(json.dumps({
                         "ok": False,
@@ -655,7 +700,7 @@ async def handle_client(ws, planner: TaskPlanner) -> None:
 
 async def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="EXO v8 Task Planner Server (HTN)")
+    parser = argparse.ArgumentParser(description="EXO v10 Task Planner Server (HTN)")
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()

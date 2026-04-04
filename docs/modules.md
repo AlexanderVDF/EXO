@@ -7,14 +7,14 @@
 | Module | Dossier | Fichiers | Point d'entrée |
 |--------|---------|----------|----------------|
 | context | `python/context` | 2 | `` |
-| domotique | `python/domotique` | 8 | `python/domotique/homegraph_server.py` |
+| domotique | `python/domotique` | 12 | `python/domotique/homegraph_server.py` |
 | executor | `python/executor` | 2 | `python/executor/task_executor_server.py` |
 | knowledge | `python/knowledge` | 2 | `python/knowledge/knowledge_server.py` |
-| memory | `python/memory` | 2 | `python/memory/memory_server.py` |
-| network | `python/network` | 2 | `` |
+| memory | `python/memory` | 9 | `python/memory/memory_server.py` |
+| network | `python/network` | 10 | `` |
 | news | `python/news` | 2 | `python/news/news_server.py` |
 | nlu | `python/nlu` | 2 | `python/nlu/nlu_server.py` |
-| orchestrator | `python/orchestrator` | 8 | `python/orchestrator/exo_server.py` |
+| orchestrator | `python/orchestrator` | 16 | `python/orchestrator/exo_server.py` |
 | planner | `python/planner` | 2 | `python/planner/task_planner_server.py` |
 | shared | `python/shared` | 12 | `` |
 | stt | `python/stt` | 3 | `python/stt/stt_server.py` |
