@@ -1,6 +1,6 @@
 # Pipeline EXO — Événements
 
-> Auto-généré par `auto_maintain.py` — 2026-04-01
+> Auto-généré par `auto_maintain.py` — 2026-04-04
 
 ## Flux audio
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — EchoService (WebSocket) — Port 8789
+EXO Domotique v2 — EchoService (WebSocket) — Port 8789
 
 Connecteur pour enceintes Amazon Echo (Alexa).
 Utilise l'API locale ou le SDK Alexa Voice Service.
+v2: capabilities, metadata.
 """
 
 from __future__ import annotations
@@ -144,10 +145,22 @@ class EchoService:
             return await self.set_state(device_id, {"mute": False})
         return {"ok": False, "error": f"Unknown command: {command}"}
 
+    def capabilities(self) -> list[str]:
+        return ["list_devices", "get_state", "set_state", "send_tts",
+                "set_volume", "apply_command", "capabilities", "metadata"]
+
+    def metadata(self) -> dict:
+        return {
+            "name": "echo",
+            "version": "v2",
+            "backend": "alexa_local",
+            "devices_count": len(self._devices),
+        }
+
 
 async def handle_client(ws, svc: EchoService) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "echo", "version": "v1"
+        "type": "ready", "service": "echo", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -194,6 +207,12 @@ async def handle_client(ws, svc: EchoService) -> None:
                     **params.get("params", {}),
                 )
                 await ws.send(json.dumps(result))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": svc.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": svc.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown: {action}"}))

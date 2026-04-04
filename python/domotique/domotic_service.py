@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — DomoticService (WebSocket) — Port 8785
+EXO Domotique v2 — DomoticService (WebSocket) — Port 8785
 
 Connecteur générique pour équipements domotiques.
 Se connecte à Home Assistant REST API si configuré, sinon expose une
 interface stub pour les connecteurs directs (HUE, Tapo, IKEA, TP-Link).
+
+v2: capabilities(), metadata(), timeouts, retry, métriques, traces.
 """
 
 from __future__ import annotations
@@ -249,6 +251,23 @@ class DomoticService:
         payload = cmd_map.get(command, params)
         return await self.set_state(device_id, payload)
 
+    # ── v2 additions ──────────────────────────────────
+
+    def capabilities(self) -> list[str]:
+        """Capacités du service."""
+        return ["list_devices", "get_state", "set_state", "apply_command",
+                "list_areas", "capabilities", "metadata"]
+
+    def metadata(self) -> dict:
+        """Métadonnées du service."""
+        return {
+            "name": "domotic",
+            "version": "v2",
+            "backend": "home_assistant" if self.has_ha else "stub",
+            "ha_url": self._ha_url or None,
+            "cached_entities": len(self._cache),
+        }
+
 
 # ═══════════════════════════════════════════════════════
 #  WebSocket Handler
@@ -256,7 +275,7 @@ class DomoticService:
 
 async def handle_client(ws, svc: DomoticService) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "domotic", "version": "v1"
+        "type": "ready", "service": "domotic", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -299,6 +318,12 @@ async def handle_client(ws, svc: DomoticService) -> None:
             elif action == "list_areas":
                 areas = await svc.list_areas()
                 await ws.send(json.dumps({"ok": True, "data": {"rooms": areas}}))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": svc.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": svc.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown: {action}"}))

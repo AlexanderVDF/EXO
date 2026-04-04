@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — SamsungService (WebSocket) — Port 8787
+EXO Domotique v2 — SamsungService (WebSocket) — Port 8787
 
 Connecteur pour appareils Samsung (TV, soundbar).
 Utilise l'API locale Samsung SmartThings ou Wake-on-LAN.
+v2: capabilities, metadata, events.
 """
 
 from __future__ import annotations
@@ -196,10 +197,23 @@ class SamsungService:
         payload = cmd_map.get(command, params)
         return await self.set_state(device_id, payload)
 
+    def capabilities(self) -> list[str]:
+        return ["list_devices", "get_state", "set_state", "apply_command",
+                "capabilities", "metadata"]
+
+    def metadata(self) -> dict:
+        return {
+            "name": "samsung",
+            "version": "v2",
+            "backend": "smartthings",
+            "configured": self.configured,
+            "devices_count": len(self._devices),
+        }
+
 
 async def handle_client(ws, svc: SamsungService) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "samsung", "version": "v1"
+        "type": "ready", "service": "samsung", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -238,6 +252,12 @@ async def handle_client(ws, svc: SamsungService) -> None:
                     **params.get("params", {}),
                 )
                 await ws.send(json.dumps(result))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": svc.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": svc.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown: {action}"}))

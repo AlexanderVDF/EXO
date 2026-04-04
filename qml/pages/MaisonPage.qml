@@ -5,8 +5,8 @@ import "../theme"
 import "../components"
 
 // ═══════════════════════════════════════════════════════
-//  MaisonPage — Vue Maison Connectée (Domotique v1)
-//  Affiche les pièces, appareils et commandes rapides
+//  MaisonPage — Vue Maison Connectée (Domotique v2)
+//  Affiche les pièces, appareils, commandes rapides et scénarios
 // ═══════════════════════════════════════════════════════
 
 Item {
@@ -15,10 +15,12 @@ Item {
     // ── Données injectées depuis MainWindow ──
     property var rooms: []          // [{id, name, device_ids}]
     property var devices: []        // [{id_exo, name, type, room_id, state, online, source}]
+    property var scenarios: []      // [{name, description, builtin}]
     property string selectedRoom: "" // filtre pièce active ("" = toutes)
 
     signal deviceCommand(string deviceId, string command, var params)
     signal refreshRequested()
+    signal scenarioRequested(string name)
 
     ColumnLayout {
         anchors.fill: parent
@@ -272,6 +274,71 @@ Item {
                 text: root.rooms.length + " pièces"
                 font.pixelSize: Theme.fontSM
                 color: Theme.textMuted
+            }
+        }
+
+        // ── v2: Scénarios rapides ──
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: scenariosCol.implicitHeight + Theme.spacing12 * 2
+            radius: Theme.radius12
+            color: Theme.bgElevated
+            border.color: Theme.border
+            visible: root.scenarios.length > 0
+
+            ColumnLayout {
+                id: scenariosCol
+                anchors.fill: parent
+                anchors.margins: Theme.spacing12
+                spacing: Theme.spacing8
+
+                Text {
+                    text: "🎬  Scénarios"
+                    font.pixelSize: Theme.fontMD
+                    font.weight: Font.DemiBold
+                    color: Theme.textPrimary
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: Theme.spacing8
+
+                    Repeater {
+                        model: root.scenarios
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: scenarioLabel.implicitWidth + 24
+                            height: 34
+                            radius: Theme.radius8
+                            color: scenarioMa.containsMouse ? Theme.accent : Theme.bgActive
+                            border.color: Theme.border
+
+                            Text {
+                                id: scenarioLabel
+                                anchors.centerIn: parent
+                                text: {
+                                    var icons = {
+                                        "cinema": "🎬", "nuit": "🌙", "absence": "🔒",
+                                        "reveil": "☀️", "securite": "🛡️", "eco": "🌿"
+                                    };
+                                    return (icons[modelData.name] || "▶") + "  " + modelData.name;
+                                }
+                                font.pixelSize: Theme.fontSM
+                                color: scenarioMa.containsMouse ? "#FFF" : Theme.textSecondary
+                            }
+                            MouseArea {
+                                id: scenarioMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.scenarioRequested(modelData.name)
+                            }
+
+                            ToolTip.visible: scenarioMa.containsMouse
+                            ToolTip.text: modelData.description || modelData.name
+                        }
+                    }
+                }
             }
         }
     }

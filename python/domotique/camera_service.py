@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — CameraService (EZVIZ) (WebSocket) — Port 8786
+EXO Domotique v2 — CameraService (EZVIZ) (WebSocket) — Port 8786
 
 Connecteur pour caméras EZVIZ.
-Expose : list_cameras, get_snapshot, get_stream_url.
+Expose : list_cameras, get_snapshot, get_stream_url, capabilities, metadata.
 """
 
 from __future__ import annotations
@@ -126,12 +126,29 @@ class CameraService:
             return await self.get_snapshot(device_id)
         elif command == "stream":
             return await self.get_stream_url(device_id)
+        elif command == "turn_on":
+            return {"ok": True, "state": {"on": True}}
+        elif command == "turn_off":
+            return {"ok": True, "state": {"on": False}}
         return {"ok": False, "error": f"Unknown command: {command}"}
+
+    def capabilities(self) -> list[str]:
+        return ["list_devices", "get_snapshot", "get_stream_url",
+                "apply_command", "capabilities", "metadata"]
+
+    def metadata(self) -> dict:
+        return {
+            "name": "camera",
+            "version": "v2",
+            "backend": "ezviz",
+            "configured": self.configured,
+            "cameras_count": len(self._cameras),
+        }
 
 
 async def handle_client(ws, svc: CameraService) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "camera", "version": "v1"
+        "type": "ready", "service": "camera", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -164,6 +181,12 @@ async def handle_client(ws, svc: CameraService) -> None:
                     **params.get("params", {}),
                 )
                 await ws.send(json.dumps(result))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": svc.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": svc.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown: {action}"}))

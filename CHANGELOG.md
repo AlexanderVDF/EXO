@@ -5,6 +5,27 @@
 
 ---
 
+## v10.0 — Domotique v2 — 30 mars 2026
+
+### Ajouté
+- **DomoticCache** (`python/domotique/domotic_cache.py`) — cache d'état par device avec TTL, invalidation, stats (hits/misses/hit_rate), thread-safe
+- **DiscoveryManager** (`python/domotique/discovery_manager.py`) — moteur de découverte réseau (ARP + mDNS + SSDP + vendor lookup OUI), fusion et dédup
+- **EventManager** (`python/domotique/event_manager.py`) — événements push + polling intelligent, subscriptions par device/wildcard, intervalles adaptatifs
+- **ScenarioManager** (`python/domotique/scenario_manager.py`) — 6 scénarios prédéfinis (cinéma, nuit, absence, réveil, sécurité, éco), scénarios custom, exécution parallèle, wildcards
+- **ScenariosPage.qml** (`qml/pages/ScenariosPage.qml`) — page GUI scénarios (liste, exécution, built-in vs custom)
+- **models.py v2** — Protocol (8 valeurs), Connectivity (4 valeurs), DeviceEvent, champs v2 Device (protocol, connectivity, signal_strength, last_event, energy, tags)
+
+### Modifié
+- **HomeGraph v2** (`python/domotique/homegraph_server.py`) — intégration DomoticCache, EventManager, ScenarioManager, DiscoveryManager ; nouvelles API : `refresh_device`, `list_by_type`, `get_capabilities`, `get_vendor`, `list_scenarios`, `run_scenario`, `discovery`, `cache_stats`, `event_stats`, `capabilities`, `metadata`
+- **5 services domotiques → v2** — samsung, voltalis, echo, domotic, camera : ajout `capabilities()`, `metadata()`, version bump "v2", handlers WS
+- **NetworkMapService → v2** (`python/network/network_map_service.py`) — ajout `capabilities()`, `metadata()`
+- **MaisonPage.qml** — v2 : section scénarios rapides, signal `scenarioRequested`
+- **ReseauPage.qml** — v2 : commentaire header mis à jour
+- **43 nouveaux tests** — DomoticCache (8), EventManager (7), ScenarioManager (7), Models v2 (5), HomeGraph v2 (8), Service capabilities (8)
+- Total tests : **608 passés** (565 existants + 43 nouveaux)
+
+---
+
 ## v9.0 — Observability, Resilience & Security — 30 mars 2026
 
 ### Ajouté

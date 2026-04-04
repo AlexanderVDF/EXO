@@ -1,6 +1,6 @@
 # Graphe de dépendances C++
 
-> Auto-généré par `auto_maintain.py` — 2026-04-01
+> Auto-généré par `auto_maintain.py` — 2026-04-04
 
 ## Matrice d'inclusion
 
@@ -22,8 +22,10 @@
   TTSManager.cpp -> TTSBackendXTTS.h
   TTSManager.cpp -> LogManager.h
   TTSManager.cpp -> PipelineEvent.h
+  TTSManager.cpp -> LatencyMetrics.h
   VoicePipeline.cpp -> VoicePipeline.h
   VoicePipeline.cpp -> LogManager.h
+  VoicePipeline.cpp -> LatencyMetrics.h
   VoicePipeline.h -> AudioInput.h
   VoicePipeline.h -> AudioInputQt.h
   VoicePipeline.h -> AudioInputRtAudio.h
@@ -42,13 +44,19 @@
   AssistantManager.cpp -> WeatherManager.h
   AssistantManager.cpp -> PipelineEvent.h
   AssistantManager.cpp -> PipelineTracer.h
+  AssistantManager.cpp -> ContextCache.h
+  AssistantManager.cpp -> LatencyMetrics.h
   AssistantManager.h -> ConfigManager.h
   AssistantManager.h -> HealthCheck.h
   ConfigManager.cpp -> ConfigManager.h
   ConfigManager.cpp -> LogManager.h
+  ContextCache.cpp -> ContextCache.h
+  ContextCache.cpp -> LogManager.h
   HealthCheck.cpp -> HealthCheck.h
   HealthCheck.cpp -> ConfigManager.h
   HealthCheck.h -> WebSocketClient.h
+  LatencyMetrics.cpp -> LatencyMetrics.h
+  LatencyMetrics.cpp -> LogManager.h
   LogManager.cpp -> LogManager.h
   PipelineEvent.cpp -> PipelineEvent.h
   PipelineEvent.cpp -> LogManager.h
@@ -75,6 +83,7 @@
   ClaudeAPI.cpp -> ClaudeAPI.h
   ClaudeAPI.cpp -> LogManager.h
   ClaudeAPI.cpp -> PipelineEvent.h
+  ClaudeAPI.cpp -> LatencyMetrics.h
   main.cpp -> AssistantManager.h
   main.cpp -> LogManager.h
   main.cpp -> ServiceSupervisor.h
@@ -97,19 +106,23 @@
 - `app/audio/TTSBackendQt.h` (1 include(s))
 - `app/audio/TTSBackendXTTS.cpp` (2 include(s))
 - `app/audio/TTSBackendXTTS.h` (1 include(s))
-- `app/audio/TTSManager.cpp` (6 include(s))
+- `app/audio/TTSManager.cpp` (7 include(s))
 - `app/audio/TTSManager.h` (0 include(s))
-- `app/audio/VoicePipeline.cpp` (2 include(s))
+- `app/audio/VoicePipeline.cpp` (3 include(s))
 - `app/audio/VoicePipeline.h` (7 include(s))
 
 ### core/
 
-- `app/core/AssistantManager.cpp` (11 include(s))
+- `app/core/AssistantManager.cpp` (13 include(s))
 - `app/core/AssistantManager.h` (2 include(s))
 - `app/core/ConfigManager.cpp` (2 include(s))
 - `app/core/ConfigManager.h` (0 include(s))
+- `app/core/ContextCache.cpp` (2 include(s))
+- `app/core/ContextCache.h` (0 include(s))
 - `app/core/HealthCheck.cpp` (2 include(s))
 - `app/core/HealthCheck.h` (1 include(s))
+- `app/core/LatencyMetrics.cpp` (2 include(s))
+- `app/core/LatencyMetrics.h` (0 include(s))
 - `app/core/LogManager.cpp` (1 include(s))
 - `app/core/LogManager.h` (0 include(s))
 - `app/core/PipelineEvent.cpp` (2 include(s))
@@ -132,7 +145,7 @@
 
 - `app/llm/AIMemoryManager.cpp` (2 include(s))
 - `app/llm/AIMemoryManager.h` (1 include(s))
-- `app/llm/ClaudeAPI.cpp` (3 include(s))
+- `app/llm/ClaudeAPI.cpp` (4 include(s))
 - `app/llm/ClaudeAPI.h` (0 include(s))
 
 ### root/

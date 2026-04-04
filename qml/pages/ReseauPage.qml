@@ -4,8 +4,9 @@ import QtQuick.Layouts
 import "../theme"
 
 // ═══════════════════════════════════════════════════════
-//  ReseauPage — Carte réseau local (Domotique v1)
+//  ReseauPage — Carte réseau local (Domotique v2)
 //  Canvas de visualisation des nœuds et liens réseau
+//  v2: vendor, latence, metadata
 // ═══════════════════════════════════════════════════════
 
 Item {

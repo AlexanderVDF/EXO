@@ -1,6 +1,6 @@
 # Services EXO
 
-> Auto-généré par `auto_maintain.py` — 2026-04-01
+> Auto-généré par `auto_maintain.py` — 2026-04-04
 
 ## Microservices
 
@@ -34,23 +34,40 @@
 
 - `tests/performance/test_performance.py`
 
-### python/ (16 fichier(s))
+### python/ (33 fichier(s))
 
 - `tests/python/test_actions.py`
 - `tests/python/test_areas.py`
+- `tests/python/test_calendar_service.py`
+- `tests/python/test_context_engine.py`
+- `tests/python/test_context_engine_v8.py`
 - `tests/python/test_devices.py`
+- `tests/python/test_domotique.py`
 - `tests/python/test_entities.py`
+- `tests/python/test_file_service.py`
 - `tests/python/test_healthcheck_protocol.py`
 - `tests/python/test_home_bridge.py`
 - `tests/python/test_knowledge_server.py`
 - `tests/python/test_memory_server.py`
+- `tests/python/test_memory_v8.py`
 - `tests/python/test_news_server.py`
 - `tests/python/test_nlu_server.py`
 - `tests/python/test_stt_server.py`
 - `tests/python/test_sync.py`
+- `tests/python/test_system_service.py`
+- `tests/python/test_task_executor.py`
+- `tests/python/test_task_planner.py`
+- `tests/python/test_task_planner_v8.py`
+- `tests/python/test_task_verifier.py`
 - `tests/python/test_tools_server.py`
 - `tests/python/test_tts_server.py`
+- `tests/python/test_ull.py`
+- `tests/python/test_v9_config.py`
+- `tests/python/test_v9_integration.py`
+- `tests/python/test_v9_observability.py`
+- `tests/python/test_v9_resilience.py`
+- `tests/python/test_v9_security.py`
 - `tests/python/test_vad_server.py`
 - `tests/python/test_websearch_server.py`
 
-**Total : 25 fichier(s) de test**
+**Total : 42 fichier(s) de test**

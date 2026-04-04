@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — NetworkMapService (WebSocket) — Port 8790
+EXO Domotique v2 — NetworkMapService (WebSocket) — Port 8790
 
 Scanner réseau local : ARP, mDNS, SSDP/UPnP.
 Détecte les appareils, attribue des noms via OUI lookup et mDNS.
 Fournit une carte réseau avec nœuds et liens.
+v2: capabilities, metadata.
 """
 
 from __future__ import annotations
@@ -265,10 +266,25 @@ class NetworkMapService:
                 return node
         return None
 
+    def capabilities(self) -> list[str]:
+        return ["scan", "list_nodes", "list_links", "get_node",
+                "capabilities", "metadata"]
+
+    def metadata(self) -> dict:
+        return {
+            "name": "network_map",
+            "version": "v2",
+            "backend": "arp_mdns_ssdp",
+            "nodes_count": len(self._nodes),
+            "links_count": len(self._links),
+            "oui_entries": len(self._oui),
+            "last_scan": self._last_scan,
+        }
+
 
 async def handle_client(ws, svc: NetworkMapService) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "network_map", "version": "v1"
+        "type": "ready", "service": "network_map", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -300,6 +316,12 @@ async def handle_client(ws, svc: NetworkMapService) -> None:
                     await ws.send(json.dumps({"ok": True, "data": node}))
                 else:
                     await ws.send(json.dumps({"ok": False, "error": "Not found"}))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": svc.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": svc.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown: {action}"}))

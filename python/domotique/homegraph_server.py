@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — HomeGraphManager (WebSocket) — Port 8784
+EXO Domotique v2 — HomeGraphManager (WebSocket) — Port 8784
 
 Modèle unifié de la maison : appareils, pièces, liens réseau.
 Fusionne les données des services d'intégration (Domotic, Camera, Samsung,
 Voltalis, Echo) et du NetworkMap.
+
+v2: DomoticCache, DiscoveryManager, EventManager, ScenarioManager,
+    capabilities/metadata, refresh par device, list_by_type, get_vendor.
 """
 
 from __future__ import annotations
@@ -29,6 +32,10 @@ from domotique.models import (
     Capability, Device, DeviceSource, DeviceType,
     Link, LinkType, Room,
 )
+from domotique.domotic_cache import DomoticCache
+from domotique.event_manager import EventManager
+from domotique.scenario_manager import ScenarioManager
+from domotique.discovery_manager import DiscoveryManager
 
 log = logging.getLogger("homegraph")
 logging.basicConfig(level=logging.INFO,
@@ -41,7 +48,7 @@ CONNECTOR_TIMEOUT = 10
 
 
 class HomeGraphManager:
-    """Modèle unifié de la maison connectée."""
+    """Modèle unifié de la maison connectée — v2."""
 
     def __init__(self) -> None:
         self._devices: dict[str, Device] = {}
@@ -55,6 +62,19 @@ class HomeGraphManager:
             "echo":     os.getenv("EXO_ECHO_URL", "ws://localhost:8789"),
             "network":  os.getenv("EXO_NETWORK_URL", "ws://localhost:8790"),
         }
+        # v2 modules
+        self._cache = DomoticCache(default_ttl=30.0)
+        self._events = EventManager()
+        self._scenarios = ScenarioManager()
+        self._discovery = DiscoveryManager()
+
+        # Wire scenario executor to apply_command
+        self._scenarios.set_executor(self._scenario_executor)
+
+    async def _scenario_executor(self, device_id: str, command: str,
+                                  **params: object) -> dict:
+        """Executor pour le ScenarioManager."""
+        return await self.apply_command(device_id, command, params)
 
     # ── Public API ──────────────────────────────────
 
@@ -82,8 +102,16 @@ class HomeGraphManager:
         dev = self._devices.get(id_exo)
         if not dev:
             return False
+        old_state = dict(dev.state)
         dev.state.update(new_state)
         dev.last_seen = time.time()
+        # v2: update cache + emit event
+        self._cache.set_state(id_exo, dev.state)
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._events.on_event(id_exo, dev.state))
+        except RuntimeError:
+            pass  # no running loop (sync context)
         return True
 
     def get_network_links(self) -> list[dict]:
@@ -104,6 +132,90 @@ class HomeGraphManager:
         except ValueError:
             return []
         return [d.to_dict() for d in self._devices.values() if d.type == dt]
+
+    # ── v2 API ──────────────────────────────────────
+
+    def list_devices_by_type(self, device_type: str) -> list[dict]:
+        """Alias v2 pour find_devices_by_type."""
+        return self.find_devices_by_type(device_type)
+
+    def get_capabilities(self, id_exo: str) -> list[str] | None:
+        """Retourne les capabilities d'un device."""
+        dev = self._devices.get(id_exo)
+        if not dev:
+            return None
+        return [c.value for c in dev.capabilities]
+
+    def get_vendor(self, id_exo: str) -> str | None:
+        """Retourne le vendor d'un device."""
+        dev = self._devices.get(id_exo)
+        if not dev:
+            return None
+        return dev.vendor
+
+    def get_cache_stats(self) -> dict:
+        """Retourne les stats du cache domotique."""
+        return self._cache.stats()
+
+    def get_event_stats(self) -> dict:
+        """Retourne les stats de l'EventManager."""
+        return self._events.stats()
+
+    def list_scenarios(self) -> list[dict]:
+        """Retourne la liste des scénarios disponibles."""
+        return self._scenarios.list_scenarios()
+
+    async def run_scenario(self, name: str, devices: list[str] | None = None) -> dict:
+        """Exécute un scénario."""
+        return await self._scenarios.run_scenario(name, devices or list(self._devices.keys()))
+
+    async def run_discovery(self) -> dict:
+        """Lance un scan réseau complet via le DiscoveryManager."""
+        return await self._discovery.full_scan()
+
+    async def refresh_device(self, id_exo: str) -> dict:
+        """Refresh un device individuel via son connecteur."""
+        dev = self._devices.get(id_exo)
+        if not dev:
+            return {"ok": False, "error": f"Device not found: {id_exo}"}
+        connector_map = {
+            DeviceSource.HUE: "domotic", DeviceSource.TAPO: "domotic",
+            DeviceSource.IKEA: "domotic", DeviceSource.TPLINK: "domotic",
+            DeviceSource.EZVIZ: "camera", DeviceSource.SAMSUNG: "samsung",
+            DeviceSource.VOLTALIS: "voltalis", DeviceSource.ECHO: "echo",
+        }
+        connector = connector_map.get(dev.source, "domotic")
+        resp = await self._query_connector(connector, "get_state", {"device_id": dev.id_origin})
+        if resp and resp.get("ok"):
+            new_state = resp.get("data", {}).get("state", {})
+            if new_state:
+                dev.state.update(new_state)
+                dev.last_seen = time.time()
+                self._cache.set_state(id_exo, dev.state)
+            return {"ok": True, "data": dev.to_dict()}
+        return {"ok": False, "error": "Connector unreachable"}
+
+    def capabilities(self) -> list[str]:
+        return [
+            "list_devices", "list_rooms", "get_device", "find_device",
+            "update_state", "apply_command", "refresh_all", "refresh_device",
+            "add_room", "assign_room", "get_network_links",
+            "domotic_action", "domotic_query",
+            "list_scenarios", "run_scenario", "discovery",
+            "cache_stats", "event_stats",
+            "capabilities", "metadata",
+        ]
+
+    def metadata(self) -> dict:
+        return {
+            "name": "homegraph",
+            "version": "v2",
+            "devices_count": len(self._devices),
+            "rooms_count": len(self._rooms),
+            "links_count": len(self._links),
+            "cache": self._cache.stats(),
+            "scenarios": len(self._scenarios.list_scenarios()),
+        }
 
     def add_room(self, room_id: str, name: str) -> dict:
         room = Room(id=room_id, name=name)
@@ -329,6 +441,10 @@ class HomeGraphManager:
             if new_state:
                 dev.state.update(new_state)
                 dev.last_seen = time.time()
+                self._cache.set_state(id_exo, dev.state)
+                asyncio.get_running_loop().create_task(
+                    self._events.on_event(id_exo, dev.state)
+                )
             return {"ok": True, "state": dev.state}
         return {"ok": False, "error": resp.get("error", "Command failed") if resp else "Unreachable"}
 
@@ -339,7 +455,7 @@ class HomeGraphManager:
 
 async def handle_client(ws, hg: HomeGraphManager) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "homegraph", "version": "v1"
+        "type": "ready", "service": "homegraph", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -444,6 +560,57 @@ async def handle_client(ws, hg: HomeGraphManager) -> None:
                     "ok": True,
                     "data": {"devices": results, "count": len(results)},
                 }))
+
+            # ── v2 actions ──────────────────────────────
+
+            elif action == "refresh_device":
+                result = await hg.refresh_device(params.get("id_exo", ""))
+                await ws.send(json.dumps(result))
+
+            elif action == "list_by_type":
+                data = hg.list_devices_by_type(params.get("type", ""))
+                await ws.send(json.dumps({"ok": True, "data": {"devices": data}}))
+
+            elif action == "get_capabilities":
+                caps = hg.get_capabilities(params.get("id_exo", ""))
+                if caps is not None:
+                    await ws.send(json.dumps({"ok": True, "data": caps}))
+                else:
+                    await ws.send(json.dumps({"ok": False, "error": "Device not found"}))
+
+            elif action == "get_vendor":
+                vendor = hg.get_vendor(params.get("id_exo", ""))
+                if vendor is not None:
+                    await ws.send(json.dumps({"ok": True, "data": {"vendor": vendor}}))
+                else:
+                    await ws.send(json.dumps({"ok": False, "error": "Device not found"}))
+
+            elif action == "list_scenarios":
+                data = hg.list_scenarios()
+                await ws.send(json.dumps({"ok": True, "data": {"scenarios": data}}))
+
+            elif action == "run_scenario":
+                result = await hg.run_scenario(
+                    params.get("name", ""),
+                    params.get("devices"),
+                )
+                await ws.send(json.dumps({"ok": True, "data": result}))
+
+            elif action == "discovery":
+                result = await hg.run_discovery()
+                await ws.send(json.dumps({"ok": True, "data": result}))
+
+            elif action == "cache_stats":
+                await ws.send(json.dumps({"ok": True, "data": hg.get_cache_stats()}))
+
+            elif action == "event_stats":
+                await ws.send(json.dumps({"ok": True, "data": hg.get_event_stats()}))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": hg.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": hg.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown action: {action}"}))

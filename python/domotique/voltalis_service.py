@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-EXO Domotique v1 — VoltalisService (WebSocket) — Port 8788
+EXO Domotique v2 — VoltalisService (WebSocket) — Port 8788
 
 Connecteur pour appareils Voltalis (radiateurs éco-pilotés).
 Utilise l'API REST Voltalis (ou stub si non configuré).
+v2: capabilities, metadata, energy tracking.
 """
 
 from __future__ import annotations
@@ -194,10 +195,23 @@ class VoltalisService:
             return await handler()
         return {"ok": False, "error": f"Unknown command: {command}"}
 
+    def capabilities(self) -> list[str]:
+        return ["list_devices", "get_state", "set_mode", "get_consumption",
+                "apply_command", "capabilities", "metadata"]
+
+    def metadata(self) -> dict:
+        return {
+            "name": "voltalis",
+            "version": "v2",
+            "backend": "voltalis_api",
+            "configured": self.configured,
+            "devices_count": len(self._devices),
+        }
+
 
 async def handle_client(ws, svc: VoltalisService) -> None:
     await ws.send(json.dumps({
-        "type": "ready", "service": "voltalis", "version": "v1"
+        "type": "ready", "service": "voltalis", "version": "v2"
     }))
     try:
         async for raw in ws:
@@ -246,6 +260,12 @@ async def handle_client(ws, svc: VoltalisService) -> None:
                     **params.get("params", {}),
                 )
                 await ws.send(json.dumps(result))
+
+            elif action == "capabilities":
+                await ws.send(json.dumps({"ok": True, "data": svc.capabilities()}))
+
+            elif action == "metadata":
+                await ws.send(json.dumps({"ok": True, "data": svc.metadata()}))
 
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown: {action}"}))
