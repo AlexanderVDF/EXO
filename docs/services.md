@@ -34,7 +34,7 @@
 
 - `tests/performance/test_performance.py`
 
-### python/ (37 fichier(s))
+### python/ (39 fichier(s))
 
 - `tests/python/test_actions.py`
 - `tests/python/test_agent_v10.py`
@@ -66,6 +66,8 @@
 - `tests/python/test_tts_server.py`
 - `tests/python/test_ull.py`
 - `tests/python/test_v11_selflearning.py`
+- `tests/python/test_v12_metareasoning.py`
+- `tests/python/test_v13_prospective.py`
 - `tests/python/test_v9_config.py`
 - `tests/python/test_v9_integration.py`
 - `tests/python/test_v9_observability.py`
@@ -74,4 +76,4 @@
 - `tests/python/test_vad_server.py`
 - `tests/python/test_websearch_server.py`
 
-**Total : 46 fichier(s) de test**
+**Total : 48 fichier(s) de test**

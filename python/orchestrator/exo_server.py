@@ -81,6 +81,16 @@ from anticipation_engine import AnticipationEngine
 from explainability_engine_v3 import ExplainabilityEngineV3
 from meta_supervisor_v3 import MetaSupervisorV3
 
+# v14 — Cognition distribuée, agents spécialisés
+from agent_messaging_bus import AgentMessagingBus
+from agent_registry import AgentRegistry
+from specialized_agents import create_default_agents
+from conflict_resolver import ConflictResolver
+from cognitive_orchestrator import CognitiveOrchestrator
+from distributed_consistency_engine import DistributedConsistencyEngine
+from meta_supervisor_v4 import MetaSupervisorV4
+from explainability_engine_v4 import ExplainabilityEngineV4
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -113,13 +123,15 @@ class GUIServer:
                  agent_mgr: AgentManager | None = None,
                  v11: dict | None = None,
                  v12: dict | None = None,
-                 v13: dict | None = None) -> None:
+                 v13: dict | None = None,
+                 v14: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
         self._v11 = v11 or {}
         self._v12 = v12 or {}
         self._v13 = v13 or {}
+        self._v14 = v14 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -609,6 +621,134 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v13_stats", **stats}))
 
+        # ── v14 — Cognition distribuée, agents spécialisés ───────
+        elif msg_type == "v14_orchestrate":
+            eng = self._v14.get("orchestrator")
+            if eng:
+                result = eng.orchestrate(msg.get("intent", {}))
+                await ws.send(json.dumps({"type": "v14_orchestrate_result",
+                                          **result}))
+
+        elif msg_type == "v14_agents":
+            eng = self._v14.get("registry")
+            if eng:
+                sub = msg.get("sub", "list")
+                if sub == "list":
+                    result = {"agents": eng.list_agents()}
+                elif sub == "info":
+                    result = eng.get_agent_info(msg.get("name", ""))
+                elif sub == "dispatch":
+                    orch = self._v14.get("orchestrator")
+                    if orch:
+                        result = orch.dispatch(
+                            msg.get("task", {}), msg.get("agent", ""))
+                    else:
+                        result = {}
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v14_agents_result",
+                                          **result}))
+
+        elif msg_type == "v14_messaging":
+            eng = self._v14.get("messaging_bus")
+            if eng:
+                sub = msg.get("sub", "log")
+                if sub == "send":
+                    result = eng.send(
+                        msg.get("sender", ""), msg.get("recipient", ""),
+                        msg.get("message", {}))
+                elif sub == "broadcast":
+                    results = eng.broadcast(
+                        msg.get("sender", ""), msg.get("message", {}))
+                    result = {"delivered": results}
+                elif sub == "log":
+                    result = {"log": eng.get_message_log(
+                        msg.get("limit", 50))}
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v14_messaging_result",
+                                          **result}))
+
+        elif msg_type == "v14_conflicts":
+            eng = self._v14.get("conflict_resolver")
+            if eng:
+                sub = msg.get("sub", "detect")
+                if sub == "detect":
+                    result = eng.detect_conflicts(
+                        msg.get("agent_outputs", []))
+                elif sub == "resolve":
+                    result = eng.resolve(msg.get("agent_outputs", []))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v14_conflicts_result",
+                                          **result}))
+
+        elif msg_type == "v14_consistency":
+            eng = self._v14.get("consistency")
+            if eng:
+                sub = msg.get("sub", "check")
+                if sub == "check":
+                    result = eng.check_global_consistency()
+                elif sub == "enforce":
+                    result = eng.enforce_global_consistency()
+                elif sub == "agent":
+                    result = eng.check_agent_consistency(
+                        msg.get("name", ""))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v14_consistency_result",
+                                          **result}))
+
+        elif msg_type == "v14_supervise":
+            eng = self._v14.get("supervisor_v4")
+            if eng:
+                sub = msg.get("sub", "agent")
+                if sub == "agent":
+                    result = eng.supervise_agent(msg.get("name", ""))
+                elif sub == "interaction":
+                    result = eng.supervise_interaction(
+                        msg.get("message", {}))
+                elif sub == "decision":
+                    result = eng.supervise_decision(
+                        msg.get("decision", {}))
+                elif sub == "enforce":
+                    result = eng.enforce_meta_rules()
+                elif sub == "alerts":
+                    result = {"alerts": eng.get_alerts(
+                        msg.get("limit", 20))}
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v14_supervise_result",
+                                          **result}))
+
+        elif msg_type == "v14_explain":
+            eng = self._v14.get("explainability_v4")
+            if eng:
+                kind = msg.get("kind", "agent")
+                if kind == "agent":
+                    result = eng.explain_agent_decision(
+                        msg.get("name", ""))
+                elif kind == "global":
+                    result = eng.explain_global_decision(
+                        msg.get("decision", {}))
+                elif kind == "conflict":
+                    result = eng.explain_conflict_resolution(
+                        msg.get("resolution", {}))
+                elif kind == "orchestration":
+                    result = eng.explain_orchestration(
+                        msg.get("orch_result", {}))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v14_explain_result",
+                                          **result}))
+
+        elif msg_type == "v14_stats":
+            stats = {}
+            for name, mod in self._v14.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v14_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -784,9 +924,38 @@ async def main() -> None:
     logger.info("EXO v13 prospective modules initialized (%d modules)",
                 len(v13_modules))
 
+    # ── v14 — Cognition distribuée, agents spécialisés ────────
+    msg_bus = AgentMessagingBus(meta_memory)
+    registry = AgentRegistry(msg_bus)
+    agents = create_default_agents(msg_bus, meta_memory)
+    for a in agents:
+        registry.register_agent(a)
+    conflict_res = ConflictResolver(meta_memory, governance)
+    cog_orchestrator = CognitiveOrchestrator(
+        registry, msg_bus, conflict_res, meta_memory, governance)
+    consistency_eng = DistributedConsistencyEngine(
+        registry, msg_bus, conflict_res, meta_memory)
+    supervisor_v4 = MetaSupervisorV4(
+        meta_memory, registry, msg_bus, consistency_eng,
+        supervisor_v3, governance)
+    explainability_v4 = ExplainabilityEngineV4(
+        meta_memory, registry, explainability_v3)
+
+    v14_modules = {
+        "messaging_bus": msg_bus,
+        "registry": registry,
+        "conflict_resolver": conflict_res,
+        "orchestrator": cog_orchestrator,
+        "consistency": consistency_eng,
+        "supervisor_v4": supervisor_v4,
+        "explainability_v4": explainability_v4,
+    }
+    logger.info("EXO v14 distributed cognition modules initialized "
+                "(%d modules, %d agents)", len(v14_modules), len(agents))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
-                    v13_modules)
+                    v13_modules, v14_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
