@@ -71,6 +71,16 @@ from self_consistency_engine import SelfConsistencyEngine
 from meta_supervisor_v2 import MetaSupervisorV2
 from explainability_engine_v2 import ExplainabilityEngineV2
 
+# v13 — Auto-simulation, prévision, planification prospective
+from self_simulation_engine import SelfSimulationEngine
+from prediction_engine import PredictionEngine
+from future_planner import FuturePlanner
+from multi_scenario_engine import MultiScenarioEngine
+from temporal_coherence_engine import TemporalCoherenceEngine
+from anticipation_engine import AnticipationEngine
+from explainability_engine_v3 import ExplainabilityEngineV3
+from meta_supervisor_v3 import MetaSupervisorV3
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -102,12 +112,14 @@ class GUIServer:
     def __init__(self, sync: SyncManager, pipeline_mgr: "PipelineManager",
                  agent_mgr: AgentManager | None = None,
                  v11: dict | None = None,
-                 v12: dict | None = None) -> None:
+                 v12: dict | None = None,
+                 v13: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
         self._v11 = v11 or {}
         self._v12 = v12 or {}
+        self._v13 = v13 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -457,6 +469,146 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v12_stats", **stats}))
 
+        # ── v13 — Auto-simulation, prévision, planification prospective ──
+        elif msg_type == "v13_simulate":
+            eng = self._v13.get("simulation")
+            if eng:
+                sub = msg.get("sub", "plan")
+                if sub == "plan":
+                    result = eng.simulate_plan(msg.get("plan", {}))
+                elif sub == "step":
+                    result = eng.simulate_step(msg.get("step", {}))
+                elif sub == "scenario":
+                    result = eng.simulate_scenario(msg.get("scenario", {}))
+                elif sub == "outcome":
+                    result = eng.simulate_outcome(msg.get("plan", {}))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_simulate_result",
+                                          **result}))
+
+        elif msg_type == "v13_predict":
+            eng = self._v13.get("prediction")
+            if eng:
+                sub = msg.get("sub", "user_need")
+                if sub == "user_need":
+                    result = eng.predict_user_need()
+                elif sub == "domotic":
+                    result = eng.predict_domotic_state()
+                elif sub == "network":
+                    result = eng.predict_network_state()
+                elif sub == "routine":
+                    result = eng.predict_routine()
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_predict_result",
+                                          **result}))
+
+        elif msg_type == "v13_future_plan":
+            eng = self._v13.get("future_planner")
+            if eng:
+                sub = msg.get("sub", "future")
+                if sub == "future":
+                    result = eng.plan_future_action(
+                        msg.get("action", {}), msg.get("time_target", 0))
+                elif sub == "conditional":
+                    result = eng.plan_conditional_action(
+                        msg.get("action", {}), msg.get("condition", {}))
+                elif sub == "recurrent":
+                    result = eng.plan_recurrent_action(
+                        msg.get("action", {}), msg.get("schedule", {}))
+                elif sub == "pending":
+                    result = {"plans": eng.get_pending_plans()}
+                elif sub == "cancel":
+                    ok = eng.cancel_plan(msg.get("plan_id", ""))
+                    result = {"cancelled": ok}
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_future_plan_result",
+                                          **result}))
+
+        elif msg_type == "v13_scenarios":
+            eng = self._v13.get("multi_scenario")
+            if eng:
+                sub = msg.get("sub", "generate")
+                if sub == "generate":
+                    result = eng.generate_future_variants(msg.get("plan", {}))
+                elif sub == "compare":
+                    result = eng.compare_futures(msg.get("futures", []))
+                elif sub == "select":
+                    result = eng.select_best_future(msg.get("futures", []))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_scenarios_result",
+                                          **result}))
+
+        elif msg_type == "v13_temporal":
+            eng = self._v13.get("temporal")
+            if eng:
+                sub = msg.get("sub", "check")
+                if sub == "check":
+                    result = eng.check_temporal_conflicts(msg.get("plans", []))
+                elif sub == "enforce":
+                    result = eng.enforce_temporal_coherence()
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_temporal_result",
+                                          **result}))
+
+        elif msg_type == "v13_anticipate":
+            eng = self._v13.get("anticipation")
+            if eng:
+                sub = msg.get("sub", "need")
+                if sub == "need":
+                    result = eng.anticipate_need()
+                elif sub == "propose":
+                    result = eng.propose_anticipation()
+                elif sub == "context":
+                    result = eng.prepare_future_context()
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_anticipate_result",
+                                          **result}))
+
+        elif msg_type == "v13_explain":
+            eng = self._v13.get("explainability_v3")
+            if eng:
+                kind = msg.get("kind", "simulation")
+                if kind == "simulation":
+                    text = eng.explain_simulation(msg.get("simulation", {}))
+                elif kind == "prediction":
+                    text = eng.explain_prediction(msg.get("prediction", {}))
+                elif kind == "future":
+                    text = eng.explain_future(msg.get("future", {}))
+                else:
+                    text = ""
+                await ws.send(json.dumps({"type": "v13_explain_result",
+                                          "explanation": text}))
+
+        elif msg_type == "v13_supervise":
+            eng = self._v13.get("supervisor_v3")
+            if eng:
+                sub = msg.get("sub", "simulation")
+                if sub == "simulation":
+                    result = eng.supervise_simulation(msg.get("simulation", {}))
+                elif sub == "prediction":
+                    result = eng.supervise_prediction(msg.get("prediction", {}))
+                elif sub == "enforce":
+                    result = eng.enforce_future_rules()
+                elif sub == "alerts":
+                    result = {"alerts": eng.get_alerts(msg.get("limit", 20))}
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v13_supervise_result",
+                                          **result}))
+
+        elif msg_type == "v13_stats":
+            stats = {}
+            for name, mod in self._v13.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v13_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -608,8 +760,33 @@ async def main() -> None:
     logger.info("EXO v12 meta-reasoning modules initialized (%d modules)",
                 len(v12_modules))
 
+    # ── v13 — Auto-simulation, prévision, planification prospective ──
+    simulation_eng = SelfSimulationEngine(meta_memory, governance)
+    prediction_eng = PredictionEngine(meta_memory, governance)
+    future_planner = FuturePlanner(meta_memory, governance)
+    multi_scenario = MultiScenarioEngine(meta_memory, simulation_eng, governance)
+    temporal_coherence = TemporalCoherenceEngine(meta_memory, future_planner)
+    anticipation = AnticipationEngine(meta_memory, prediction_eng, governance)
+    explainability_v3 = ExplainabilityEngineV3(meta_memory, explainability_v2)
+    supervisor_v3 = MetaSupervisorV3(
+        meta_memory, supervisor_v2, simulation_eng, governance)
+
+    v13_modules = {
+        "simulation": simulation_eng,
+        "prediction": prediction_eng,
+        "future_planner": future_planner,
+        "multi_scenario": multi_scenario,
+        "temporal": temporal_coherence,
+        "anticipation": anticipation,
+        "explainability_v3": explainability_v3,
+        "supervisor_v3": supervisor_v3,
+    }
+    logger.info("EXO v13 prospective modules initialized (%d modules)",
+                len(v13_modules))
+
     # GUI server
-    gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules)
+    gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
+                    v13_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
