@@ -5,6 +5,27 @@
 
 ---
 
+## v11.0 — NetworkMap v2 — 30 mars 2026
+
+### Ajouté
+- **ARPScanner** (`python/network/arp_scanner.py`) — scan ARP local, extraction IP+MAC, détection gateway, enrichissement vendor
+- **MDNSScanner** (`python/network/mdns_scanner.py`) — résolution DNS inverse parallèle, inférence services/type mDNS
+- **SSDPScanner** (`python/network/ssdp_scanner.py`) — découverte SSDP/UPnP M-SEARCH multicast, extraction manufacturer
+- **PingScanner** (`python/network/ping_scanner.py`) — ping sweep ICMP parallèle (semaphore 20), mesure latence
+- **VendorLookup** (`python/network/vendor_lookup.py`) — base OUI IEEE locale, lookup MAC → fabricant
+- **DeviceClassifier** (`python/network/device_classifier.py`) — classification automatique par vendor, hostname, services mDNS, SSDP (12 types)
+- **TopologyBuilder** (`python/network/topology_builder.py`) — reconstruction topologie étoile, détection gateway/EXO, liens typés (eth/wifi/iot), latence
+- **NetworkMapManager** (`python/network/network_map_manager.py`) — orchestrateur unifié : scan_full (ARP+mDNS+SSDP+Ping), scan_fast (ARP), résilience fallback, 14 capabilities
+
+### Modifié
+- **NetworkMapService** (`python/network/network_map_service.py`) — réécriture complète : délègue au NetworkMapManager, 15 handlers WS (scan, scan_fast, list_nodes, list_links, get_node, get_topology, get_vendor, get_latency, classify, export, health, restart, metrics, capabilities, metadata)
+- **HomeGraph v2** (`python/domotique/homegraph_server.py`) — ajout `run_network_scan()`, `get_network_topology()`, handlers WS "network_scan"/"network_topology"
+- **ReseauPage.qml** (`qml/pages/ReseauPage.qml`) — réécriture complète : graphe dynamique Canvas, filtre par type, scan rapide/complet, latence couleur (vert <5ms, jaune <20ms, rouge), sélection nœud + panneau détail, liens typés (eth=bleu, wifi=gris, iot=orange)
+- **81 nouveaux tests** — ARPScanner (6), MDNSScanner (9), SSDPScanner (6), PingScanner (8), VendorLookup (5), DeviceClassifier (14), TopologyBuilder (8), NetworkMapManager (12), NetworkMapService (13)
+- Total tests : **689 passés** (608 existants + 81 nouveaux)
+
+---
+
 ## v10.0 — Domotique v2 — 30 mars 2026
 
 ### Ajouté

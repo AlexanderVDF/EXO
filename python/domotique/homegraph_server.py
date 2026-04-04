@@ -173,6 +173,30 @@ class HomeGraphManager:
         """Lance un scan réseau complet via le DiscoveryManager."""
         return await self._discovery.full_scan()
 
+    async def run_network_scan(self) -> dict:
+        """Lance un scan réseau complet via NetworkMap v2 (connecteur WS)."""
+        resp = await self._query_connector("network", "scan")
+        if resp and resp.get("ok"):
+            data = resp.get("data", {})
+            # Merge topology nodes
+            devices = data.get("devices", [])
+            if devices:
+                self.merge_devices("network", devices)
+            # Merge topology links
+            topo = data.get("topology", {})
+            links = topo.get("links", [])
+            if links:
+                self.merge_links(links)
+            return {"ok": True, "data": data}
+        return {"ok": False, "error": "Network scan unreachable"}
+
+    def get_network_topology(self) -> dict:
+        """Retourne la topologie réseau depuis la dernière intégration."""
+        return {
+            "links": [lnk.to_dict() for lnk in self._links],
+            "devices_count": len(self._devices),
+        }
+
     async def refresh_device(self, id_exo: str) -> dict:
         """Refresh un device individuel via son connecteur."""
         dev = self._devices.get(id_exo)
@@ -202,6 +226,7 @@ class HomeGraphManager:
             "add_room", "assign_room", "get_network_links",
             "domotic_action", "domotic_query",
             "list_scenarios", "run_scenario", "discovery",
+            "network_scan", "network_topology",
             "cache_stats", "event_stats",
             "capabilities", "metadata",
         ]
@@ -599,6 +624,14 @@ async def handle_client(ws, hg: HomeGraphManager) -> None:
             elif action == "discovery":
                 result = await hg.run_discovery()
                 await ws.send(json.dumps({"ok": True, "data": result}))
+
+            elif action == "network_scan":
+                result = await hg.run_network_scan()
+                await ws.send(json.dumps(result, default=str))
+
+            elif action == "network_topology":
+                data = hg.get_network_topology()
+                await ws.send(json.dumps({"ok": True, "data": data}))
 
             elif action == "cache_stats":
                 await ws.send(json.dumps({"ok": True, "data": hg.get_cache_stats()}))
