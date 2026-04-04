@@ -62,6 +62,15 @@ from meta_planner import MetaPlanner
 from meta_supervisor import MetaSupervisor
 from auto_explanation import AutoExplanation
 
+# v12 — Auto-réflexion, méta-raisonnement, auto-cohérence
+from self_reflection_engine import SelfReflectionEngine
+from meta_reasoning_engine import MetaReasoningEngine
+from meta_planner_v2 import MetaPlannerV2
+from meta_verifier import MetaVerifier
+from self_consistency_engine import SelfConsistencyEngine
+from meta_supervisor_v2 import MetaSupervisorV2
+from explainability_engine_v2 import ExplainabilityEngineV2
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -92,11 +101,13 @@ class GUIServer:
 
     def __init__(self, sync: SyncManager, pipeline_mgr: "PipelineManager",
                  agent_mgr: AgentManager | None = None,
-                 v11: dict | None = None) -> None:
+                 v11: dict | None = None,
+                 v12: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
         self._v11 = v11 or {}
+        self._v12 = v12 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -334,6 +345,118 @@ class GUIServer:
                     await ws.send(json.dumps({"type": "v11_memory_list",
                                               "entries": entries}))
 
+        # ── v12 — Auto-réflexion, méta-raisonnement, auto-cohérence ──
+        elif msg_type == "v12_reflect":
+            eng = self._v12.get("reflection")
+            if eng:
+                sub = msg.get("sub", "reasoning")
+                if sub == "reasoning":
+                    result = eng.reflect_on_reasoning(msg.get("trace", {}))
+                elif sub == "plan":
+                    result = eng.reflect_on_plan(msg.get("plan", {}))
+                elif sub == "decision":
+                    result = eng.reflect_on_decision(msg.get("decision", {}))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v12_reflect_result",
+                                          **result}))
+
+        elif msg_type == "v12_meta_reason":
+            eng = self._v12.get("reasoning")
+            if eng:
+                sub = msg.get("sub", "full")
+                trace = msg.get("trace", {})
+                if sub == "full":
+                    result = eng.meta_reason(trace)
+                elif sub == "quality":
+                    result = eng.evaluate_reasoning_quality(trace)
+                elif sub == "improve":
+                    result = eng.propose_reasoning_improvements(trace)
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v12_meta_reason_result",
+                                          **result}))
+
+        elif msg_type == "v12_evaluate_plan":
+            eng = self._v12.get("planner_v2")
+            if eng:
+                sub = msg.get("sub", "evaluate")
+                if sub == "evaluate":
+                    result = eng.evaluate_plan(msg.get("plan", {}))
+                elif sub == "compare":
+                    result = eng.compare_plans(msg.get("plans", []))
+                elif sub == "improve":
+                    result = eng.improve_plan(msg.get("plan", {}))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v12_evaluate_plan_result",
+                                          **result}))
+
+        elif msg_type == "v12_verify":
+            eng = self._v12.get("verifier")
+            if eng:
+                sub = msg.get("sub", "plan")
+                if sub == "plan":
+                    result = eng.meta_verify(msg.get("plan", {}))
+                elif sub == "reasoning":
+                    result = eng.meta_verify_reasoning(msg.get("trace", {}))
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v12_verify_result",
+                                          **result}))
+
+        elif msg_type == "v12_consistency":
+            eng = self._v12.get("consistency")
+            if eng:
+                sub = msg.get("sub", "plan")
+                if sub == "plan":
+                    result = eng.check_consistency(msg.get("plan", {}))
+                elif sub == "reasoning":
+                    result = eng.check_consistency_reasoning(msg.get("trace", {}))
+                elif sub == "enforce":
+                    result = eng.enforce_consistency()
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v12_consistency_result",
+                                          **result}))
+
+        elif msg_type == "v12_supervise":
+            eng = self._v12.get("supervisor_v2")
+            if eng:
+                sub = msg.get("sub", "reasoning")
+                if sub == "reasoning":
+                    result = eng.supervise_reasoning(msg.get("trace", {}))
+                elif sub == "planning":
+                    result = eng.supervise_planning(msg.get("plan", {}))
+                elif sub == "enforce":
+                    result = eng.enforce_meta_rules()
+                else:
+                    result = {}
+                await ws.send(json.dumps({"type": "v12_supervise_result",
+                                          **result}))
+
+        elif msg_type == "v12_explain":
+            eng = self._v12.get("explainability_v2")
+            if eng:
+                kind = msg.get("kind", "plan")
+                if kind == "plan":
+                    text = eng.explain_plan(msg.get("plan", {}))
+                elif kind == "reasoning":
+                    text = eng.explain_reasoning(msg.get("trace", {}))
+                elif kind == "meta_decision":
+                    text = eng.explain_meta_decision(msg.get("decision", {}))
+                else:
+                    text = ""
+                await ws.send(json.dumps({"type": "v12_explain_result",
+                                          "explanation": text}))
+
+        elif msg_type == "v12_stats":
+            stats = {}
+            for name, mod in self._v12.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v12_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -463,8 +586,30 @@ async def main() -> None:
     logger.info("EXO v11 self-learning modules initialized (%d modules)",
                 len(v11_modules))
 
+    # ── v12 — Auto-réflexion, méta-raisonnement, auto-cohérence ──
+    reflection = SelfReflectionEngine(meta_memory, governance)
+    meta_reasoning = MetaReasoningEngine(meta_memory, governance)
+    planner_v2 = MetaPlannerV2(meta_memory, planner, reflection)
+    verifier = MetaVerifier(meta_memory, governance)
+    consistency = SelfConsistencyEngine(meta_memory, verifier, governance)
+    supervisor_v2 = MetaSupervisorV2(
+        meta_memory, supervisor, reflection, meta_reasoning, governance)
+    explainability_v2 = ExplainabilityEngineV2(meta_memory, explanation)
+
+    v12_modules = {
+        "reflection": reflection,
+        "reasoning": meta_reasoning,
+        "planner_v2": planner_v2,
+        "verifier": verifier,
+        "consistency": consistency,
+        "supervisor_v2": supervisor_v2,
+        "explainability_v2": explainability_v2,
+    }
+    logger.info("EXO v12 meta-reasoning modules initialized (%d modules)",
+                len(v12_modules))
+
     # GUI server
-    gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules)
+    gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
