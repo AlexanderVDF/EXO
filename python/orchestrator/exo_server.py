@@ -192,6 +192,15 @@ from cognitive_anomaly_detector import CognitiveAnomalyDetector
 from observability_aggregator import ObservabilityAggregator
 from observability_dashboard_engine import ObservabilityDashboardEngine
 from observability_explainability_engine import ObservabilityExplainabilityEngine
+from cognitive_permission_system import CognitivePermissionSystem
+from multi_level_validation_engine import MultiLevelValidationEngine
+from cognitive_audit_engine import CognitiveAuditEngine
+from compliance_engine import ComplianceEngine
+from governance_policy_engine import GovernancePolicyEngine
+from action_control_engine import ActionControlEngine
+from decision_validation_engine import DecisionValidationEngine
+from governance_supervisor import GovernanceSupervisor
+from governance_explainability_engine import GovernanceExplainabilityEngine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -236,7 +245,8 @@ class GUIServer:
                  v21: dict | None = None,
                  v22: dict | None = None,
                  v23: dict | None = None,
-                 v24: dict | None = None) -> None:
+                 v24: dict | None = None,
+                 v25: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -254,6 +264,7 @@ class GUIServer:
         self._v22 = v22 or {}
         self._v23 = v23 or {}
         self._v24 = v24 or {}
+        self._v25 = v25 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -2052,6 +2063,124 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v24_stats", **stats}))
 
+        # ── v25 cognitive governance ──────────────────────────
+        elif msg_type == "v25_grant_permission":
+            mod = self._v25.get("permissions")
+            if mod:
+                result = mod.grant_permission(data.get("entity", ""), data.get("action", ""))
+                await ws.send(json.dumps({"type": "v25_grant_permission_result", **result}))
+        elif msg_type == "v25_revoke_permission":
+            mod = self._v25.get("permissions")
+            if mod:
+                result = mod.revoke_permission(data.get("entity", ""), data.get("action", ""))
+                await ws.send(json.dumps({"type": "v25_revoke_permission_result", **result}))
+        elif msg_type == "v25_check_permission":
+            mod = self._v25.get("permissions")
+            if mod:
+                result = mod.check_permission(data.get("entity", ""), data.get("action", ""))
+                await ws.send(json.dumps({"type": "v25_check_permission_result", **result}))
+        elif msg_type == "v25_validate_action":
+            mod = self._v25.get("validation")
+            if mod:
+                result = mod.validate_action(data.get("action", {}))
+                await ws.send(json.dumps({"type": "v25_validate_action_result", **result}))
+        elif msg_type == "v25_validate_decision":
+            mod = self._v25.get("validation")
+            if mod:
+                result = mod.validate_decision(data.get("decision", {}))
+                await ws.send(json.dumps({"type": "v25_validate_decision_result", **result}))
+        elif msg_type == "v25_audit_log":
+            mod = self._v25.get("audit")
+            if mod:
+                result = mod.audit_log(data.get("event", {}))
+                await ws.send(json.dumps({"type": "v25_audit_log_result", **result}))
+        elif msg_type == "v25_audit_export":
+            mod = self._v25.get("audit")
+            if mod:
+                result = mod.audit_export()
+                await ws.send(json.dumps({"type": "v25_audit_export_result", **result}))
+        elif msg_type == "v25_audit_query":
+            mod = self._v25.get("audit")
+            if mod:
+                result = mod.audit_query(data.get("criteria", {}))
+                await ws.send(json.dumps({"type": "v25_audit_query_result", **result}))
+        elif msg_type == "v25_check_compliance":
+            mod = self._v25.get("compliance")
+            if mod:
+                result = mod.check_compliance(data.get("action", {}))
+                await ws.send(json.dumps({"type": "v25_check_compliance_result", **result}))
+        elif msg_type == "v25_enforce_compliance":
+            mod = self._v25.get("compliance")
+            if mod:
+                result = mod.enforce_compliance(data.get("action", {}))
+                await ws.send(json.dumps({"type": "v25_enforce_compliance_result", **result}))
+        elif msg_type == "v25_load_policies":
+            mod = self._v25.get("policies")
+            if mod:
+                result = mod.load_policies(data.get("policies", []))
+                await ws.send(json.dumps({"type": "v25_load_policies_result", **result}))
+        elif msg_type == "v25_apply_policy":
+            mod = self._v25.get("policies")
+            if mod:
+                result = mod.apply_policy(data.get("policy", ""))
+                await ws.send(json.dumps({"type": "v25_apply_policy_result", **result}))
+        elif msg_type == "v25_control_action":
+            mod = self._v25.get("action_control")
+            if mod:
+                result = mod.control_action(data.get("action", {}))
+                await ws.send(json.dumps({"type": "v25_control_action_result", **result}))
+        elif msg_type == "v25_block_action":
+            mod = self._v25.get("action_control")
+            if mod:
+                result = mod.block_action(data.get("action", {}))
+                await ws.send(json.dumps({"type": "v25_block_action_result", **result}))
+        elif msg_type == "v25_validate_final_decision":
+            mod = self._v25.get("decision_validation")
+            if mod:
+                result = mod.validate_decision(data.get("decision", {}))
+                await ws.send(json.dumps({"type": "v25_validate_final_decision_result", **result}))
+        elif msg_type == "v25_reject_decision":
+            mod = self._v25.get("decision_validation")
+            if mod:
+                result = mod.reject_decision(data.get("decision", {}))
+                await ws.send(json.dumps({"type": "v25_reject_decision_result", **result}))
+        elif msg_type == "v25_supervise_governance":
+            mod = self._v25.get("supervisor")
+            if mod:
+                result = mod.supervise_governance()
+                await ws.send(json.dumps({"type": "v25_supervise_governance_result", **result}))
+        elif msg_type == "v25_enforce_governance_rules":
+            mod = self._v25.get("supervisor")
+            if mod:
+                result = mod.enforce_governance_rules()
+                await ws.send(json.dumps({"type": "v25_enforce_governance_rules_result", **result}))
+        elif msg_type == "v25_governance_health":
+            mod = self._v25.get("supervisor")
+            if mod:
+                result = mod.governance_health_check()
+                await ws.send(json.dumps({"type": "v25_governance_health_result", **result}))
+        elif msg_type == "v25_explain_permission":
+            mod = self._v25.get("explainability")
+            if mod:
+                result = mod.explain_permission(data.get("entity", ""), data.get("action", ""))
+                await ws.send(json.dumps({"type": "v25_explain_permission_result", **result}))
+        elif msg_type == "v25_explain_governance_decision":
+            mod = self._v25.get("explainability")
+            if mod:
+                result = mod.explain_governance_decision()
+                await ws.send(json.dumps({"type": "v25_explain_governance_decision_result", **result}))
+        elif msg_type == "v25_explain_block_reason":
+            mod = self._v25.get("explainability")
+            if mod:
+                result = mod.explain_block_reason()
+                await ws.send(json.dumps({"type": "v25_explain_block_reason_result", **result}))
+        elif msg_type == "v25_stats":
+            stats = {}
+            for name, mod in self._v25.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v25_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -2614,11 +2743,53 @@ async def main() -> None:
     logger.info("EXO v24 cognitive observability initialized (%d modules)",
                 len(v24_modules))
 
+    # ── EXO v25  cognitive governance ──────────────────────
+    governance_v11 = v11_modules.get("governance")
+    gov_permissions = CognitivePermissionSystem(governance=governance_v11)
+    gov_validation = MultiLevelValidationEngine(
+        governance=governance_v11, permissions=gov_permissions)
+    gov_audit = CognitiveAuditEngine(governance=governance_v11)
+    gov_policies = GovernancePolicyEngine(governance=governance_v11)
+    gov_compliance = ComplianceEngine(
+        governance=governance_v11, permissions=gov_permissions,
+        policies=gov_policies)
+    gov_action_ctrl = ActionControlEngine(
+        governance=governance_v11, permissions=gov_permissions,
+        validation=gov_validation, compliance=gov_compliance)
+    gov_decision_val = DecisionValidationEngine(
+        governance=governance_v11, permissions=gov_permissions,
+        policies=gov_policies)
+    gov_supervisor = GovernanceSupervisor(
+        governance=governance_v11, permissions=gov_permissions,
+        validation=gov_validation, audit=gov_audit,
+        compliance=gov_compliance, policies=gov_policies,
+        action_control=gov_action_ctrl,
+        decision_validation=gov_decision_val)
+    gov_explainability = GovernanceExplainabilityEngine(
+        governance=governance_v11, permissions=gov_permissions,
+        validation=gov_validation, compliance=gov_compliance,
+        action_control=gov_action_ctrl, audit=gov_audit)
+
+    v25_modules = {
+        "permissions": gov_permissions,
+        "validation": gov_validation,
+        "audit": gov_audit,
+        "compliance": gov_compliance,
+        "policies": gov_policies,
+        "action_control": gov_action_ctrl,
+        "decision_validation": gov_decision_val,
+        "supervisor": gov_supervisor,
+        "explainability": gov_explainability,
+    }
+    logger.info("EXO v25 cognitive governance initialized (%d modules)",
+                len(v25_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
                     v17_modules, v18_modules, v19_modules, v20_modules,
-                    v21_modules, v22_modules, v23_modules, v24_modules)
+                    v21_modules, v22_modules, v23_modules, v24_modules,
+                    v25_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
