@@ -645,6 +645,17 @@ async def handle_client(ws, hg: HomeGraphManager) -> None:
             elif action == "metadata":
                 await ws.send(json.dumps({"ok": True, "data": hg.metadata()}))
 
+            elif action == "gui_state":
+                # Composite action for GUI: returns devices + rooms + scenarios
+                await ws.send(json.dumps({
+                    "ok": True,
+                    "data": {
+                        "devices": hg.list_devices(),
+                        "rooms": hg.list_rooms(),
+                        "scenarios": hg.list_scenarios(),
+                    },
+                }))
+
             else:
                 await ws.send(json.dumps({"ok": False, "error": f"Unknown action: {action}"}))
 

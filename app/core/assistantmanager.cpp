@@ -17,6 +17,7 @@
 #include <QDate>
 #include <QLocale>
 #include <QMetaObject>
+#include <QUuid>
 
 AssistantManager::AssistantManager(QObject *parent)
     : QObject(parent)
@@ -516,6 +517,170 @@ QString AssistantManager::getWeatherSummary() const
            .arg(m_weatherManager->description());
 }
 
+void AssistantManager::requestNetworkScan(bool fast)
+{
+    QString guiId = QStringLiteral("gui_") + QUuid::createUuid().toString(QUuid::Id128);
+    m_guiToolCalls.insert(guiId);
+
+    auto *ws = m_toolSockets.value(QStringLiteral("network"));
+    if (!ws || !ws->isValid()) {
+        hWarning(exoAssistant) << "Network socket non disponible";
+        QJsonObject err;
+        err[QStringLiteral("status")] = QStringLiteral("error");
+        err[QStringLiteral("message")] = QStringLiteral("Service réseau non disponible");
+        m_guiToolCalls.remove(guiId);
+        emit networkScanCompleted(err);
+        return;
+    }
+
+    m_pendingToolCalls.insert(QStringLiteral("network"), guiId);
+
+    QJsonObject request;
+    request[QStringLiteral("action")] = fast ? QStringLiteral("scan_fast")
+                                             : QStringLiteral("scan");
+    request[QStringLiteral("params")] = QJsonObject();
+    ws->sendTextMessage(QString::fromUtf8(
+        QJsonDocument(request).toJson(QJsonDocument::Compact)));
+
+    hAssistant() << "GUI network scan:" << (fast ? "fast" : "full");
+
+    // Timeout 120s for full scan (ARP+mDNS+SSDP+Ping can be slow)
+    int timeoutMs = fast ? 30000 : 120000;
+    QTimer::singleShot(timeoutMs, this, [this, guiId]() {
+        if (m_guiToolCalls.remove(guiId)) {
+            if (m_pendingToolCalls.value(QStringLiteral("network")) == guiId)
+                m_pendingToolCalls.remove(QStringLiteral("network"));
+            hWarning(exoAssistant) << "GUI network scan timeout";
+            QJsonObject err;
+            err[QStringLiteral("status")] = QStringLiteral("error");
+            err[QStringLiteral("message")] = QStringLiteral("Timeout scan réseau");
+            emit networkScanCompleted(err);
+        }
+    });
+}
+
+void AssistantManager::requestHomeGraph()
+{
+    QString guiId = QStringLiteral("gui_") + QUuid::createUuid().toString(QUuid::Id128);
+    m_guiToolCalls.insert(guiId);
+
+    auto *ws = m_toolSockets.value(QStringLiteral("homegraph"));
+    if (!ws || !ws->isValid()) {
+        QJsonObject err;
+        err[QStringLiteral("status")] = QStringLiteral("error");
+        err[QStringLiteral("message")] = QStringLiteral("Service HomeGraph non disponible");
+        m_guiToolCalls.remove(guiId);
+        emit homeGraphReceived(err);
+        return;
+    }
+
+    m_pendingToolCalls.insert(QStringLiteral("homegraph"), guiId);
+
+    QJsonObject request;
+    request[QStringLiteral("action")] = QStringLiteral("gui_state");
+    request[QStringLiteral("params")] = QJsonObject();
+    ws->sendTextMessage(QString::fromUtf8(
+        QJsonDocument(request).toJson(QJsonDocument::Compact)));
+
+    hAssistant() << "GUI HomeGraph state requested";
+
+    QTimer::singleShot(60000, this, [this, guiId]() {
+        if (m_guiToolCalls.remove(guiId)) {
+            if (m_pendingToolCalls.value(QStringLiteral("homegraph")) == guiId)
+                m_pendingToolCalls.remove(QStringLiteral("homegraph"));
+            QJsonObject err;
+            err[QStringLiteral("status")] = QStringLiteral("error");
+            err[QStringLiteral("message")] = QStringLiteral("Timeout HomeGraph");
+            emit homeGraphReceived(err);
+        }
+    });
+}
+
+void AssistantManager::requestDeviceCommand(const QString &deviceId,
+                                             const QString &command,
+                                             const QJsonObject &params)
+{
+    QString guiId = QStringLiteral("gui_") + QUuid::createUuid().toString(QUuid::Id128);
+    m_guiToolCalls.insert(guiId);
+
+    auto *ws = m_toolSockets.value(QStringLiteral("homegraph"));
+    if (!ws || !ws->isValid()) {
+        QJsonObject err;
+        err[QStringLiteral("status")] = QStringLiteral("error");
+        err[QStringLiteral("message")] = QStringLiteral("Service HomeGraph non disponible");
+        m_guiToolCalls.remove(guiId);
+        emit deviceCommandResult(err);
+        return;
+    }
+
+    m_pendingToolCalls.insert(QStringLiteral("homegraph"), guiId);
+
+    QJsonObject cmdParams;
+    cmdParams[QStringLiteral("id_exo")] = deviceId;
+    cmdParams[QStringLiteral("command")] = command;
+    if (!params.isEmpty())
+        cmdParams[QStringLiteral("params")] = params;
+
+    QJsonObject request;
+    request[QStringLiteral("action")] = QStringLiteral("apply_command");
+    request[QStringLiteral("params")] = cmdParams;
+    ws->sendTextMessage(QString::fromUtf8(
+        QJsonDocument(request).toJson(QJsonDocument::Compact)));
+
+    hAssistant() << "GUI device command:" << deviceId << command;
+
+    QTimer::singleShot(15000, this, [this, guiId]() {
+        if (m_guiToolCalls.remove(guiId)) {
+            if (m_pendingToolCalls.value(QStringLiteral("homegraph")) == guiId)
+                m_pendingToolCalls.remove(QStringLiteral("homegraph"));
+            QJsonObject err;
+            err[QStringLiteral("status")] = QStringLiteral("error");
+            err[QStringLiteral("message")] = QStringLiteral("Timeout commande appareil");
+            emit deviceCommandResult(err);
+        }
+    });
+}
+
+void AssistantManager::requestRunScenario(const QString &name)
+{
+    QString guiId = QStringLiteral("gui_") + QUuid::createUuid().toString(QUuid::Id128);
+    m_guiToolCalls.insert(guiId);
+
+    auto *ws = m_toolSockets.value(QStringLiteral("homegraph"));
+    if (!ws || !ws->isValid()) {
+        QJsonObject err;
+        err[QStringLiteral("status")] = QStringLiteral("error");
+        err[QStringLiteral("message")] = QStringLiteral("Service HomeGraph non disponible");
+        m_guiToolCalls.remove(guiId);
+        emit scenarioResult(err);
+        return;
+    }
+
+    m_pendingToolCalls.insert(QStringLiteral("homegraph"), guiId);
+
+    QJsonObject scParams;
+    scParams[QStringLiteral("name")] = name;
+
+    QJsonObject request;
+    request[QStringLiteral("action")] = QStringLiteral("run_scenario");
+    request[QStringLiteral("params")] = scParams;
+    ws->sendTextMessage(QString::fromUtf8(
+        QJsonDocument(request).toJson(QJsonDocument::Compact)));
+
+    hAssistant() << "GUI run scenario:" << name;
+
+    QTimer::singleShot(30000, this, [this, guiId]() {
+        if (m_guiToolCalls.remove(guiId)) {
+            if (m_pendingToolCalls.value(QStringLiteral("homegraph")) == guiId)
+                m_pendingToolCalls.remove(QStringLiteral("homegraph"));
+            QJsonObject err;
+            err[QStringLiteral("status")] = QStringLiteral("error");
+            err[QStringLiteral("message")] = QStringLiteral("Timeout scénario");
+            emit scenarioResult(err);
+        }
+    });
+}
+
 // Slots
 
 void AssistantManager::onWeatherUpdate()
@@ -947,6 +1112,41 @@ void AssistantManager::onToolServiceMessage(const QString &service,
     }
 
     m_pendingToolCalls.remove(service);
+
+    // GUI-initiated request → emit signal, don't forward to Claude
+    if (m_guiToolCalls.remove(toolUseId)) {
+        QJsonObject result;
+        if (msg.value(QStringLiteral("ok")).toBool()) {
+            result = msg.value(QStringLiteral("data")).toObject();
+            result[QStringLiteral("status")] = QStringLiteral("success");
+        } else {
+            result[QStringLiteral("status")] = QStringLiteral("error");
+            result[QStringLiteral("message")] =
+                msg.value(QStringLiteral("error")).toString(QStringLiteral("Erreur inconnue"));
+        }
+        hAssistant() << "GUI tool response:" << service;
+
+        // Route to correct signal based on service
+        if (service == QLatin1String("network")) {
+            emit networkScanCompleted(result);
+        } else if (service == QLatin1String("homegraph")) {
+            // Detect action type from result content
+            if (result.contains(QStringLiteral("devices"))
+                || result.contains(QStringLiteral("rooms"))
+                || result.contains(QStringLiteral("scenarios"))) {
+                emit homeGraphReceived(result);
+            } else if (result.contains(QStringLiteral("state"))
+                       || result.contains(QStringLiteral("ok"))) {
+                emit deviceCommandResult(result);
+            } else {
+                emit homeGraphReceived(result);
+            }
+        } else {
+            // Fallback
+            emit homeGraphReceived(result);
+        }
+        return;
+    }
 
     // Construire le résultat pour Claude
     QJsonObject result;

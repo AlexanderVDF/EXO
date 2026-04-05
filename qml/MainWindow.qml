@@ -124,6 +124,37 @@ ApplicationWindow {
             mainWindow.currentResponse = "Erreur: " + error
             mainWindow.appStatus = "Idle"
         }
+
+        function onNetworkScanCompleted(result) {
+            reseauPage.scanning = false
+            if (result.status === "success") {
+                var nodes = result.devices || result.nodes || []
+                var topo = result.topology || {}
+                var links = topo.links || result.links || result.edges || []
+                reseauPage.nodes = nodes
+                reseauPage.links = links
+            }
+        }
+
+        function onHomeGraphReceived(result) {
+            if (result.status === "success") {
+                maisonPage.devices = result.devices || []
+                maisonPage.rooms = result.rooms || []
+                maisonPage.scenarios = result.scenarios || []
+            }
+        }
+
+        function onDeviceCommandResult(result) {
+            // Refresh home graph after a device command
+            if (result.status === "success" && typeof assistantManager !== 'undefined')
+                assistantManager.requestHomeGraph()
+        }
+
+        function onScenarioResult(result) {
+            // Refresh after scenario execution
+            if (typeof assistantManager !== 'undefined')
+                assistantManager.requestHomeGraph()
+        }
     }
 
     // ══════════════════════════════════════════════
@@ -160,6 +191,9 @@ ApplicationWindow {
                     break
                 case "maison":
                     centralStack.currentIndex = 5
+                    // Auto-refresh HomeGraph when navigating to Maison
+                    if (typeof assistantManager !== 'undefined')
+                        assistantManager.requestHomeGraph()
                     break
                 case "reseau":
                     centralStack.currentIndex = 6
@@ -262,11 +296,35 @@ ApplicationWindow {
                 // Index 5 : Maison (Domotique v1)
                 MaisonPage {
                     id: maisonPage
+                    onDeviceCommand: function(deviceId, command, params) {
+                        if (typeof assistantManager !== 'undefined')
+                            assistantManager.requestDeviceCommand(deviceId, command, params || {})
+                    }
+                    onRefreshRequested: {
+                        if (typeof assistantManager !== 'undefined')
+                            assistantManager.requestHomeGraph()
+                    }
+                    onScenarioRequested: function(name) {
+                        if (typeof assistantManager !== 'undefined')
+                            assistantManager.requestRunScenario(name)
+                    }
                 }
 
                 // Index 6 : Réseau (Domotique v1)
                 ReseauPage {
                     id: reseauPage
+                    onScanRequested: {
+                        if (typeof assistantManager !== 'undefined') {
+                            reseauPage.scanning = true
+                            assistantManager.requestNetworkScan(false)
+                        }
+                    }
+                    onScanFastRequested: {
+                        if (typeof assistantManager !== 'undefined') {
+                            reseauPage.scanning = true
+                            assistantManager.requestNetworkScan(true)
+                        }
+                    }
                 }
             }
 

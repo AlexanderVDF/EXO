@@ -50,14 +50,14 @@ Item {
 
             Text {
                 text: "📶  Réseau"
-                font.pixelSize: Theme.fontXL
+                font.pixelSize: Theme.fontH1
                 font.weight: Font.Bold
                 color: Theme.textPrimary
             }
 
             Text {
                 text: root.nodes.length + " appareils"
-                font.pixelSize: Theme.fontSM
+                font.pixelSize: Theme.fontSmall
                 color: Theme.textMuted
                 Layout.alignment: Qt.AlignBottom
             }
@@ -77,7 +77,7 @@ Item {
             Rectangle {
                 width: fastLabel.implicitWidth + 24
                 height: 34
-                radius: Theme.radius8
+                radius: Theme.radiusLarge
                 color: root.scanning ? Theme.bgActive : Theme.bgElevated
                 border.color: Theme.border
 
@@ -85,7 +85,7 @@ Item {
                     id: fastLabel
                     anchors.centerIn: parent
                     text: "⚡ Rapide"
-                    font.pixelSize: Theme.fontSM
+                    font.pixelSize: Theme.fontSmall
                     color: Theme.textPrimary
                 }
                 MouseArea {
@@ -100,7 +100,7 @@ Item {
             Rectangle {
                 width: scanLabel.implicitWidth + 24
                 height: 34
-                radius: Theme.radius8
+                radius: Theme.radiusLarge
                 color: root.scanning ? Theme.bgActive : Theme.accent
                 border.color: Theme.border
 
@@ -108,7 +108,7 @@ Item {
                     id: scanLabel
                     anchors.centerIn: parent
                     text: root.scanning ? "Scan…" : "🔍 Scan complet"
-                    font.pixelSize: Theme.fontSM
+                    font.pixelSize: Theme.fontSmall
                     color: "#FFF"
                 }
                 MouseArea {
@@ -124,7 +124,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            radius: Theme.radius12
+            radius: Theme.radiusXL
             color: Theme.bgSecondary
             border.color: Theme.border
             clip: true
@@ -336,7 +336,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.selectedNode ? 80 : 0
             visible: root.selectedNode !== null
-            radius: Theme.radius8
+            radius: Theme.radiusLarge
             color: Theme.bgElevated
             border.color: Theme.accent
 
@@ -350,13 +350,13 @@ Item {
                     spacing: 2
                     Text {
                         text: root.selectedNode ? (root.selectedNode.name || root.selectedNode.hostname || "Inconnu") : ""
-                        font.pixelSize: Theme.fontMD
+                        font.pixelSize: Theme.fontBody
                         font.weight: Font.Bold
                         color: Theme.textPrimary
                     }
                     Text {
                         text: root.selectedNode ? ("IP: " + (root.selectedNode.ip || "—") + "  MAC: " + (root.selectedNode.mac || "—")) : ""
-                        font.pixelSize: Theme.fontSM
+                        font.pixelSize: Theme.fontSmall
                         color: Theme.textSecondary
                     }
                 }
@@ -365,12 +365,12 @@ Item {
                     spacing: 2
                     Text {
                         text: root.selectedNode ? ("Vendor: " + (root.selectedNode.vendor || "—")) : ""
-                        font.pixelSize: Theme.fontSM
+                        font.pixelSize: Theme.fontSmall
                         color: Theme.textSecondary
                     }
                     Text {
                         text: root.selectedNode ? ("Type: " + (root.selectedNode.type || "—") + "  Latence: " + (root.selectedNode.latency_ms !== undefined && root.selectedNode.latency_ms !== null ? root.selectedNode.latency_ms + "ms" : "—")) : ""
-                        font.pixelSize: Theme.fontSM
+                        font.pixelSize: Theme.fontSmall
                         color: Theme.textSecondary
                     }
                 }
@@ -431,40 +431,40 @@ Item {
 
                         Text {
                             text: modelData.name || modelData.hostname || "—"
-                            font.pixelSize: Theme.fontSM
+                            font.pixelSize: Theme.fontSmall
                             color: Theme.textPrimary
                             Layout.preferredWidth: 140
                             elide: Text.ElideRight
                         }
                         Text {
                             text: modelData.ip || "—"
-                            font.pixelSize: Theme.fontSM
+                            font.pixelSize: Theme.fontSmall
                             color: Theme.textSecondary
                             Layout.preferredWidth: 110
                         }
                         Text {
                             text: modelData.mac || "—"
-                            font.pixelSize: Theme.fontXS
+                            font.pixelSize: Theme.fontCaption
                             color: Theme.textMuted
                             Layout.preferredWidth: 130
                         }
                         Text {
                             text: modelData.vendor || ""
-                            font.pixelSize: Theme.fontXS
+                            font.pixelSize: Theme.fontCaption
                             color: Theme.textMuted
                             Layout.preferredWidth: 100
                             elide: Text.ElideRight
                         }
                         Text {
                             text: modelData.type || ""
-                            font.pixelSize: Theme.fontXS
+                            font.pixelSize: Theme.fontCaption
                             color: Theme.accent
                             Layout.preferredWidth: 55
                         }
                         Text {
                             text: modelData.latency_ms !== undefined && modelData.latency_ms !== null
                                   ? modelData.latency_ms + "ms" : "—"
-                            font.pixelSize: Theme.fontXS
+                            font.pixelSize: Theme.fontCaption
                             color: {
                                 var lat = modelData.latency_ms;
                                 if (lat === undefined || lat === null) return Theme.textMuted;

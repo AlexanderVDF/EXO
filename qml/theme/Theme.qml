@@ -96,6 +96,12 @@ QtObject {
     readonly property int fontMicro:   11
     readonly property int fontTiny:    10
 
+    // Alias de commodité (utilisés par MaisonPage, ScenariosPage, etc.)
+    readonly property int fontXL: fontH1       // 24
+    readonly property int fontMD: fontH3       // 16
+    readonly property int fontSM: fontSmall    // 13
+    readonly property int fontXS: fontCaption  // 12
+
     // Poids
     readonly property int weightLight:    300
     readonly property int weightRegular:  400
@@ -134,6 +140,10 @@ QtObject {
     readonly property int radiusLarge:  8
     readonly property int radiusXL:     12
     readonly property int radiusRound:  999
+
+    // Alias de commodité
+    readonly property int radius8:  radiusLarge  // 8
+    readonly property int radius12: radiusXL     // 12
 
     // ══════════════════════════════════════════════
     //  OMBRES (valeurs pour DropShadow / layer.effect)

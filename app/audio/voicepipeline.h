@@ -386,7 +386,7 @@ private:
     static constexpr int UTTERANCE_TIMEOUT_MS   = 8000;  // v5.2: 8s max utterance (was 12000)
     static constexpr int POST_WAKE_GRACE_MS     = 150;   // v5.2: 150ms grace (was 400)
     static constexpr int CONVERSATION_TIMEOUT_MS = 10000; // v5.2: 10s conversation mode (was 15000)
-    static constexpr int TRANSCRIBE_TIMEOUT_MS  = 10000; // v5.2: 10s STT timeout (was 20000)
+    static constexpr int TRANSCRIBE_TIMEOUT_MS  = 20000; // v25.1: 20s STT timeout (beam-size latency)
     static constexpr int SPEAKING_WATCHDOG_MS    = 20000; // v5.2: 20s watchdog (was 30000)
     static constexpr int MIN_UTTERANCE_MS       = 800;   // v5.2: min 800ms before end-of-speech
 

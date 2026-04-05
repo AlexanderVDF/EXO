@@ -5,6 +5,27 @@
 
 ---
 
+## v26.0 — Conformité architecture + STT performance — 5 avril 2026
+
+### Ajouté
+- **MetricsManager** (`app/core/MetricsManager.cpp/h`) — façade métriques unifiée : compteurs, gauges, histogrammes + délégation à LatencyMetrics
+- **TraceManager** (`app/core/TraceManager.cpp/h`) — tracing distribué : spans hiérarchiques (trace_id → span_id → parent_id) + délégation à PipelineTracer
+- **ErrorManager** (`app/core/ErrorManager.cpp/h`) — gestion centralisée des erreurs : catégorisation (Warning/Error/Critical/Fatal), recovery, compteurs par sévérité, API QML
+- **SecurityManager** (`app/core/SecurityManager.cpp/h`) — sécurité et audit : permissions par module, masquage clés API, validation hosts réseau, journal d'audit
+
+### Modifié
+- **STT beam-size** : 3 → **1** (greedy decoding) — latence STT réduite de ~60% (`stt_server.py`, `tasks.json`)
+- **TRANSCRIBE_TIMEOUT_MS** : 10000 → **20000** (`VoicePipeline.h`) — aligné sur le timeout serveur STT
+- **Hallucination filter** : ajout logging `logger.debug()` pour traçabilité des transcriptions filtrées (`stt_server.py`)
+- **exo/main.py** : 13 `print()` → `logger.info()` — conformité règle nettoyage Prompt Maître
+- **PROMPT_MAITRE.md** : v25.1 → v26, 7 → 15 services documentés, 4 managers C++ ajoutés
+
+### Architecture
+- **15 microservices Python** documentés (était 7) : orchestrator, stt, tts, vad, wakeword, memory, nlu, websearch, news, knowledge, tools, planner, executor, verifier, homegraph
+- **16 modules C++** : AssistantManager, VoicePipeline, TTSManager, ClaudeAPI, AIMemoryManager, ConfigManager, LogManager, MetricsManager, TraceManager, ErrorManager, SecurityManager, LatencyMetrics, PipelineTracer, ContextCache, WeatherManager + ServiceManager
+
+---
+
 ## v25.1 — Framework cognitif standalone — 5 avril 2026
 
 ### Ajouté

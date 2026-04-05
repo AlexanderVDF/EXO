@@ -1,6 +1,6 @@
 # Services EXO
 
-> Auto-généré par `auto_maintain.py` — 2026-04-04
+> Auto-généré par `auto_maintain.py` — 2026-04-05
 
 ## Microservices
 
@@ -34,7 +34,7 @@
 
 - `tests/performance/test_performance.py`
 
-### python/ (40 fichier(s))
+### python/ (51 fichier(s))
 
 - `tests/python/test_actions.py`
 - `tests/python/test_agent_v10.py`
@@ -69,6 +69,17 @@
 - `tests/python/test_v12_metareasoning.py`
 - `tests/python/test_v13_prospective.py`
 - `tests/python/test_v14_distributed.py`
+- `tests/python/test_v15_unified.py`
+- `tests/python/test_v16_autonomous.py`
+- `tests/python/test_v17_neurosymbolic.py`
+- `tests/python/test_v18_hierarchical.py`
+- `tests/python/test_v19_optimization.py`
+- `tests/python/test_v20_modular.py`
+- `tests/python/test_v21_expert_system.py`
+- `tests/python/test_v22_strategic_planning.py`
+- `tests/python/test_v23_contextual_simulation.py`
+- `tests/python/test_v24_cognitive_observability.py`
+- `tests/python/test_v25_cognitive_governance.py`
 - `tests/python/test_v9_config.py`
 - `tests/python/test_v9_integration.py`
 - `tests/python/test_v9_observability.py`
@@ -77,4 +88,4 @@
 - `tests/python/test_vad_server.py`
 - `tests/python/test_websearch_server.py`
 
-**Total : 49 fichier(s) de test**
+**Total : 60 fichier(s) de test**

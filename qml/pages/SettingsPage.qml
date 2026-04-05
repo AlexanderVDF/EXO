@@ -1803,7 +1803,7 @@ Rectangle {
                                     parent.clicked()
                                     var msg = chatInput.text.trim()
                                     if (msg.length > 0 && typeof assistantManager !== 'undefined') {
-                                        assistantManager.processTextCommand(msg)
+                                        assistantManager.sendMessage(msg)
                                         chatInput.text = ""
                                     }
                                 }

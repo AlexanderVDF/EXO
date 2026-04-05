@@ -7,6 +7,7 @@
 #include <QQmlApplicationEngine>
 #include <QWebSocket>
 #include <QMap>
+#include <QSet>
 #include "ConfigManager.h"
 #include "HealthCheck.h"
 
@@ -52,6 +53,12 @@ public:
     Q_INVOKABLE void startListening();
     Q_INVOKABLE void stopListening();
     Q_INVOKABLE QString getWeatherSummary() const;
+    Q_INVOKABLE void requestNetworkScan(bool fast = false);
+    Q_INVOKABLE void requestHomeGraph();
+    Q_INVOKABLE void requestDeviceCommand(const QString &deviceId,
+                                           const QString &command,
+                                           const QJsonObject &params = {});
+    Q_INVOKABLE void requestRunScenario(const QString &name);
     
     // Accès aux composants pour l'exposition QML  
     ClaudeAPI* claudeApi() const { return m_claudeApi; }
@@ -69,6 +76,10 @@ signals:
     void listeningStateChanged(bool isListening);
     void initializationComplete();
     void errorOccurred(const QString &error);
+    void networkScanCompleted(const QJsonObject &result);
+    void homeGraphReceived(const QJsonObject &result);
+    void deviceCommandResult(const QJsonObject &result);
+    void scenarioResult(const QJsonObject &result);
 
 private slots:
     void onClaudeResponse(const QString &response);
@@ -112,6 +123,7 @@ private:
     // Microservices outils (WebSocket)
     QMap<QString, QWebSocket*> m_toolSockets;
     QMap<QString, QString> m_pendingToolCalls;  // service → toolUseId
+    QSet<QString> m_guiToolCalls;  // toolUseIds initiated from GUI
 
     // v8.1 ULL: Context cache
     ContextCache *m_contextCache = nullptr;

@@ -1,6 +1,6 @@
 # Index des modules EXO
 
-> Auto-généré par `auto_maintain.py` — 2026-04-04
+> Auto-généré par `auto_maintain.py` — 2026-04-05
 
 ## Modules Python
 
@@ -14,7 +14,7 @@
 | network | `python/network` | 10 | `` |
 | news | `python/news` | 2 | `python/news/news_server.py` |
 | nlu | `python/nlu` | 2 | `python/nlu/nlu_server.py` |
-| orchestrator | `python/orchestrator` | 54 | `python/orchestrator/exo_server.py` |
+| orchestrator | `python/orchestrator` | 149 | `python/orchestrator/exo_server.py` |
 | planner | `python/planner` | 2 | `python/planner/task_planner_server.py` |
 | shared | `python/shared` | 12 | `` |
 | stt | `python/stt` | 3 | `python/stt/stt_server.py` |

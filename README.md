@@ -1,6 +1,6 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 25.1** | Avril 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
+**Version 26.0** | Avril 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
@@ -393,7 +393,7 @@ La documentation est dans [`docs/`](docs/) :
 
 ## Roadmap
 
-### ✅ Réalisé (v25.1)
+### ✅ Réalisé (v26)
 - RtAudio WASAPI — capture audio faible latence
 - Interface QML 19 composants VS Code + Fluent Design
 - Pipeline vocal VoicePipeline v4 (FSM, VAD, StreamingSTT)
@@ -414,7 +414,13 @@ La documentation est dans [`docs/`](docs/) :
 - Sécurité (permissions, audit log)
 - Config centralisée avec hot-reload
 - **Framework cognitif standalone** (`exo/`) — 8 moteurs, 8 couches, 3 pipelines, 13 agents, gouvernance, observabilité
-- **2335 tests automatisés** (2218 tests existants + 117 tests framework cognitif)
+- **MetricsManager** — façade métriques unifiée (compteurs, gauges, histogrammes)
+- **TraceManager** — tracing distribué avec spans hiérarchiques
+- **ErrorManager** — gestion centralisée des erreurs (catégorisation, recovery)
+- **SecurityManager** — permissions, masquage API keys, audit, validation hosts
+- **STT beam=1** — greedy decoding pour latence temps-réel (~60% plus rapide)
+- **15 microservices Python** — architecture complète documentée
+- **2335+ tests automatisés** (2218 tests existants + 117 tests framework cognitif)
 
 ### 🔄 À venir
 - Google Calendar — agenda intelligent

@@ -39,6 +39,10 @@ set(SOURCES
     app/core/PipelineTracer.cpp
     app/core/ContextCache.cpp
     app/core/LatencyMetrics.cpp
+    app/core/MetricsManager.cpp
+    app/core/TraceManager.cpp
+    app/core/ErrorManager.cpp
+    app/core/SecurityManager.cpp
     app/core/WebSocketClient.cpp
     app/core/HealthCheck.cpp
     app/core/ServiceManager.cpp
@@ -64,6 +68,10 @@ set(HEADERS
     app/core/PipelineTracer.h
     app/core/ContextCache.h
     app/core/LatencyMetrics.h
+    app/core/MetricsManager.h
+    app/core/TraceManager.h
+    app/core/ErrorManager.h
+    app/core/SecurityManager.h
     app/core/WebSocketClient.h
     app/core/HealthCheck.h
     app/core/ServiceManager.h

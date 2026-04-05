@@ -1,6 +1,6 @@
 # Graphe de dépendances C++
 
-> Auto-généré par `auto_maintain.py` — 2026-04-04
+> Auto-généré par `auto_maintain.py` — 2026-04-05
 
 ## Matrice d'inclusion
 

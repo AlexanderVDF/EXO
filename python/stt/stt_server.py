@@ -90,7 +90,7 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8766
 DEFAULT_MODEL = "medium"        # medium = 700MB RAM, good quality — was large-v3 (~2GB)
 DEFAULT_LANGUAGE = "fr"
-DEFAULT_BEAM_SIZE = 3
+DEFAULT_BEAM_SIZE = 1            # v25.1: beam=1 for real-time latency (was 3)
 DEFAULT_DEVICE = "vulkan"        # Force Vulkan GPU (RTX 3070)
 DEFAULT_COMPUTE_TYPE = "int8"    # int8 = fast CPU, float16 = CUDA
 DEFAULT_BACKEND = "whispercpp"   # "whispercpp" (Vulkan GPU) or "faster_whisper" (CPU) or "whispercpp_cpu"
@@ -122,13 +122,16 @@ def _is_hallucination(text: str) -> bool:
         return False
     lower = text.lower().strip()
     if len(lower) < 2:
+        logger.debug("Hallucination filter: too short (%d chars): %r", len(lower), text)
         return True
     # Reject repeated short words (e.g., "Merci. Merci. Merci.")
     words = lower.split()
     if len(words) >= 3 and len(set(words)) == 1:
+        logger.debug("Hallucination filter: repeated word: %r", text)
         return True
     for pat in _HALLUCINATION_PATTERNS:
         if pat in lower:
+            logger.debug("Hallucination filter: pattern %r in: %r", pat, text)
             return True
     return False
 
