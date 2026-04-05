@@ -166,6 +166,17 @@ from logical_coherence_engine import LogicalCoherenceEngine
 from knowledge_graph_v2 import KnowledgeGraphV2
 from symbolic_explainability_v2 import SymbolicExplainabilityEngineV2
 
+# v22 — Planification stratégique
+from strategic_planner import StrategicPlanner
+from htn_plus_engine import HTNPlusEngine
+from multi_objective_planner import MultiObjectivePlanner
+from constraint_aware_planner import ConstraintAwarePlanner
+from scenario_planner import ScenarioPlanner
+from strategic_arbitration_engine import StrategicArbitrationEngine
+from temporal_planning_engine import TemporalPlanningEngine
+from plan_coherence_engine import PlanCoherenceEngine
+from planning_explainability_engine import PlanningExplainabilityEngine
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -206,7 +217,8 @@ class GUIServer:
                  v18: dict | None = None,
                  v19: dict | None = None,
                  v20: dict | None = None,
-                 v21: dict | None = None) -> None:
+                 v21: dict | None = None,
+                 v22: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -221,6 +233,7 @@ class GUIServer:
         self._v19 = v19 or {}
         self._v20 = v20 or {}
         self._v21 = v21 or {}
+        self._v22 = v22 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1751,6 +1764,85 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v21_stats", **stats}))
 
+        # ── v22 — Planification stratégique ─────────────────
+        elif msg_type == "v22_plan":
+            planner = self._v22.get("strategic_planner")
+            if planner:
+                intent = msg.get("intent", {})
+                result = planner.plan(intent)
+                await ws.send(json.dumps({"type": "v22_plan_result", **result}))
+
+        elif msg_type == "v22_htn_expand":
+            eng = self._v22.get("htn_plus")
+            if eng:
+                task = msg.get("task", {})
+                result = eng.htn_expand(task)
+                await ws.send(json.dumps({"type": "v22_htn_expand_result", **result}))
+
+        elif msg_type == "v22_multi_objective":
+            eng = self._v22.get("multi_objective")
+            if eng:
+                intent = msg.get("intent", {})
+                objectives = msg.get("objectives", [])
+                result = eng.plan_multi_objectives(intent, objectives)
+                await ws.send(json.dumps({"type": "v22_multi_objective_result", **result}))
+
+        elif msg_type == "v22_apply_constraints":
+            eng = self._v22.get("constraint_aware")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.apply_constraints(plan)
+                await ws.send(json.dumps({"type": "v22_constraints_result", **result}))
+
+        elif msg_type == "v22_scenarios":
+            eng = self._v22.get("scenario_planner")
+            if eng:
+                intent = msg.get("intent", {})
+                result = eng.generate_scenarios(intent)
+                await ws.send(json.dumps({"type": "v22_scenarios_result", **result}))
+
+        elif msg_type == "v22_arbitrate":
+            eng = self._v22.get("arbitration")
+            if eng:
+                plans = msg.get("plans", [])
+                result = eng.arbitrate(plans)
+                await ws.send(json.dumps({"type": "v22_arbitrate_result", **result}))
+
+        elif msg_type == "v22_temporal":
+            eng = self._v22.get("temporal")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.analyze_temporal_constraints(plan)
+                await ws.send(json.dumps({"type": "v22_temporal_result", **result}))
+
+        elif msg_type == "v22_coherence":
+            eng = self._v22.get("coherence")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.check_plan_coherence(plan)
+                await ws.send(json.dumps({"type": "v22_coherence_result", **result}))
+
+        elif msg_type == "v22_explain":
+            eng = self._v22.get("explainability")
+            if eng:
+                what = msg.get("what", "plan")
+                if what == "scenario":
+                    scenario = msg.get("scenario", {})
+                    result = eng.explain_scenario(scenario)
+                elif what == "decision":
+                    result = eng.explain_decision()
+                else:
+                    plan = msg.get("plan", {})
+                    result = eng.explain_plan(plan)
+                await ws.send(json.dumps({"type": "v22_explain_result", **result}))
+
+        elif msg_type == "v22_stats":
+            stats = {}
+            for name, mod in self._v22.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v22_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -2217,11 +2309,46 @@ async def main() -> None:
     logger.info("EXO v21 expert system initialized (%d modules)",
                 len(v21_modules))
 
+    # ── v22 — Planification stratégique ──────────────────────
+    htn_plus = HTNPlusEngine(governance=governance, htn_planner=htn_planner)
+    multi_obj_planner = MultiObjectivePlanner(governance=governance)
+    constraint_aware = ConstraintAwarePlanner(
+        governance=governance, constraint_solver=constraint_solver)
+    scenario_planner = ScenarioPlanner(governance=governance)
+    arbitration = StrategicArbitrationEngine(governance=governance)
+    temporal = TemporalPlanningEngine(governance=governance)
+    plan_coherence = PlanCoherenceEngine(
+        governance=governance, coherence_engine=coherence)
+    planning_explain = PlanningExplainabilityEngine(
+        governance=governance, arbitration=arbitration,
+        coherence=plan_coherence)
+    strategic_planner = StrategicPlanner(
+        governance=governance, htn=htn_plus,
+        multi_obj=multi_obj_planner,
+        constraint_planner=constraint_aware,
+        scenario_planner=scenario_planner,
+        temporal_planner=temporal,
+        arbitration=arbitration)
+
+    v22_modules = {
+        "strategic_planner": strategic_planner,
+        "htn_plus": htn_plus,
+        "multi_objective": multi_obj_planner,
+        "constraint_aware": constraint_aware,
+        "scenario_planner": scenario_planner,
+        "arbitration": arbitration,
+        "temporal": temporal,
+        "coherence": plan_coherence,
+        "explainability": planning_explain,
+    }
+    logger.info("EXO v22 strategic planning initialized (%d modules)",
+                len(v22_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
                     v17_modules, v18_modules, v19_modules, v20_modules,
-                    v21_modules)
+                    v21_modules, v22_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
