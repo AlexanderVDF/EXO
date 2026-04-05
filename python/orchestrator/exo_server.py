@@ -112,6 +112,16 @@ from emergent_reasoning_engine import EmergentReasoningEngine
 from self_regulation_engine import SelfRegulationEngine
 from explainability_engine_v6 import ExplainabilityEngineV6
 
+# v17 — Architecture neuro-symbolique
+from reasoning_bridge import ReasoningBridge
+from hybrid_inference_engine import HybridInferenceEngine
+from knowledge_grounded_llm import KnowledgeGroundedLLM
+from neurosymbolic_coherence_engine import NeuroSymbolicCoherenceEngine
+from symbolic_validator import SymbolicValidator
+from semantic_extractor import SemanticExtractor
+from knowledge_augmentor import KnowledgeAugmentor
+from neurosymbolic_explainability_engine import NeuroSymbolicExplainabilityEngine
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -147,7 +157,8 @@ class GUIServer:
                  v13: dict | None = None,
                  v14: dict | None = None,
                  v15: dict | None = None,
-                 v16: dict | None = None) -> None:
+                 v16: dict | None = None,
+                 v17: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -157,6 +168,7 @@ class GUIServer:
         self._v14 = v14 or {}
         self._v15 = v15 or {}
         self._v16 = v16 or {}
+        self._v17 = v17 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -996,6 +1008,92 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v16_stats", **stats}))
 
+        # ── v17 — Architecture neuro-symbolique ──────────────
+        elif msg_type == "v17_hybrid_infer":
+            eng = self._v17.get("hybrid_inference")
+            if eng:
+                result = eng.infer_hybrid(msg.get("query", ""))
+                await ws.send(json.dumps({"type": "v17_hybrid_result",
+                                          **result}))
+
+        elif msg_type == "v17_ground_prompt":
+            grounded = self._v17.get("knowledge_grounded_llm")
+            if grounded:
+                result = grounded.ground_prompt(
+                    msg.get("prompt", ""), msg.get("knowledge", {}))
+                await ws.send(json.dumps({"type": "v17_ground_result",
+                                          **result}))
+
+        elif msg_type == "v17_ground_output":
+            grounded = self._v17.get("knowledge_grounded_llm")
+            if grounded:
+                result = grounded.ground_llm_output(msg.get("output", ""))
+                await ws.send(json.dumps({"type": "v17_ground_output_result",
+                                          **result}))
+
+        elif msg_type == "v17_validate_output":
+            val = self._v17.get("symbolic_validator")
+            if val:
+                result = val.validate_llm_output(msg.get("output", ""))
+                await ws.send(json.dumps({"type": "v17_validate_result",
+                                          **result}))
+
+        elif msg_type == "v17_correct_output":
+            val = self._v17.get("symbolic_validator")
+            if val:
+                result = val.correct_llm_output(msg.get("output", ""))
+                await ws.send(json.dumps({"type": "v17_correct_result",
+                                          **result}))
+
+        elif msg_type == "v17_extract_entities":
+            ext = self._v17.get("semantic_extractor")
+            if ext:
+                result = ext.extract_entities(msg.get("text", ""))
+                await ws.send(json.dumps({"type": "v17_entities_result",
+                                          **result}))
+
+        elif msg_type == "v17_extract_relations":
+            ext = self._v17.get("semantic_extractor")
+            if ext:
+                result = ext.extract_relations(msg.get("text", ""))
+                await ws.send(json.dumps({"type": "v17_relations_result",
+                                          **result}))
+
+        elif msg_type == "v17_augment_kg":
+            aug = self._v17.get("knowledge_augmentor")
+            if aug:
+                result = aug.augment_kg(msg.get("facts", []))
+                await ws.send(json.dumps({"type": "v17_augment_result",
+                                          **result}))
+
+        elif msg_type == "v17_coherence_check":
+            coh = self._v17.get("coherence_engine")
+            if coh:
+                result = coh.check_neuro_symbolic_consistency()
+                await ws.send(json.dumps({"type": "v17_coherence_result",
+                                          **result}))
+
+        elif msg_type == "v17_explain":
+            exp = self._v17.get("neurosymbolic_explainability")
+            if exp:
+                mode = msg.get("mode", "hybrid")
+                if mode == "symbolic":
+                    r = exp.explain_symbolic_part(msg.get("decision", {}))
+                elif mode == "neural":
+                    r = exp.explain_neural_part(msg.get("decision", {}))
+                elif mode == "full":
+                    r = exp.explain_full_v17(msg.get("session", {}))
+                else:
+                    r = exp.explain_hybrid_decision(msg.get("decision", {}))
+                await ws.send(json.dumps({"type": "v17_explain_result", **r}))
+
+        elif msg_type == "v17_stats":
+            stats = {}
+            for name, mod in self._v17.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v17_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -1258,9 +1356,56 @@ async def main() -> None:
     logger.info("EXO v16 autonomous agents initialized (%d modules)",
                 len(v16_modules))
 
+    # ── v17 — Architecture neuro-symbolique ───────────────────
+    reasoning_bridge = ReasoningBridge(
+        knowledge_graph=knowledge_graph, inference_engine=inference_eng,
+        meta_memory=meta_memory, governance=governance)
+    hybrid_inference = HybridInferenceEngine(
+        reasoning_bridge=reasoning_bridge, knowledge_graph=knowledge_graph,
+        inference_engine=inference_eng, meta_memory=meta_memory,
+        governance=governance)
+    knowledge_grounded_llm = KnowledgeGroundedLLM(
+        knowledge_graph=knowledge_graph, inference_engine=inference_eng,
+        reasoning_bridge=reasoning_bridge, meta_memory=meta_memory,
+        governance=governance)
+    neurosymbolic_coherence = NeuroSymbolicCoherenceEngine(
+        reasoning_bridge=reasoning_bridge, knowledge_graph=knowledge_graph,
+        hybrid_inference=hybrid_inference, meta_memory=meta_memory,
+        governance=governance)
+    symbolic_validator = SymbolicValidator(
+        knowledge_graph=knowledge_graph, inference_engine=inference_eng,
+        reasoning_bridge=reasoning_bridge, governance=governance,
+        meta_memory=meta_memory)
+    semantic_extractor = SemanticExtractor(
+        knowledge_graph=knowledge_graph, reasoning_bridge=reasoning_bridge,
+        meta_memory=meta_memory)
+    knowledge_augmentor = KnowledgeAugmentor(
+        knowledge_graph=knowledge_graph, semantic_extractor=semantic_extractor,
+        reasoning_bridge=reasoning_bridge, governance=governance,
+        meta_memory=meta_memory)
+    neurosymbolic_explainability = NeuroSymbolicExplainabilityEngine(
+        meta_memory=meta_memory, explainability_v6=explainability_v6,
+        reasoning_bridge=reasoning_bridge, hybrid_inference=hybrid_inference,
+        symbolic_validator=symbolic_validator,
+        coherence_engine=neurosymbolic_coherence)
+
+    v17_modules = {
+        "reasoning_bridge": reasoning_bridge,
+        "hybrid_inference": hybrid_inference,
+        "knowledge_grounded_llm": knowledge_grounded_llm,
+        "coherence_engine": neurosymbolic_coherence,
+        "symbolic_validator": symbolic_validator,
+        "semantic_extractor": semantic_extractor,
+        "knowledge_augmentor": knowledge_augmentor,
+        "neurosymbolic_explainability": neurosymbolic_explainability,
+    }
+    logger.info("EXO v17 neuro-symbolic architecture initialized (%d modules)",
+                len(v17_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
-                    v13_modules, v14_modules, v15_modules, v16_modules)
+                    v13_modules, v14_modules, v15_modules, v16_modules,
+                    v17_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
