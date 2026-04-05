@@ -155,6 +155,17 @@ from hot_swap_engine import HotSwapEngine
 from module_compatibility_checker import ModuleCompatibilityChecker
 from modular_explainability_engine import ModularExplainabilityEngine
 
+# v21 — Système expert étendu
+from advanced_rule_engine import AdvancedRuleEngine
+from causal_graph_engine import CausalGraphEngine
+from deductive_reasoner import DeductiveReasoner
+from inductive_reasoner import InductiveReasoner
+from abductive_reasoner import AbductiveReasoner
+from constraint_solver import ConstraintSolver
+from logical_coherence_engine import LogicalCoherenceEngine
+from knowledge_graph_v2 import KnowledgeGraphV2
+from symbolic_explainability_v2 import SymbolicExplainabilityEngineV2
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -194,7 +205,8 @@ class GUIServer:
                  v17: dict | None = None,
                  v18: dict | None = None,
                  v19: dict | None = None,
-                 v20: dict | None = None) -> None:
+                 v20: dict | None = None,
+                 v21: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -208,6 +220,7 @@ class GUIServer:
         self._v18 = v18 or {}
         self._v19 = v19 or {}
         self._v20 = v20 or {}
+        self._v21 = v21 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1652,6 +1665,92 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v20_stats", **stats}))
 
+        # ── v21 handlers ─────────────────────────────────
+        elif msg_type == "v21_evaluate_rules":
+            eng = self._v21.get("rule_engine")
+            if eng:
+                ctx = data.get("context", {})
+                result = eng.evaluate_rules(ctx)
+                await ws.send(json.dumps({"type": "v21_evaluate_rules_result", **result}))
+
+        elif msg_type == "v21_causal_chain":
+            eng = self._v21.get("causal_engine")
+            if eng:
+                query = data.get("query", {})
+                result = eng.infer_causal_chain(query)
+                await ws.send(json.dumps({"type": "v21_causal_chain_result", **result}))
+
+        elif msg_type == "v21_deduce":
+            eng = self._v21.get("deductive")
+            if eng:
+                query = data.get("query", {})
+                result = eng.deduce(query)
+                await ws.send(json.dumps({"type": "v21_deduce_result", **result}))
+
+        elif msg_type == "v21_induce":
+            eng = self._v21.get("inductive")
+            if eng:
+                patterns = data.get("patterns", {})
+                result = eng.induce(patterns)
+                await ws.send(json.dumps({"type": "v21_induce_result", **result}))
+
+        elif msg_type == "v21_abduct":
+            eng = self._v21.get("abductive")
+            if eng:
+                query = data.get("query", {})
+                result = eng.abduct(query)
+                await ws.send(json.dumps({"type": "v21_abduct_result", **result}))
+
+        elif msg_type == "v21_solve_constraints":
+            eng = self._v21.get("constraint_solver")
+            if eng:
+                cs = data.get("constraint_set", {})
+                result = eng.solve_constraints(cs)
+                await ws.send(json.dumps({"type": "v21_solve_constraints_result", **result}))
+
+        elif msg_type == "v21_check_coherence":
+            eng = self._v21.get("coherence")
+            if eng:
+                result = eng.check_logical_consistency()
+                await ws.send(json.dumps({"type": "v21_check_coherence_result", **result}))
+
+        elif msg_type == "v21_kg_add":
+            eng = self._v21.get("kg_v2")
+            if eng:
+                node = data.get("node", {})
+                result = eng.kg_add(node)
+                await ws.send(json.dumps({"type": "v21_kg_add_result", **result}))
+
+        elif msg_type == "v21_kg_query":
+            eng = self._v21.get("kg_v2")
+            if eng:
+                pattern = data.get("pattern", {})
+                result = eng.kg_query(pattern)
+                await ws.send(json.dumps({"type": "v21_kg_query_result", **result}))
+
+        elif msg_type == "v21_explain_symbolic":
+            eng = self._v21.get("symbolic_explain")
+            if eng:
+                what = data.get("what", "deduction")
+                if what == "deduction":
+                    result = eng.explain_deduction()
+                elif what == "induction":
+                    result = eng.explain_induction()
+                elif what == "abduction":
+                    result = eng.explain_abduction()
+                elif what == "causal":
+                    result = eng.explain_causal_chain()
+                else:
+                    result = eng.explain_deduction()
+                await ws.send(json.dumps({"type": "v21_explain_symbolic_result", **result}))
+
+        elif msg_type == "v21_stats":
+            stats = {}
+            for name, mod in self._v21.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v21_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -2087,10 +2186,42 @@ async def main() -> None:
     logger.info("EXO v20 modular architecture initialized (%d modules)",
                 len(v20_modules))
 
+    # ── v21 — Système expert étendu ──────────────────────
+    rule_engine = AdvancedRuleEngine(governance=governance)
+    causal_engine = CausalGraphEngine(governance=governance)
+    deductive = DeductiveReasoner(governance=governance)
+    inductive = InductiveReasoner(governance=governance)
+    abductive = AbductiveReasoner(governance=governance)
+    constraint_solver = ConstraintSolver(
+        governance=governance, rule_engine=rule_engine)
+    coherence = LogicalCoherenceEngine(
+        rule_engine=rule_engine, deductive=deductive, governance=governance)
+    kg_v2 = KnowledgeGraphV2(
+        knowledge_graph=knowledge_graph, causal_engine=causal_engine,
+        governance=governance)
+    symbolic_explain_v2 = SymbolicExplainabilityEngineV2(
+        deductive=deductive, inductive=inductive, abductive=abductive,
+        causal_engine=causal_engine, governance=governance)
+
+    v21_modules = {
+        "rule_engine": rule_engine,
+        "causal_engine": causal_engine,
+        "deductive": deductive,
+        "inductive": inductive,
+        "abductive": abductive,
+        "constraint_solver": constraint_solver,
+        "coherence": coherence,
+        "kg_v2": kg_v2,
+        "symbolic_explain": symbolic_explain_v2,
+    }
+    logger.info("EXO v21 expert system initialized (%d modules)",
+                len(v21_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
-                    v17_modules, v18_modules, v19_modules, v20_modules)
+                    v17_modules, v18_modules, v19_modules, v20_modules,
+                    v21_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
