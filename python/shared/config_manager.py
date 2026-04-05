@@ -29,8 +29,8 @@ _DEFAULT_CONFIG: dict[str, Any] = {
         "retries": 1,
     },
     "tts": {
-        "backend": "xtts",
-        "voice": "Claribel Dervla",
+        "backend": "cosyvoice2",
+        "voice": "",
         "language": "fr",
         "timeout_s": 3,
         "retries": 1,

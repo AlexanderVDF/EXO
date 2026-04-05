@@ -61,7 +61,7 @@ class TestConfigManager:
         cfg = ConfigManager(tmp_path / "config.json")
         assert cfg.get("llm.model") == "claude-sonnet-4-20250514"
         assert cfg.get("stt.backend") == "whispercpp"
-        assert cfg.get("tts.voice") == "Claribel Dervla"
+        assert cfg.get("tts.voice") == ""
 
     def test_dot_notation_get(self, tmp_path):
         cfg = ConfigManager(tmp_path / "config.json")

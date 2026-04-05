@@ -252,6 +252,7 @@ public:
     Q_INVOKABLE void speakText(const QString &text);
     Q_INVOKABLE void enqueueSentence(const QString &text);
     Q_INVOKABLE void cancelSpeech();
+    void prepareNext();
 
     // ── state ──
     bool isSpeaking() const { return m_speaking; }
@@ -350,7 +351,7 @@ private:
     QWebSocket *m_ws = nullptr;
 
     // ── constants ──
-    static constexpr int SAMPLE_RATE     = 24000; // XTTS v2 native rate
+    static constexpr int SAMPLE_RATE     = 24000; // CosyVoice2 native rate
     static constexpr int CHANNELS        = 1;
     static constexpr int BITS_PER_SAMPLE = 16;
 };

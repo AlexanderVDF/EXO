@@ -34,13 +34,13 @@ language=fr
 
 [TTS]
 server_url=ws://localhost:8767
-engine=xtts_cuda
-voice=Claribel Dervla
+engine=cosyvoice2
+voice=
 language=fr
 pitch=1.0
 rate=1.0
 style=neutral
-sample_rate=16000
+sample_rate=24000
 
 [General]
 app_name=EXO Assistant

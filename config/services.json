@@ -4,7 +4,7 @@
     "port": 8767,
     "venv": ".venv_stt_tts",
     "script": "python/tts/tts_server.py",
-    "args": ["--voice", "Claribel Dervla", "--lang", "fr"],
+    "args": ["--lang", "fr"],
     "startup_timeout_ms": 120000
   },
   {

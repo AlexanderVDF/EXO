@@ -7,14 +7,17 @@ websockets>=12,<14
 # STT (stt_server.py)
 faster-whisper>=1.0
 
-# TTS (tts_server.py) — XTTS v2
-TTS>=0.22.0
+# TTS (tts_server.py) — CosyVoice 2
+# Install CosyVoice: pip install -e . from cloned https://github.com/FunAudioLLM/CosyVoice
+# Or: pip install git+https://github.com/FunAudioLLM/CosyVoice.git
+hyperpyyaml>=1.2
+conformer
+modelscope
 # PyTorch CUDA — install via: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
 torch>=2.4,<2.5
 torchaudio>=2.4,<2.5
-# torch-directml  # Removed — using CUDA (torch+cu124) instead
 soundfile
-transformers>=4.40,<4.50
+transformers>=4.40,<4.55
 numpy>=1.24
 
 # VAD (vad_server.py) — Silero VAD

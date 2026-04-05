@@ -8,7 +8,7 @@
 Write-Host "Lancement d'EXO Assistant..." -ForegroundColor Cyan
 Write-Host "=== Configuration Multi-GPU ===" -ForegroundColor Magenta
 Write-Host "  GUI (Qt/QML)  : AMD (affichage)" -ForegroundColor Green
-Write-Host "  TTS (XTTS v2) : CUDA -> RTX 3070" -ForegroundColor Green
+Write-Host "  TTS (CosyVoice2): CUDA -> RTX 3070" -ForegroundColor Green
 Write-Host "  STT (Whisper)  : Vulkan -> RTX 3070" -ForegroundColor Green
 Write-Host "================================" -ForegroundColor Magenta
 
@@ -28,8 +28,8 @@ $ttsRunning = Get-NetTCPConnection -LocalPort $ttsPort -ErrorAction SilentlyCont
 if (-not $ttsRunning) {
     $ttsScript = "$projectDir\python\tts\tts_server.py"
     if ((Test-Path $pythonSTT) -and (Test-Path $ttsScript)) {
-        Write-Host "Demarrage du TTS GPU CUDA (XTTS v2 — RTX 3070)..." -ForegroundColor Yellow
-        $ttsProc = Start-Process -FilePath $pythonSTT -ArgumentList "$ttsScript --voice `"Claribel Dervla`" --lang fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\tts_stdout.log" -RedirectStandardError "$logDir\tts_stderr.log"
+        Write-Host "Demarrage du TTS GPU CUDA (CosyVoice2 — RTX 3070)..." -ForegroundColor Yellow
+        $ttsProc = Start-Process -FilePath $pythonSTT -ArgumentList "$ttsScript --lang fr" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\tts_stdout.log" -RedirectStandardError "$logDir\tts_stderr.log"
         Write-Host "TTS CUDA lance (PID: $($ttsProc.Id)) - attente demarrage..." -ForegroundColor Yellow
         $timeout = 120
         $elapsed = 0
