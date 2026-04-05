@@ -5,6 +5,145 @@
 
 ---
 
+## v25.1 — Framework cognitif standalone — 5 avril 2026
+
+### Ajouté
+- **Package `exo/`** — framework cognitif standalone, 61 fichiers, 4299 lignes
+- **Core** (`exo/core/`) — `CognitiveKernel` (BaseAgent, MacroAgent, MicroAgent, CognitiveEngine, CognitiveLayer, CognitivePipeline, CognitiveSupervisor), `CognitiveContext` (Rule, Plan, Scenario, SimulationResult, GovernanceDecision, Metric, TraceSpan), `CognitiveState` (KnowledgeGraph, faits/croyances/buts/plans), `CognitiveFlow` (buffers, traces, stats)
+- **8 moteurs cognitifs** (`exo/engines/`) — AdvancedRuleEngine, CausalGraphEngine, DeductiveReasoner, InductiveReasoner, AbductiveReasoner, ConstraintSolver, HTNPlusEngine, MultiObjectivePlanner, ScenarioPlanner, SimulationSandbox, PredictiveModelingEngine, OutcomeAnalysisEngine, CognitiveOptimizer, CognitiveTelemetryEngine, StructuredTracingEngine, CognitiveMetricsEngine, GovernancePermissionSystem, GovernanceMultiLevelValidation, GovernanceComplianceEngine, GovernanceAuditEngine
+- **8 couches** (`exo/layers/`) — Perception (tokenisation), Extraction (entités/intent/mots-clés), Symbolic (faits/relations), Inference (raisonnement par règles), Planning (HTN), Simulation (sandbox), Decision (arbitrage), Supervision (validation superviseur)
+- **3 pipelines** (`exo/pipelines/`) — MainCognitivePipeline (chaîne 8 couches), SimulationPipeline (scénarios → simulation → analyse → arbitrage), PlanningPipeline (HTN → contraintes → multi-objectif)
+- **5 agents macro** (`exo/agents/macro/`) — CognitionAgent, SimulationAgent, PlanningAgent, ObservabilityAgent, GovernanceAgent
+- **8 agents micro** (`exo/agents/micro/`) — EntityExtractionAgent, RuleVerificationAgent, CausalAnalysisAgent, HTNExpansionAgent, LocalSimulationAgent, RiskAnalysisAgent, LogicValidationAgent, MetricsCollectionAgent
+- **Gouvernance** (`exo/governance/`) — PermissionManager, MultiLevelValidator (5 niveaux), ComplianceChecker (4 domaines), AuditLogger
+- **Observabilité** (`exo/observability/`) — TelemetryCollector, TracingService, MetricsRegistry, ObservabilityDashboard
+- **117 tests** (`exo/tests/`) — test_engines, test_pipelines, test_agents, test_governance, test_observability
+- **Point d'entrée** (`exo/main.py`) — démo build_system() + run_demo()
+- Total tests : **2335 passés** (2218 existants + 117 nouveaux), 6 skipped, 0 regressions
+
+---
+
+## v25.0 — Gouvernance cognitive renforcée — 5 avril 2026
+
+### Ajouté
+- Gouvernance cognitive : permissions, validation multi-niveaux, compliance, audit
+- 60 tests gouvernance
+- Total tests : **2218 passés**, 6 skipped
+
+---
+
+## v24.0 — Observabilité cognitive — 5 avril 2026
+
+### Ajouté
+- Observabilité cognitive : télémétrie, tracing distribué, métriques, dashboard
+- 60 tests observabilité
+- Total tests : **2158 passés**
+
+---
+
+## v23.0 — Simulation contextuelle — 5 avril 2026
+
+### Ajouté
+- Simulation contextuelle : scénarios, sandbox, modèles prédictifs, analyse outcomes
+- 55 tests simulation
+- Total tests : **2098 passés**
+
+---
+
+## v22.0 — Planification stratégique — 5 avril 2026
+
+### Ajouté
+- Planification stratégique : HTN+, multi-objectif, contraintes
+- 67 tests planification
+- Total tests : **2043 passés**
+
+---
+
+## v21.0 — Système expert étendu — 5 avril 2026
+
+### Ajouté
+- Système expert étendu : moteurs de règles avancés, raisonnement causal, inférence abductive
+- 66 tests système expert
+- Total tests : **1976 passés**
+
+---
+
+## v20.0 — Architecture modulaire ultra-scalable — 5 avril 2026
+
+### Ajouté
+- Architecture modulaire ultra-scalable : 9 modules, interfaces abstraites
+- 73 tests architecture
+- Total tests : **1910 passés**
+
+---
+
+## v19.0 — Optimisation cognitive — 5 avril 2026
+
+### Ajouté
+- Optimisation cognitive : optimizer multi-critères, scoring pondéré
+- 70 tests optimisation
+- Total tests : **1837 passés**
+
+---
+
+## v18.0 — Cognition hiérarchique multi-niveaux — 4 avril 2026
+
+### Ajouté
+- Cognition hiérarchique multi-niveaux : orchestration multi-couches
+- 71 tests cognition hiérarchique
+- Total tests : **1767 passés**
+
+---
+
+## v17.0 — Architecture neuro-symbolique — 4 avril 2026
+
+### Ajouté
+- Architecture neuro-symbolique : graphes de connaissance, raisonnement symbolique
+- 60 tests neuro-symbolique
+- Total tests : **1696 passés**
+
+---
+
+## v16.0 — Agents autonomes supervisés — 4 avril 2026
+
+### Ajouté
+- Agents autonomes supervisés, cognition émergente, collaboration multi-agents
+- Tests agents autonomes
+- Total tests : **1636 passés**
+
+---
+
+## v15.0 — Architecture cognitive complète — 4 avril 2026
+
+### Ajouté
+- Architecture cognitive complète : pipeline cognitif end-to-end
+- Total tests : **1570 passés**
+
+---
+
+## v14.0 — Cognition distribuée — 4 avril 2026
+
+### Ajouté
+- Cognition distribuée, agents spécialisés, communication inter-agents, supervision multi-niveaux, cohérence globale
+- Total tests : **1425 passés**
+
+---
+
+## v13.0 — Auto-simulation — 4 avril 2026
+
+### Ajouté
+- Auto-simulation, prévision, planification prospective
+
+---
+
+## v12.0 — Auto-réflexion — 4 avril 2026
+
+### Ajouté
+- Auto-réflexion, méta-raisonnement, auto-cohérence
+- Mémoire v2 — architecture modulaire (6 modules + orchestrateur)
+
+---
+
 ## v11.0 — NetworkMap v2 — 30 mars 2026
 
 ### Ajouté

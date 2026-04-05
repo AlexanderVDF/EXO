@@ -1,10 +1,10 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 9.0** | Mars 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
+**Version 25.1** | Avril 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
-![Python 3.11](https://img.shields.io/badge/Python-3.11-yellow?logo=python)
+![Python 3.13](https://img.shields.io/badge/Python-3.13-yellow?logo=python)
 ![Whisper.cpp](https://img.shields.io/badge/Whisper.cpp-Vulkan%20GPU-orange)
 ![XTTS v2](https://img.shields.io/badge/XTTS%20v2-TTS%20Neural-green)
 ![Silero VAD](https://img.shields.io/badge/Silero-VAD%20Neural-purple)
@@ -92,6 +92,61 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 
 ---
 
+## Framework Cognitif (`exo/`)
+
+Package Python standalone implémentant l'architecture cognitive complète v1→v25 : modulaire, testable, déterministe, explicable, gouverné.
+
+```
+                    ┌───────────────────────────────────────┐
+                    │           Agents Macro (5)            │
+                    │  Cognition · Simulation · Planning    │
+                    │     Observability · Governance        │
+                    └───────────────┬───────────────────────┘
+                                    │ orchestrent
+                    ┌───────────────▼───────────────────────┐
+                    │          Pipelines (3)                 │
+                    │  Cognitive (8 couches chaînées)        │
+                    │  Simulation (scénarios → arbitrage)    │
+                    │  Planning (HTN → contraintes → optim)  │
+                    └───────────────┬───────────────────────┘
+                                    │ composés de
+          ┌─────────────────────────▼──────────────────────────┐
+          │                   Layers (8)                        │
+          │  Perception → Extraction → Symbolic → Inference    │
+          │  → Planning → Simulation → Decision → Supervision  │
+          └─────────────────────────┬──────────────────────────┘
+                                    │ utilisent
+          ┌─────────────────────────▼──────────────────────────┐
+          │                  Engines (8)                        │
+          │  Rule · Causal · Inference · HTN · Simulation      │
+          │  Optimization · Observability · Governance         │
+          └─────────────────────────┬──────────────────────────┘
+                                    │ s'appuient sur
+          ┌─────────────────────────▼──────────────────────────┐
+          │                   Core (4)                          │
+          │  CognitiveKernel · CognitiveContext                │
+          │  CognitiveState · CognitiveFlow                    │
+          └────────────────────────────────────────────────────┘
+
+  Transversal :  Governance (permissions, validation, compliance, audit)
+                 Observability (telemetry, tracing, metrics, dashboard)
+                 Agents Micro (8 tâches spécialisées)
+```
+
+| Composant | Fichiers | Rôle |
+|-----------|----------|------|
+| Core | 4 | Classes abstraites, data classes, graphe de connaissance |
+| Engines | 8 | Moteurs cognitifs concrets (règles, causal, inférence, HTN, simulation…) |
+| Layers | 8 | Couches de traitement chaînables (perception → supervision) |
+| Pipelines | 3 | Orchestration de couches et moteurs |
+| Agents macro | 5 | Orchestrateurs haut niveau (cognition, simulation, planning, obs, gov) |
+| Agents micro | 8 | Tâches spécialisées (extraction, vérification, analyse…) |
+| Governance | 4 | Permissions, validation 5 niveaux, compliance 4 domaines, audit |
+| Observability | 4 | Télémétrie, tracing, métriques, dashboard |
+| Tests | 5 | 117 tests couvrant tous les modules |
+
+---
+
 ## Fonctionnalités
 
 | Fonctionnalité | Détail |
@@ -106,7 +161,7 @@ EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu 
 | 🎛 DSP | Réduction de bruit spectrale + chaîne audio complète |
 | 🏠 Domotique | Home Assistant — 13 actions LLM (lumières, médias, clima) |
 | 🌤 Météo | OpenWeatherMap + géolocalisation |
-| 🧪 Tests | 565 tests automatisés (7 CTest + 558 pytest) |
+| 🧪 Tests | 2335 tests automatisés (pytest) |
 
 ---
 
@@ -278,6 +333,23 @@ EXO/
 │   ├── llm/                       ClaudeAPI, AIMemoryManager
 │   └── utils/                     WeatherManager
 │
+├── exo/                          Framework cognitif standalone (v25.1)
+│   ├── core/                      CognitiveKernel, Context, State, Flow
+│   ├── engines/                   8 moteurs (Rule, Causal, Inference, HTN,
+│   │                              Simulation, Optimization, Observability, Governance)
+│   ├── layers/                    8 couches (Perception → Supervision)
+│   ├── pipelines/                 3 pipelines (Cognitive, Simulation, Planning)
+│   ├── agents/
+│   │   ├── macro/                 5 agents (Cognition, Simulation, Planning,
+│   │   │                          Observability, Governance)
+│   │   └── micro/                 8 agents (EntityExtraction, RuleVerification,
+│   │                              CausalAnalysis, HTNExpansion, LocalSimulation,
+│   │                              RiskAnalysis, LogicValidation, MetricsCollection)
+│   ├── governance/                Permissions, Validation, Compliance, Audit
+│   ├── observability/             Telemetry, Tracing, Metrics, Dashboard
+│   ├── tests/                     117 tests (engines, pipelines, agents, gov, obs)
+│   └── main.py                    Démo entry point
+│
 ├── python/                       Microservices Python
 │   ├── orchestrator/              exo_server.py + Home Assistant (8765)
 │   ├── stt/                       stt_server.py + whisper_cpp.py (8766)
@@ -294,7 +366,7 @@ EXO/
 ├── rtaudio/                      RtAudio WASAPI (sous-module statique)
 ├── resources/                    Polices, icônes
 ├── scripts/                      Utilitaires PowerShell
-├── tests/                        Tests (CTest C++ + pytest Python)
+├── tests/                        Tests (2218 pytest Python)
 ├── whisper.cpp/                  Whisper.cpp (sous-module)
 ├── .env                          Clés API (non versionné)
 ├── requirements.txt              Dépendances Python orchestrator
@@ -321,7 +393,7 @@ La documentation est dans [`docs/`](docs/) :
 
 ## Roadmap
 
-### ✅ Réalisé (v9.0)
+### ✅ Réalisé (v25.1)
 - RtAudio WASAPI — capture audio faible latence
 - Interface QML 19 composants VS Code + Fluent Design
 - Pipeline vocal VoicePipeline v4 (FSM, VAD, StreamingSTT)
@@ -337,11 +409,12 @@ La documentation est dans [`docs/`](docs/) :
 - **ContextCache** — cache in-process avec TTL par clé + refresh arrière-plan
 - **LatencyMetrics** — instrumentation pipeline 9 timestamps, 6 métriques dérivées
 - **ClaudeAPI warmup/keepalive** — connexion TCP/TLS pré-établie, latence 1er token réduite
-- 565 tests automatisés (7 CTest + 558 pytest)
 - Observabilité complète (logging structuré, métriques, tracing distribué)
 - Résilience (retry, timeout, fallback, circuit breaker)
 - Sécurité (permissions, audit log)
 - Config centralisée avec hot-reload
+- **Framework cognitif standalone** (`exo/`) — 8 moteurs, 8 couches, 3 pipelines, 13 agents, gouvernance, observabilité
+- **2335 tests automatisés** (2218 tests existants + 117 tests framework cognitif)
 
 ### 🔄 À venir
 - Google Calendar — agenda intelligent
@@ -375,4 +448,4 @@ Ce projet est sous licence **MIT**. Voir [LICENSE](LICENSE) pour les détails.
 
 ---
 
-**EXO** — C++ / Qt 6.9.3 · Python · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Observability & Résilience v9.0
+**EXO** — C++ / Qt 6.9.3 · Python 3.13 · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Framework Cognitif v25.1
