@@ -144,6 +144,17 @@ from simulation_optimizer import SimulationOptimizer
 from inference_optimizer import InferenceOptimizer
 from optimization_explainability_engine import OptimizationExplainabilityEngine
 
+# v20 — Architecture modulaire ultra-scalable
+from modular_cognitive_unit import ModularCognitiveUnit
+from plug_and_play_agent_system import PlugAndPlayAgentSystem
+from distributed_orchestrator import DistributedOrchestrator
+from scalable_cognitive_fabric import ScalableCognitiveFabric
+from cognitive_partitioning_engine import CognitivePartitioningEngine
+from module_lifecycle_manager import ModuleLifecycleManager
+from hot_swap_engine import HotSwapEngine
+from module_compatibility_checker import ModuleCompatibilityChecker
+from modular_explainability_engine import ModularExplainabilityEngine
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -182,7 +193,8 @@ class GUIServer:
                  v16: dict | None = None,
                  v17: dict | None = None,
                  v18: dict | None = None,
-                 v19: dict | None = None) -> None:
+                 v19: dict | None = None,
+                 v20: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -195,6 +207,7 @@ class GUIServer:
         self._v17 = v17 or {}
         self._v18 = v18 or {}
         self._v19 = v19 or {}
+        self._v20 = v20 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1460,6 +1473,185 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v19_stats", **stats}))
 
+        # ── v20 — Architecture modulaire ultra-scalable ──────
+        elif msg_type == "v20_mcu_init":
+            mcu = self._v20.get("mcu")
+            if mcu:
+                result = mcu.mcu_init(name=data.get("name", "default"),
+                                      version=data.get("version", "1.0.0"),
+                                      capabilities=data.get("capabilities"),
+                                      config=data.get("config"))
+                await ws.send(json.dumps({"type": "v20_mcu_init_result", **result}))
+
+        elif msg_type == "v20_mcu_execute":
+            mcu = self._v20.get("mcu")
+            if mcu:
+                result = mcu.mcu_execute(data)
+                await ws.send(json.dumps({"type": "v20_mcu_execute_result", **result}))
+
+        elif msg_type == "v20_mcu_report":
+            mcu = self._v20.get("mcu")
+            if mcu:
+                result = mcu.mcu_report()
+                await ws.send(json.dumps({"type": "v20_mcu_report_result", **result}))
+
+        elif msg_type == "v20_mcu_shutdown":
+            mcu = self._v20.get("mcu")
+            if mcu:
+                result = mcu.mcu_shutdown(data.get("unit_id", ""))
+                await ws.send(json.dumps({"type": "v20_mcu_shutdown_result", **result}))
+
+        elif msg_type == "v20_register_agent":
+            pnp = self._v20.get("plug_and_play")
+            if pnp:
+                result = pnp.register_agent(data)
+                await ws.send(json.dumps({"type": "v20_register_agent_result", **result}))
+
+        elif msg_type == "v20_unregister_agent":
+            pnp = self._v20.get("plug_and_play")
+            if pnp:
+                result = pnp.unregister_agent(data)
+                await ws.send(json.dumps({"type": "v20_unregister_agent_result", **result}))
+
+        elif msg_type == "v20_replace_agent":
+            pnp = self._v20.get("plug_and_play")
+            if pnp:
+                result = pnp.replace_agent(data.get("old", {}), data.get("new", {}))
+                await ws.send(json.dumps({"type": "v20_replace_agent_result", **result}))
+
+        elif msg_type == "v20_orchestrate":
+            orch = self._v20.get("distributed_orchestrator")
+            if orch:
+                result = orch.orchestrate(data)
+                await ws.send(json.dumps({"type": "v20_orchestrate_result", **result}))
+
+        elif msg_type == "v20_distribute":
+            orch = self._v20.get("distributed_orchestrator")
+            if orch:
+                result = orch.distribute(data)
+                await ws.send(json.dumps({"type": "v20_distribute_result", **result}))
+
+        elif msg_type == "v20_collect":
+            orch = self._v20.get("distributed_orchestrator")
+            if orch:
+                result = orch.collect(data)
+                await ws.send(json.dumps({"type": "v20_collect_result", **result}))
+
+        elif msg_type == "v20_fabric_route":
+            fab = self._v20.get("scalable_fabric")
+            if fab:
+                result = fab.fabric_route(data)
+                await ws.send(json.dumps({"type": "v20_fabric_route_result", **result}))
+
+        elif msg_type == "v20_fabric_register":
+            fab = self._v20.get("scalable_fabric")
+            if fab:
+                result = fab.fabric_register(data)
+                await ws.send(json.dumps({"type": "v20_fabric_register_result", **result}))
+
+        elif msg_type == "v20_fabric_scale":
+            fab = self._v20.get("scalable_fabric")
+            if fab:
+                result = fab.fabric_scale(data)
+                await ws.send(json.dumps({"type": "v20_fabric_scale_result", **result}))
+
+        elif msg_type == "v20_partition_cognition":
+            pe = self._v20.get("partitioning")
+            if pe:
+                result = pe.partition_cognition(data)
+                await ws.send(json.dumps({"type": "v20_partition_cognition_result", **result}))
+
+        elif msg_type == "v20_reassign_partition":
+            pe = self._v20.get("partitioning")
+            if pe:
+                result = pe.reassign_partition(data)
+                await ws.send(json.dumps({"type": "v20_reassign_partition_result", **result}))
+
+        elif msg_type == "v20_merge_partitions":
+            pe = self._v20.get("partitioning")
+            if pe:
+                result = pe.merge_partitions(data.get("partition_ids"))
+                await ws.send(json.dumps({"type": "v20_merge_partitions_result", **result}))
+
+        elif msg_type == "v20_install_module":
+            lm = self._v20.get("lifecycle")
+            if lm:
+                result = lm.install_module(data)
+                await ws.send(json.dumps({"type": "v20_install_module_result", **result}))
+
+        elif msg_type == "v20_update_module":
+            lm = self._v20.get("lifecycle")
+            if lm:
+                result = lm.update_module(data)
+                await ws.send(json.dumps({"type": "v20_update_module_result", **result}))
+
+        elif msg_type == "v20_remove_module":
+            lm = self._v20.get("lifecycle")
+            if lm:
+                result = lm.remove_module(data)
+                await ws.send(json.dumps({"type": "v20_remove_module_result", **result}))
+
+        elif msg_type == "v20_hotswap":
+            hs = self._v20.get("hot_swap")
+            if hs:
+                result = hs.hotswap(data.get("old", {}), data.get("new", {}))
+                await ws.send(json.dumps({"type": "v20_hotswap_result", **result}))
+
+        elif msg_type == "v20_rollback":
+            hs = self._v20.get("hot_swap")
+            if hs:
+                result = hs.rollback(data)
+                await ws.send(json.dumps({"type": "v20_rollback_result", **result}))
+
+        elif msg_type == "v20_validate_swap":
+            hs = self._v20.get("hot_swap")
+            if hs:
+                result = hs.validate_swap(data.get("old", {}), data.get("new", {}))
+                await ws.send(json.dumps({"type": "v20_validate_swap_result", **result}))
+
+        elif msg_type == "v20_check_api":
+            cc = self._v20.get("compatibility")
+            if cc:
+                result = cc.check_api(data)
+                await ws.send(json.dumps({"type": "v20_check_api_result", **result}))
+
+        elif msg_type == "v20_check_version":
+            cc = self._v20.get("compatibility")
+            if cc:
+                result = cc.check_version(data)
+                await ws.send(json.dumps({"type": "v20_check_version_result", **result}))
+
+        elif msg_type == "v20_check_dependencies":
+            cc = self._v20.get("compatibility")
+            if cc:
+                result = cc.check_dependencies(data)
+                await ws.send(json.dumps({"type": "v20_check_dependencies_result", **result}))
+
+        elif msg_type == "v20_explain_module":
+            me = self._v20.get("modular_explainability")
+            if me:
+                result = me.explain_module(data)
+                await ws.send(json.dumps({"type": "v20_explain_module_result", **result}))
+
+        elif msg_type == "v20_explain_swap":
+            me = self._v20.get("modular_explainability")
+            if me:
+                result = me.explain_swap(data.get("old", {}), data.get("new", {}))
+                await ws.send(json.dumps({"type": "v20_explain_swap_result", **result}))
+
+        elif msg_type == "v20_explain_partitioning":
+            me = self._v20.get("modular_explainability")
+            if me:
+                result = me.explain_partitioning()
+                await ws.send(json.dumps({"type": "v20_explain_partitioning_result", **result}))
+
+        elif msg_type == "v20_stats":
+            stats = {}
+            for name, mod in self._v20.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v20_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -1858,10 +2050,47 @@ async def main() -> None:
     logger.info("EXO v19 cognitive optimization initialized (%d modules)",
                 len(v19_modules))
 
+    # ── v20 — Architecture modulaire ultra-scalable ──────────
+    mcu = ModularCognitiveUnit(
+        governance=governance, meta_memory=meta_memory)
+    plug_and_play = PlugAndPlayAgentSystem(
+        governance=governance, agent_registry=agent_registry)
+    dist_orchestrator = DistributedOrchestrator(
+        governance=governance, mcu=mcu)
+    scalable_fabric = ScalableCognitiveFabric(
+        governance=governance, mcu=mcu)
+    cog_partitioning = CognitivePartitioningEngine(
+        governance=governance, mcu=mcu, fabric=scalable_fabric)
+    mod_compatibility = ModuleCompatibilityChecker(
+        governance=governance, mcu=mcu)
+    mod_lifecycle = ModuleLifecycleManager(
+        governance=governance, mcu=mcu, compatibility_checker=mod_compatibility)
+    hot_swap = HotSwapEngine(
+        governance=governance, lifecycle=mod_lifecycle,
+        compatibility=mod_compatibility)
+    mod_explain = ModularExplainabilityEngine(
+        governance=governance, mcu=mcu, orchestrator=dist_orchestrator,
+        partitioning=cog_partitioning, hot_swap=hot_swap,
+        lifecycle=mod_lifecycle)
+
+    v20_modules = {
+        "mcu": mcu,
+        "plug_and_play": plug_and_play,
+        "distributed_orchestrator": dist_orchestrator,
+        "scalable_fabric": scalable_fabric,
+        "partitioning": cog_partitioning,
+        "lifecycle": mod_lifecycle,
+        "hot_swap": hot_swap,
+        "compatibility": mod_compatibility,
+        "modular_explainability": mod_explain,
+    }
+    logger.info("EXO v20 modular architecture initialized (%d modules)",
+                len(v20_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
-                    v17_modules, v18_modules, v19_modules)
+                    v17_modules, v18_modules, v19_modules, v20_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
