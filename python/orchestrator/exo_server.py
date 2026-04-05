@@ -2359,6 +2359,7 @@ async def main() -> None:
     # ── v14 — Cognition distribuée, agents spécialisés ────────
     msg_bus = AgentMessagingBus(meta_memory)
     registry = AgentRegistry(msg_bus)
+    agent_registry = registry  # alias used by v18, v20
     agents = create_default_agents(msg_bus, meta_memory)
     for a in agents:
         registry.register_agent(a)
@@ -2648,7 +2649,7 @@ async def main() -> None:
                 len(v21_modules))
 
     # ── v22 — Planification stratégique ──────────────────────
-    htn_plus = HTNPlusEngine(governance=governance, htn_planner=htn_planner)
+    htn_plus = HTNPlusEngine(governance=governance)
     multi_obj_planner = MultiObjectivePlanner(governance=governance)
     constraint_aware = ConstraintAwarePlanner(
         governance=governance, constraint_solver=constraint_solver)
