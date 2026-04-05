@@ -102,6 +102,16 @@ from distributed_cognition_layer import DistributedCognitionLayer
 from global_supervisor_v5 import GlobalSupervisorV5
 from explainability_engine_v5 import ExplainabilityEngineV5
 
+# v16 — Agents autonomes supervisés, émergence cognitive, auto-régulation
+from cognitive_audit_log import CognitiveAuditLog
+from initiative_protocol import InitiativeProtocol
+from cognitive_governor import CognitiveGovernor
+from autonomous_agent_layer import AutonomousAgentLayer
+from emergent_collaboration_bus import EmergentCollaborationBus
+from emergent_reasoning_engine import EmergentReasoningEngine
+from self_regulation_engine import SelfRegulationEngine
+from explainability_engine_v6 import ExplainabilityEngineV6
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -136,7 +146,8 @@ class GUIServer:
                  v12: dict | None = None,
                  v13: dict | None = None,
                  v14: dict | None = None,
-                 v15: dict | None = None) -> None:
+                 v15: dict | None = None,
+                 v16: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -145,6 +156,7 @@ class GUIServer:
         self._v13 = v13 or {}
         self._v14 = v14 or {}
         self._v15 = v15 or {}
+        self._v16 = v16 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -875,6 +887,115 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v15_stats", **stats}))
 
+        # ── v16 — Agents autonomes supervisés, émergence ──────
+        elif msg_type == "v16_propose_initiative":
+            layer = self._v16.get("autonomous_layer")
+            if layer:
+                result = layer.propose_initiative(
+                    msg.get("agent", ""), msg.get("action", ""),
+                    msg.get("context", {}))
+                await ws.send(json.dumps({"type": "v16_initiative_proposed",
+                                          **result}))
+
+        elif msg_type == "v16_validate_initiative":
+            layer = self._v16.get("autonomous_layer")
+            if layer:
+                result = layer.validate_initiative(msg.get("initiative_id", ""))
+                await ws.send(json.dumps({"type": "v16_initiative_validated",
+                                          **result}))
+
+        elif msg_type == "v16_execute_initiative":
+            layer = self._v16.get("autonomous_layer")
+            if layer:
+                result = layer.execute_initiative(msg.get("initiative_id", ""))
+                await ws.send(json.dumps({"type": "v16_initiative_executed",
+                                          **result}))
+
+        elif msg_type == "v16_rollback_initiative":
+            layer = self._v16.get("autonomous_layer")
+            if layer:
+                result = layer.rollback_initiative(msg.get("initiative_id", ""))
+                await ws.send(json.dumps({"type": "v16_initiative_rollback",
+                                          **result}))
+
+        elif msg_type == "v16_collaborate":
+            bus = self._v16.get("collaboration_bus")
+            if bus:
+                result = bus.collaborate(
+                    msg.get("initiator", ""), msg.get("participants", []),
+                    msg.get("goal", ""))
+                await ws.send(json.dumps({"type": "v16_collab_started",
+                                          **result}))
+
+        elif msg_type == "v16_share_observation":
+            bus = self._v16.get("collaboration_bus")
+            if bus:
+                result = bus.share_observation(
+                    msg.get("agent", ""), msg.get("observation", {}))
+                await ws.send(json.dumps({"type": "v16_observation_shared",
+                                          **result}))
+
+        elif msg_type == "v16_emergent_solve":
+            eng = self._v16.get("emergent_reasoning")
+            if eng:
+                result = eng.generate_emergent_solution(msg.get("context", {}))
+                await ws.send(json.dumps({"type": "v16_emergent_solution",
+                                          **result}))
+
+        elif msg_type == "v16_detect_emergence":
+            eng = self._v16.get("emergent_reasoning")
+            if eng:
+                result = eng.detect_emergence(msg.get("observations", []))
+                await ws.send(json.dumps({"type": "v16_emergence_detected",
+                                          **result}))
+
+        elif msg_type == "v16_regulate":
+            reg = self._v16.get("self_regulation")
+            if reg:
+                result = reg.regulate_all(msg.get("system_state", {}))
+                await ws.send(json.dumps({"type": "v16_regulation_result",
+                                          **result}))
+
+        elif msg_type == "v16_supervise":
+            gov = self._v16.get("governor")
+            if gov:
+                result = gov.supervise_initiative(msg.get("initiative", {}))
+                await ws.send(json.dumps({"type": "v16_supervise_result",
+                                          **result}))
+
+        elif msg_type == "v16_explain":
+            exp = self._v16.get("explainability_v6")
+            if exp:
+                mode = msg.get("mode", "initiative")
+                if mode == "emergence":
+                    r = exp.explain_emergence(msg.get("emergence", {}))
+                elif mode == "governor":
+                    r = exp.explain_governor_decision(msg.get("decision", {}))
+                elif mode == "regulation":
+                    r = exp.explain_regulation(msg.get("regulation", {}))
+                elif mode == "collaboration":
+                    r = exp.explain_collaboration(msg.get("collab", {}))
+                elif mode == "full":
+                    r = exp.explain_full_v16(msg.get("session", {}))
+                else:
+                    r = exp.explain_initiative(msg.get("initiative", {}))
+                await ws.send(json.dumps({"type": "v16_explain_result", **r}))
+
+        elif msg_type == "v16_audit_trail":
+            audit = self._v16.get("audit_log")
+            if audit:
+                result = audit.get_audit_trail(
+                    msg.get("limit", 50), msg.get("filters", {}))
+                await ws.send(json.dumps({"type": "v16_audit_trail",
+                                          "entries": result}))
+
+        elif msg_type == "v16_stats":
+            stats = {}
+            for name, mod in self._v16.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v16_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -1107,9 +1228,39 @@ async def main() -> None:
     logger.info("EXO v15 cognitive architecture initialized (%d modules)",
                 len(v15_modules))
 
+    # ── v16 — Agents autonomes supervisés, émergence cognitive ─────
+    cognitive_audit = CognitiveAuditLog(meta_memory)
+    initiative_proto = InitiativeProtocol(cognitive_audit, governance)
+    cog_governor = CognitiveGovernor(
+        initiative_proto, cognitive_audit, governance, meta_memory)
+    autonomous_layer = AutonomousAgentLayer(
+        cog_governor, initiative_proto, cognitive_audit, meta_memory)
+    collab_bus = EmergentCollaborationBus(
+        cognitive_audit, msg_bus, meta_memory)
+    emergent_reasoning = EmergentReasoningEngine(
+        collab_bus, cog_governor, cognitive_audit, meta_memory,
+        knowledge_graph, inference_eng)
+    self_regulation = SelfRegulationEngine(
+        cog_governor, cognitive_audit, initiative_proto, meta_memory)
+    explainability_v6 = ExplainabilityEngineV6(
+        meta_memory, explainability_v5, cognitive_audit)
+
+    v16_modules = {
+        "audit_log": cognitive_audit,
+        "initiative_protocol": initiative_proto,
+        "governor": cog_governor,
+        "autonomous_layer": autonomous_layer,
+        "collaboration_bus": collab_bus,
+        "emergent_reasoning": emergent_reasoning,
+        "self_regulation": self_regulation,
+        "explainability_v6": explainability_v6,
+    }
+    logger.info("EXO v16 autonomous agents initialized (%d modules)",
+                len(v16_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
-                    v13_modules, v14_modules, v15_modules)
+                    v13_modules, v14_modules, v15_modules, v16_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
