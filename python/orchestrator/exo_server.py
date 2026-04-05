@@ -122,6 +122,16 @@ from semantic_extractor import SemanticExtractor
 from knowledge_augmentor import KnowledgeAugmentor
 from neurosymbolic_explainability_engine import NeuroSymbolicExplainabilityEngine
 
+# v18 — Cognition hiérarchique multi-niveaux
+from macro_agent_layer import MacroAgentLayer
+from micro_agent_layer import MicroAgentLayer
+from cognitive_layer_stack import CognitiveLayerStack
+from vertical_reasoning_flow import VerticalReasoningFlow
+from hierarchical_supervisor import HierarchicalSupervisor
+from priority_engine import PriorityEngine
+from layered_consistency_engine import LayeredConsistencyEngine
+from layered_explainability_engine import LayeredExplainabilityEngine
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -158,7 +168,8 @@ class GUIServer:
                  v14: dict | None = None,
                  v15: dict | None = None,
                  v16: dict | None = None,
-                 v17: dict | None = None) -> None:
+                 v17: dict | None = None,
+                 v18: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -169,6 +180,7 @@ class GUIServer:
         self._v15 = v15 or {}
         self._v16 = v16 or {}
         self._v17 = v17 or {}
+        self._v18 = v18 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1094,6 +1106,158 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v17_stats", **stats}))
 
+        # ── v18 — Cognition hiérarchique multi-niveaux ───────
+        elif msg_type == "v18_macro_handle":
+            eng = self._v18.get("macro_layer")
+            if eng:
+                result = eng.macro_handle(msg.get("intent", {}))
+                await ws.send(json.dumps({"type": "v18_macro_result", **result}))
+
+        elif msg_type == "v18_macro_delegate":
+            eng = self._v18.get("macro_layer")
+            if eng:
+                result = eng.macro_delegate(msg.get("task", {}))
+                await ws.send(json.dumps({"type": "v18_delegate_result", **result}))
+
+        elif msg_type == "v18_micro_execute":
+            eng = self._v18.get("micro_layer")
+            if eng:
+                result = eng.micro_execute(msg.get("task", {}))
+                await ws.send(json.dumps({"type": "v18_micro_result", **result}))
+
+        elif msg_type == "v18_micro_report":
+            eng = self._v18.get("micro_layer")
+            if eng:
+                result = eng.micro_report()
+                await ws.send(json.dumps({"type": "v18_micro_report_result", **result}))
+
+        elif msg_type == "v18_push_layer":
+            eng = self._v18.get("layer_stack")
+            if eng:
+                result = eng.push_to_layer(msg.get("layer", ""), msg.get("data", {}))
+                await ws.send(json.dumps({"type": "v18_push_result", **result}))
+
+        elif msg_type == "v18_pull_layer":
+            eng = self._v18.get("layer_stack")
+            if eng:
+                result = eng.pull_from_layer(msg.get("layer", ""))
+                await ws.send(json.dumps({"type": "v18_pull_result", **result}))
+
+        elif msg_type == "v18_propagate_up":
+            eng = self._v18.get("vertical_flow")
+            if eng:
+                result = eng.reason_bottom_up(msg.get("data", {}))
+                await ws.send(json.dumps({"type": "v18_propagate_up_result", **result}))
+
+        elif msg_type == "v18_propagate_down":
+            eng = self._v18.get("vertical_flow")
+            if eng:
+                result = eng.reason_top_down(msg.get("goal", {}))
+                await ws.send(json.dumps({"type": "v18_propagate_down_result", **result}))
+
+        elif msg_type == "v18_merge_flows":
+            eng = self._v18.get("vertical_flow")
+            if eng:
+                result = eng.merge_vertical_flows()
+                await ws.send(json.dumps({"type": "v18_merge_result", **result}))
+
+        elif msg_type == "v18_supervise_layer":
+            eng = self._v18.get("hierarchical_supervisor")
+            if eng:
+                result = eng.supervise_layer(msg.get("layer", {}))
+                await ws.send(json.dumps({"type": "v18_supervise_layer_result", **result}))
+
+        elif msg_type == "v18_supervise_macro":
+            eng = self._v18.get("hierarchical_supervisor")
+            if eng:
+                result = eng.supervise_macro(msg.get("agent", {}))
+                await ws.send(json.dumps({"type": "v18_supervise_macro_result", **result}))
+
+        elif msg_type == "v18_supervise_micro":
+            eng = self._v18.get("hierarchical_supervisor")
+            if eng:
+                result = eng.supervise_micro(msg.get("agent", {}))
+                await ws.send(json.dumps({"type": "v18_supervise_micro_result", **result}))
+
+        elif msg_type == "v18_enforce_rules":
+            eng = self._v18.get("hierarchical_supervisor")
+            if eng:
+                result = eng.enforce_hierarchy_rules()
+                await ws.send(json.dumps({"type": "v18_enforce_result", **result}))
+
+        elif msg_type == "v18_set_priority":
+            eng = self._v18.get("priority_engine")
+            if eng:
+                result = eng.set_priority(msg.get("entity", {}), msg.get("level", "normal"))
+                await ws.send(json.dumps({"type": "v18_priority_result", **result}))
+
+        elif msg_type == "v18_adjust_priority":
+            eng = self._v18.get("priority_engine")
+            if eng:
+                result = eng.adjust_priority(msg.get("entity", {}))
+                await ws.send(json.dumps({"type": "v18_adjust_result", **result}))
+
+        elif msg_type == "v18_priority_map":
+            eng = self._v18.get("priority_engine")
+            if eng:
+                result = eng.compute_priority_map()
+                await ws.send(json.dumps({"type": "v18_priority_map_result", **result}))
+
+        elif msg_type == "v18_check_consistency":
+            eng = self._v18.get("layered_consistency")
+            if eng:
+                result = eng.check_layer_consistency()
+                await ws.send(json.dumps({"type": "v18_consistency_result", **result}))
+
+        elif msg_type == "v18_enforce_consistency":
+            eng = self._v18.get("layered_consistency")
+            if eng:
+                result = eng.enforce_layer_consistency()
+                await ws.send(json.dumps({"type": "v18_enforce_consistency_result", **result}))
+
+        elif msg_type == "v18_cross_level":
+            eng = self._v18.get("layered_consistency")
+            if eng:
+                result = eng.check_cross_level()
+                await ws.send(json.dumps({"type": "v18_cross_level_result", **result}))
+
+        elif msg_type == "v18_explain_layer":
+            eng = self._v18.get("layered_explainability")
+            if eng:
+                result = eng.explain_layer(msg.get("layer", {}))
+                await ws.send(json.dumps({"type": "v18_explain_layer_result", **result}))
+
+        elif msg_type == "v18_explain_macro":
+            eng = self._v18.get("layered_explainability")
+            if eng:
+                result = eng.explain_macro(msg.get("agent", {}))
+                await ws.send(json.dumps({"type": "v18_explain_macro_result", **result}))
+
+        elif msg_type == "v18_explain_micro":
+            eng = self._v18.get("layered_explainability")
+            if eng:
+                result = eng.explain_micro(msg.get("agent", {}))
+                await ws.send(json.dumps({"type": "v18_explain_micro_result", **result}))
+
+        elif msg_type == "v18_explain_flow":
+            eng = self._v18.get("layered_explainability")
+            if eng:
+                result = eng.explain_vertical_flow()
+                await ws.send(json.dumps({"type": "v18_explain_flow_result", **result}))
+
+        elif msg_type == "v18_explain_decision":
+            eng = self._v18.get("layered_explainability")
+            if eng:
+                result = eng.explain_decision(msg.get("decision", {}))
+                await ws.send(json.dumps({"type": "v18_explain_decision_result", **result}))
+
+        elif msg_type == "v18_stats":
+            stats = {}
+            for name, mod in self._v18.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v18_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -1402,10 +1566,51 @@ async def main() -> None:
     logger.info("EXO v17 neuro-symbolic architecture initialized (%d modules)",
                 len(v17_modules))
 
+    # ── v18 — Cognition hiérarchique multi-niveaux ───────────
+    macro_layer = MacroAgentLayer(
+        meta_memory=meta_memory, governance=governance,
+        registry=agent_registry)
+    micro_layer = MicroAgentLayer(
+        meta_memory=meta_memory, governance=governance)
+    layer_stack = CognitiveLayerStack(
+        macro_layer=macro_layer, micro_layer=micro_layer,
+        governance=governance, meta_memory=meta_memory)
+    vertical_flow = VerticalReasoningFlow(
+        layer_stack=layer_stack, governance=governance,
+        meta_memory=meta_memory)
+    hierarchical_supervisor = HierarchicalSupervisor(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, governance=governance,
+        meta_memory=meta_memory)
+    priority_engine = PriorityEngine(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, governance=governance)
+    layered_consistency = LayeredConsistencyEngine(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, supervisor=hierarchical_supervisor,
+        governance=governance)
+    layered_explainability = LayeredExplainabilityEngine(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, vertical_flow=vertical_flow,
+        supervisor=hierarchical_supervisor, governance=governance)
+
+    v18_modules = {
+        "macro_layer": macro_layer,
+        "micro_layer": micro_layer,
+        "layer_stack": layer_stack,
+        "vertical_flow": vertical_flow,
+        "hierarchical_supervisor": hierarchical_supervisor,
+        "priority_engine": priority_engine,
+        "layered_consistency": layered_consistency,
+        "layered_explainability": layered_explainability,
+    }
+    logger.info("EXO v18 hierarchical cognition initialized (%d modules)",
+                len(v18_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
-                    v17_modules)
+                    v17_modules, v18_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
