@@ -226,4 +226,5 @@ private:
     static constexpr double DEFAULT_TEMP       = 0.7;
     static constexpr int    MAX_RETRIES        = 3;
     static constexpr int    RATE_LIMIT_PER_MIN = 50;
+    static constexpr int    MAX_HISTORY_TURNS  = 10;     // v26.1: cap history to reduce payload size
 };

@@ -509,8 +509,16 @@ void TTSManager::initDSP()
     m_dsp.configure(SAMPLE_RATE);
     hVoice() << "DSP pipeline configuré — EQ 3kHz +0.5dB, compresseur -20dB 1.4:1, normalizer OFF (XTTS v2 light)";
 
+    // v26.1 Latency: pre-allocate DSP float buffer (avoids first-chunk heap alloc)
+    m_dsp.preAllocate(4096);
+
     // === Persistent sink — created once, never destroyed between phrases ===
+    // v26.1 Latency: open sink at init, not on first speech request
     ensureSinkReady();
+    // Start pump timer immediately so it's ready when first audio arrives
+    if (m_pumpTimer && !m_pumpTimer->isActive())
+        m_pumpTimer->start();
+    hVoice() << "[Latency] Audio sink pré-ouvert — zero latence au premier chunk";
 }
 
 // ── prosody analysis ─────────────────────────────────

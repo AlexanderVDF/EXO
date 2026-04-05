@@ -205,8 +205,8 @@ DEFAULT_VOICE = "Claribel Dervla"
 DEFAULT_LANG = "fr"
 XTTS_SAMPLE_RATE = 24000   # XTTS v2 native rate
 OUTPUT_SAMPLE_RATE = 24000  # Send at native rate (C++ TTSManager expects 24kHz)
-CHUNK_SIZE = 2048           # v5.1: ~43ms @ 24kHz mono16 — ultra-low latency streaming
-STREAM_CHUNK_SIZE = 8       # v5.2: smaller GPT chunks for faster first-chunk (was 16→12→8)
+CHUNK_SIZE = 1024           # v26.1: ~21ms @ 24kHz mono16 — reduced from 2048 for faster streaming
+STREAM_CHUNK_SIZE = 4       # v26.1: smaller GPT chunks for faster first-chunk (was 8)
 
 SUPPORTED_LANGUAGES = [
     "en", "es", "fr", "de", "it", "pt", "pl", "tr",

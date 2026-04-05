@@ -228,7 +228,16 @@ void ClaudeAPI::sendToolResult(const QString &toolUseId,
     if (!m_pendingSystemPrompt.isEmpty())
         payload[QStringLiteral("system")] = m_pendingSystemPrompt;
 
-    payload[QStringLiteral("messages")] = m_conversationHistory;
+    // v26.1 Latency: trim history for tool_result too
+    QJsonArray trimmedHistory = m_conversationHistory;
+    if (trimmedHistory.size() > MAX_HISTORY_TURNS) {
+        QJsonArray trimmed;
+        const int start = trimmedHistory.size() - MAX_HISTORY_TURNS;
+        for (int i = start; i < trimmedHistory.size(); ++i)
+            trimmed.append(trimmedHistory[i]);
+        trimmedHistory = trimmed;
+    }
+    payload[QStringLiteral("messages")] = trimmedHistory;
 
     if (!m_pendingTools.isEmpty())
         payload[QStringLiteral("tools")] = m_pendingTools;
@@ -297,8 +306,17 @@ QJsonObject ClaudeAPI::buildPayload(const QString &userMessage,
     if (!systemPrompt.isEmpty())
         payload[QStringLiteral("system")] = systemPrompt;
 
-    // Messages = conversation complète
-    payload[QStringLiteral("messages")] = m_conversationHistory;
+    // v26.1 Latency: trim history to MAX_HISTORY_TURNS to reduce payload size
+    // Keep the last N messages to stay within ~4KB payload budget
+    QJsonArray trimmedHistory = m_conversationHistory;
+    if (trimmedHistory.size() > MAX_HISTORY_TURNS) {
+        QJsonArray trimmed;
+        const int start = trimmedHistory.size() - MAX_HISTORY_TURNS;
+        for (int i = start; i < trimmedHistory.size(); ++i)
+            trimmed.append(trimmedHistory[i]);
+        trimmedHistory = trimmed;
+    }
+    payload[QStringLiteral("messages")] = trimmedHistory;
 
     // Outils Function Calling
     if (!tools.isEmpty())
@@ -1008,6 +1026,12 @@ QJsonObject ClaudeAPI::buildToolSchema(const QString &name,
 
 QJsonArray ClaudeAPI::buildEXOTools()
 {
+    // v26.1 Latency: cache the tools array (it never changes at runtime)
+    static QJsonArray cachedTools;
+    static bool cached = false;
+    if (cached)
+        return cachedTools;
+
     QJsonArray tools;
 
     // ── ha_turn_on : allumer une entité HA ──────────
@@ -1831,6 +1855,11 @@ QJsonArray ClaudeAPI::buildEXOTools()
     }
 
     hClaude() << "Outils EXO construits:" << tools.size() << "outils";
+
+    // v26.1 Latency: cache for subsequent calls
+    cachedTools = tools;
+    cached = true;
+
     return tools;
 }
 

@@ -118,6 +118,9 @@ public:
     void setCompressorThreshold(float db);
     void setNormTarget(float dBFS);
 
+    // v26.1 Latency: pre-allocate float buffer to avoid first-chunk heap alloc
+    void preAllocate(int samples) { if (static_cast<int>(m_fbuf.size()) < samples) m_fbuf.resize(samples); }
+
 private:
     bool m_enabled = true;
     int  m_sampleRate = 16000;

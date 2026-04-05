@@ -5,6 +5,18 @@
 
 ---
 
+## v26.1 — Optimisation latence (3 objectifs) — 5 avril 2026
+
+### Modifié
+- **ClaudeAPI** : historique conversation limité à **10 derniers messages** (`MAX_HISTORY_TURNS`) — payload réduit, first-token accéléré
+- **ClaudeAPI** : cache statique des tool schemas (`buildEXOTools()`) — construction JSON unique au lieu de ~18 tools rebâties à chaque appel
+- **TTS Server** : `CHUNK_SIZE` 2048 → **1024** (~21ms @ 24kHz) — streaming plus fins, first-chunk plus rapide
+- **TTS Server** : `STREAM_CHUNK_SIZE` 8 → **4** — GPT génère des chunks plus petits, first-audio plus tôt
+- **TTSManager** : pré-ouverture audio sink dans `initDSP()` — zéro latence au premier chunk (sink + pump timer actifs dès le boot)
+- **TTSManager** : pré-allocation buffer DSP float (`preAllocate(4096)`) — évite l'allocation heap au premier chunk
+
+---
+
 ## v26.0 — Conformité architecture + STT performance — 5 avril 2026
 
 ### Ajouté
