@@ -132,6 +132,18 @@ from priority_engine import PriorityEngine
 from layered_consistency_engine import LayeredConsistencyEngine
 from layered_explainability_engine import LayeredExplainabilityEngine
 
+# v19 — Optimisation cognitive
+from meta_optimizer import MetaOptimizer
+from adaptive_heuristics_engine import AdaptiveHeuristicsEngine
+from cognitive_pipeline_optimizer import CognitivePipelineOptimizer
+from cognitive_load_reducer import CognitiveLoadReducer
+from multi_objective_optimizer import MultiObjectiveOptimizer
+from cognitive_profiling_engine import CognitiveProfilingEngine
+from plan_optimizer import PlanOptimizer
+from simulation_optimizer import SimulationOptimizer
+from inference_optimizer import InferenceOptimizer
+from optimization_explainability_engine import OptimizationExplainabilityEngine
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -169,7 +181,8 @@ class GUIServer:
                  v15: dict | None = None,
                  v16: dict | None = None,
                  v17: dict | None = None,
-                 v18: dict | None = None) -> None:
+                 v18: dict | None = None,
+                 v19: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -181,6 +194,7 @@ class GUIServer:
         self._v16 = v16 or {}
         self._v17 = v17 or {}
         self._v18 = v18 or {}
+        self._v19 = v19 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1258,6 +1272,194 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v18_stats", **stats}))
 
+        # ── v19 — Optimisation cognitive ─────────────────────
+        elif msg_type == "v19_analyze_system":
+            eng = self._v19.get("meta_optimizer")
+            if eng:
+                result = eng.analyze_system()
+                await ws.send(json.dumps({"type": "v19_analyze_system_result", **result}))
+
+        elif msg_type == "v19_detect_inefficiencies":
+            eng = self._v19.get("meta_optimizer")
+            if eng:
+                result = eng.detect_inefficiencies()
+                await ws.send(json.dumps({"type": "v19_detect_inefficiencies_result", **result}))
+
+        elif msg_type == "v19_propose_optimizations":
+            eng = self._v19.get("meta_optimizer")
+            if eng:
+                result = eng.propose_optimizations()
+                await ws.send(json.dumps({"type": "v19_propose_optimizations_result", **result}))
+
+        elif msg_type == "v19_update_heuristics":
+            eng = self._v19.get("adaptive_heuristics")
+            if eng:
+                result = eng.update_heuristics()
+                await ws.send(json.dumps({"type": "v19_update_heuristics_result", **result}))
+
+        elif msg_type == "v19_select_strategy":
+            eng = self._v19.get("adaptive_heuristics")
+            if eng:
+                result = eng.select_best_strategy(msg.get("task", {}))
+                await ws.send(json.dumps({"type": "v19_select_strategy_result", **result}))
+
+        elif msg_type == "v19_adapt_context":
+            eng = self._v19.get("adaptive_heuristics")
+            if eng:
+                result = eng.adapt_to_context(msg.get("context", {}))
+                await ws.send(json.dumps({"type": "v19_adapt_context_result", **result}))
+
+        elif msg_type == "v19_optimize_pipeline":
+            eng = self._v19.get("pipeline_optimizer")
+            if eng:
+                result = eng.optimize_pipeline(msg.get("pipeline", {}))
+                await ws.send(json.dumps({"type": "v19_optimize_pipeline_result", **result}))
+
+        elif msg_type == "v19_reorder_steps":
+            eng = self._v19.get("pipeline_optimizer")
+            if eng:
+                result = eng.reorder_steps(msg.get("steps", {}))
+                await ws.send(json.dumps({"type": "v19_reorder_steps_result", **result}))
+
+        elif msg_type == "v19_optimize_flow":
+            eng = self._v19.get("pipeline_optimizer")
+            if eng:
+                result = eng.optimize_flow(msg.get("flow", {}))
+                await ws.send(json.dumps({"type": "v19_optimize_flow_result", **result}))
+
+        elif msg_type == "v19_remove_redundancies":
+            eng = self._v19.get("load_reducer")
+            if eng:
+                result = eng.remove_redundancies()
+                await ws.send(json.dumps({"type": "v19_remove_redundancies_result", **result}))
+
+        elif msg_type == "v19_reduce_llm_calls":
+            eng = self._v19.get("load_reducer")
+            if eng:
+                result = eng.reduce_llm_calls()
+                await ws.send(json.dumps({"type": "v19_reduce_llm_calls_result", **result}))
+
+        elif msg_type == "v19_simplify_pipeline":
+            eng = self._v19.get("load_reducer")
+            if eng:
+                result = eng.simplify_pipeline()
+                await ws.send(json.dumps({"type": "v19_simplify_pipeline_result", **result}))
+
+        elif msg_type == "v19_optimize_for":
+            eng = self._v19.get("multi_objective")
+            if eng:
+                result = eng.optimize_for(msg.get("criteria", {}))
+                await ws.send(json.dumps({"type": "v19_optimize_for_result", **result}))
+
+        elif msg_type == "v19_compute_tradeoffs":
+            eng = self._v19.get("multi_objective")
+            if eng:
+                result = eng.compute_tradeoffs(msg.get("criteria", {}))
+                await ws.send(json.dumps({"type": "v19_compute_tradeoffs_result", **result}))
+
+        elif msg_type == "v19_select_optimal":
+            eng = self._v19.get("multi_objective")
+            if eng:
+                result = eng.select_optimal_solution()
+                await ws.send(json.dumps({"type": "v19_select_optimal_result", **result}))
+
+        elif msg_type == "v19_profile_system":
+            eng = self._v19.get("profiling")
+            if eng:
+                result = eng.profile_system()
+                await ws.send(json.dumps({"type": "v19_profile_system_result", **result}))
+
+        elif msg_type == "v19_profile_agent":
+            eng = self._v19.get("profiling")
+            if eng:
+                result = eng.profile_agent(msg.get("agent", {}))
+                await ws.send(json.dumps({"type": "v19_profile_agent_result", **result}))
+
+        elif msg_type == "v19_profile_layer":
+            eng = self._v19.get("profiling")
+            if eng:
+                result = eng.profile_layer(msg.get("layer", {}))
+                await ws.send(json.dumps({"type": "v19_profile_layer_result", **result}))
+
+        elif msg_type == "v19_optimize_plan":
+            eng = self._v19.get("plan_optimizer")
+            if eng:
+                result = eng.optimize_plan(msg.get("plan", {}))
+                await ws.send(json.dumps({"type": "v19_optimize_plan_result", **result}))
+
+        elif msg_type == "v19_simplify_plan":
+            eng = self._v19.get("plan_optimizer")
+            if eng:
+                result = eng.simplify_plan(msg.get("plan", {}))
+                await ws.send(json.dumps({"type": "v19_simplify_plan_result", **result}))
+
+        elif msg_type == "v19_alternative_plans":
+            eng = self._v19.get("plan_optimizer")
+            if eng:
+                result = eng.generate_alternative_plans(msg.get("plan", {}))
+                await ws.send(json.dumps({"type": "v19_alternative_plans_result", **result}))
+
+        elif msg_type == "v19_optimize_simulation":
+            eng = self._v19.get("simulation_optimizer")
+            if eng:
+                result = eng.optimize_simulation(msg.get("sim", {}))
+                await ws.send(json.dumps({"type": "v19_optimize_simulation_result", **result}))
+
+        elif msg_type == "v19_prune_tree":
+            eng = self._v19.get("simulation_optimizer")
+            if eng:
+                result = eng.prune_simulation_tree(msg.get("tree", {}))
+                await ws.send(json.dumps({"type": "v19_prune_tree_result", **result}))
+
+        elif msg_type == "v19_select_scenarios":
+            eng = self._v19.get("simulation_optimizer")
+            if eng:
+                result = eng.select_relevant_scenarios()
+                await ws.send(json.dumps({"type": "v19_select_scenarios_result", **result}))
+
+        elif msg_type == "v19_optimize_inference":
+            eng = self._v19.get("inference_optimizer")
+            if eng:
+                result = eng.optimize_inference(msg.get("query", {}))
+                await ws.send(json.dumps({"type": "v19_optimize_inference_result", **result}))
+
+        elif msg_type == "v19_simplify_rules":
+            eng = self._v19.get("inference_optimizer")
+            if eng:
+                result = eng.simplify_rules()
+                await ws.send(json.dumps({"type": "v19_simplify_rules_result", **result}))
+
+        elif msg_type == "v19_compress_graph":
+            eng = self._v19.get("inference_optimizer")
+            if eng:
+                result = eng.compress_knowledge_graph()
+                await ws.send(json.dumps({"type": "v19_compress_graph_result", **result}))
+
+        elif msg_type == "v19_explain_optimization":
+            eng = self._v19.get("optimization_explainability")
+            if eng:
+                result = eng.explain_optimization()
+                await ws.send(json.dumps({"type": "v19_explain_optimization_result", **result}))
+
+        elif msg_type == "v19_explain_tradeoffs":
+            eng = self._v19.get("optimization_explainability")
+            if eng:
+                result = eng.explain_tradeoffs()
+                await ws.send(json.dumps({"type": "v19_explain_tradeoffs_result", **result}))
+
+        elif msg_type == "v19_explain_gain":
+            eng = self._v19.get("optimization_explainability")
+            if eng:
+                result = eng.explain_performance_gain()
+                await ws.send(json.dumps({"type": "v19_explain_gain_result", **result}))
+
+        elif msg_type == "v19_stats":
+            stats = {}
+            for name, mod in self._v19.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v19_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -1607,10 +1809,59 @@ async def main() -> None:
     logger.info("EXO v18 hierarchical cognition initialized (%d modules)",
                 len(v18_modules))
 
+    # ── v19 — Optimisation cognitive ─────────────────────────
+    meta_optimizer = MetaOptimizer(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, priority_engine=priority_engine,
+        governance=governance, meta_memory=meta_memory)
+    adaptive_heuristics = AdaptiveHeuristicsEngine(
+        meta_optimizer=meta_optimizer, priority_engine=priority_engine,
+        governance=governance)
+    pipeline_optimizer = CognitivePipelineOptimizer(
+        layer_stack=layer_stack, meta_optimizer=meta_optimizer,
+        governance=governance)
+    load_reducer = CognitiveLoadReducer(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, pipeline_optimizer=pipeline_optimizer,
+        governance=governance)
+    multi_objective = MultiObjectiveOptimizer(
+        meta_optimizer=meta_optimizer, heuristics=adaptive_heuristics,
+        governance=governance)
+    profiling = CognitiveProfilingEngine(
+        layer_stack=layer_stack, macro_layer=macro_layer,
+        micro_layer=micro_layer, meta_optimizer=meta_optimizer)
+    plan_opt = PlanOptimizer(
+        meta_optimizer=meta_optimizer, pipeline_optimizer=pipeline_optimizer,
+        governance=governance)
+    sim_opt = SimulationOptimizer(
+        meta_optimizer=meta_optimizer, profiling=profiling,
+        governance=governance)
+    inf_opt = InferenceOptimizer(
+        inference_eng=inference_eng, knowledge_graph=knowledge_graph,
+        meta_optimizer=meta_optimizer, governance=governance)
+    opt_explain = OptimizationExplainabilityEngine(
+        meta_optimizer=meta_optimizer, multi_objective=multi_objective,
+        profiling=profiling, governance=governance)
+
+    v19_modules = {
+        "meta_optimizer": meta_optimizer,
+        "adaptive_heuristics": adaptive_heuristics,
+        "pipeline_optimizer": pipeline_optimizer,
+        "load_reducer": load_reducer,
+        "multi_objective": multi_objective,
+        "profiling": profiling,
+        "plan_optimizer": plan_opt,
+        "simulation_optimizer": sim_opt,
+        "inference_optimizer": inf_opt,
+        "optimization_explainability": opt_explain,
+    }
+    logger.info("EXO v19 cognitive optimization initialized (%d modules)",
+                len(v19_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
-                    v17_modules, v18_modules)
+                    v17_modules, v18_modules, v19_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
