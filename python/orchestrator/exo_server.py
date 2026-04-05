@@ -184,6 +184,14 @@ from temporal_simulation_engine import TemporalSimulationEngine
 from simulation_coherence_engine import SimulationCoherenceEngine
 from simulation_governance_engine import SimulationGovernanceEngine
 from simulation_explainability_engine import SimulationExplainabilityEngine
+from cognitive_telemetry_engine import CognitiveTelemetryEngine
+from structured_tracing_engine import StructuredTracingEngine
+from cognitive_metrics_engine import CognitiveMetricsEngine
+from performance_analysis_engine import PerformanceAnalysisEngine
+from cognitive_anomaly_detector import CognitiveAnomalyDetector
+from observability_aggregator import ObservabilityAggregator
+from observability_dashboard_engine import ObservabilityDashboardEngine
+from observability_explainability_engine import ObservabilityExplainabilityEngine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -227,7 +235,8 @@ class GUIServer:
                  v20: dict | None = None,
                  v21: dict | None = None,
                  v22: dict | None = None,
-                 v23: dict | None = None) -> None:
+                 v23: dict | None = None,
+                 v24: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -244,6 +253,7 @@ class GUIServer:
         self._v21 = v21 or {}
         self._v22 = v22 or {}
         self._v23 = v23 or {}
+        self._v24 = v24 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1959,6 +1969,89 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v23_stats", **stats}))
 
+        # ── v24 cognitive observability ─────────────────────────
+        elif msg_type == "v24_telemetry_collect":
+            mod = self._v24.get("telemetry")
+            if mod:
+                result = mod.telemetry_collect(data.get("event", {}))
+                await ws.send(json.dumps({"type": "v24_telemetry_collect_result", **result}))
+        elif msg_type == "v24_telemetry_snapshot":
+            mod = self._v24.get("telemetry")
+            if mod:
+                result = mod.telemetry_snapshot()
+                await ws.send(json.dumps({"type": "v24_telemetry_snapshot_result", **result}))
+        elif msg_type == "v24_trace_start":
+            mod = self._v24.get("tracing")
+            if mod:
+                result = mod.trace_start(data.get("operation", {}))
+                await ws.send(json.dumps({"type": "v24_trace_start_result", **result}))
+        elif msg_type == "v24_trace_end":
+            mod = self._v24.get("tracing")
+            if mod:
+                result = mod.trace_end(data.get("operation", {}))
+                await ws.send(json.dumps({"type": "v24_trace_end_result", **result}))
+        elif msg_type == "v24_metrics_update":
+            mod = self._v24.get("metrics")
+            if mod:
+                result = mod.metrics_update(data.get("metric", {}))
+                await ws.send(json.dumps({"type": "v24_metrics_update_result", **result}))
+        elif msg_type == "v24_metrics_compute":
+            mod = self._v24.get("metrics")
+            if mod:
+                result = mod.metrics_compute()
+                await ws.send(json.dumps({"type": "v24_metrics_compute_result", **result}))
+        elif msg_type == "v24_analyze_performance":
+            mod = self._v24.get("performance")
+            if mod:
+                result = mod.analyze_performance()
+                await ws.send(json.dumps({"type": "v24_analyze_performance_result", **result}))
+        elif msg_type == "v24_detect_bottlenecks":
+            mod = self._v24.get("performance")
+            if mod:
+                result = mod.detect_bottlenecks()
+                await ws.send(json.dumps({"type": "v24_detect_bottlenecks_result", **result}))
+        elif msg_type == "v24_detect_anomaly":
+            mod = self._v24.get("anomaly")
+            if mod:
+                result = mod.detect_anomaly(data.get("event", {}))
+                await ws.send(json.dumps({"type": "v24_detect_anomaly_result", **result}))
+        elif msg_type == "v24_aggregate_all":
+            mod = self._v24.get("aggregator")
+            if mod:
+                result = mod.aggregate_all()
+                await ws.send(json.dumps({"type": "v24_aggregate_all_result", **result}))
+        elif msg_type == "v24_dashboard_generate":
+            mod = self._v24.get("dashboard")
+            if mod:
+                result = mod.dashboard_generate()
+                await ws.send(json.dumps({"type": "v24_dashboard_generate_result", **result}))
+        elif msg_type == "v24_dashboard_summary":
+            mod = self._v24.get("dashboard")
+            if mod:
+                result = mod.dashboard_summary()
+                await ws.send(json.dumps({"type": "v24_dashboard_summary_result", **result}))
+        elif msg_type == "v24_explain_metric":
+            mod = self._v24.get("explainability")
+            if mod:
+                result = mod.explain_metric(data.get("metric", ""))
+                await ws.send(json.dumps({"type": "v24_explain_metric_result", **result}))
+        elif msg_type == "v24_explain_anomaly":
+            mod = self._v24.get("explainability")
+            if mod:
+                result = mod.explain_anomaly(data.get("anomaly", ""))
+                await ws.send(json.dumps({"type": "v24_explain_anomaly_result", **result}))
+        elif msg_type == "v24_explain_performance":
+            mod = self._v24.get("explainability")
+            if mod:
+                result = mod.explain_performance()
+                await ws.send(json.dumps({"type": "v24_explain_performance_result", **result}))
+        elif msg_type == "v24_stats":
+            stats = {}
+            for name, mod in self._v24.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v24_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -2489,11 +2582,43 @@ async def main() -> None:
     logger.info("EXO v23 contextual simulation initialized (%d modules)",
                 len(v23_modules))
 
+    # ── EXO v24  cognitive observability ────────────────────
+    governance_v11 = v11_modules.get("governance")
+    cog_telemetry = CognitiveTelemetryEngine(governance=governance_v11)
+    cog_tracing = StructuredTracingEngine(governance=governance_v11)
+    cog_metrics = CognitiveMetricsEngine(governance=governance_v11)
+    cog_performance = PerformanceAnalysisEngine(
+        governance=governance_v11, telemetry=cog_telemetry, metrics=cog_metrics)
+    cog_anomaly = CognitiveAnomalyDetector(
+        governance=governance_v11, telemetry=cog_telemetry)
+    cog_aggregator = ObservabilityAggregator(
+        governance=governance_v11, telemetry=cog_telemetry,
+        tracing=cog_tracing, metrics=cog_metrics,
+        anomaly=cog_anomaly, performance=cog_performance)
+    cog_dashboard = ObservabilityDashboardEngine(
+        governance=governance_v11, aggregator=cog_aggregator)
+    cog_explainability = ObservabilityExplainabilityEngine(
+        governance=governance_v11, metrics=cog_metrics,
+        anomaly=cog_anomaly, performance=cog_performance)
+
+    v24_modules = {
+        "telemetry": cog_telemetry,
+        "tracing": cog_tracing,
+        "metrics": cog_metrics,
+        "performance": cog_performance,
+        "anomaly": cog_anomaly,
+        "aggregator": cog_aggregator,
+        "dashboard": cog_dashboard,
+        "explainability": cog_explainability,
+    }
+    logger.info("EXO v24 cognitive observability initialized (%d modules)",
+                len(v24_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
                     v17_modules, v18_modules, v19_modules, v20_modules,
-                    v21_modules, v22_modules, v23_modules)
+                    v21_modules, v22_modules, v23_modules, v24_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
