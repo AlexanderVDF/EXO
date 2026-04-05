@@ -14,7 +14,7 @@
 | network | `python/network` | 10 | `` |
 | news | `python/news` | 2 | `python/news/news_server.py` |
 | nlu | `python/nlu` | 2 | `python/nlu/nlu_server.py` |
-| orchestrator | `python/orchestrator` | 46 | `python/orchestrator/exo_server.py` |
+| orchestrator | `python/orchestrator` | 54 | `python/orchestrator/exo_server.py` |
 | planner | `python/planner` | 2 | `python/planner/task_planner_server.py` |
 | shared | `python/shared` | 12 | `` |
 | stt | `python/stt` | 3 | `python/stt/stt_server.py` |

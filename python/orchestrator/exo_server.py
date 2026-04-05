@@ -91,6 +91,17 @@ from distributed_consistency_engine import DistributedConsistencyEngine
 from meta_supervisor_v4 import MetaSupervisorV4
 from explainability_engine_v4 import ExplainabilityEngineV4
 
+# v15 — Architecture cognitive complète
+from expert_system_engine import ExpertSystemEngine
+from knowledge_graph import KnowledgeGraph
+from inference_engine import InferenceEngine
+from cognitive_agent_core import CognitiveAgentCore
+from meta_cognition_engine import MetaCognitionEngine
+from prospective_engine import ProspectiveEngine
+from distributed_cognition_layer import DistributedCognitionLayer
+from global_supervisor_v5 import GlobalSupervisorV5
+from explainability_engine_v5 import ExplainabilityEngineV5
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
@@ -124,7 +135,8 @@ class GUIServer:
                  v11: dict | None = None,
                  v12: dict | None = None,
                  v13: dict | None = None,
-                 v14: dict | None = None) -> None:
+                 v14: dict | None = None,
+                 v15: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -132,6 +144,7 @@ class GUIServer:
         self._v12 = v12 or {}
         self._v13 = v13 or {}
         self._v14 = v14 or {}
+        self._v15 = v15 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -749,6 +762,119 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v14_stats", **stats}))
 
+        # ── v15 — Architecture cognitive complète ─────────────
+        elif msg_type == "v15_expert_infer":
+            eng = self._v15.get("expert_system")
+            if eng:
+                result = eng.infer(msg.get("query", {}))
+                await ws.send(json.dumps({"type": "v15_expert_result", **result}))
+
+        elif msg_type == "v15_expert_add_rule":
+            eng = self._v15.get("expert_system")
+            if eng:
+                rule_id = eng.add_rule(msg.get("rule", {}))
+                await ws.send(json.dumps({"type": "v15_rule_added", "rule_id": rule_id}))
+
+        elif msg_type == "v15_kg_add":
+            kg = self._v15.get("knowledge_graph")
+            if kg:
+                eid = kg.kg_add(msg.get("node", ""), msg.get("relation", ""),
+                                msg.get("target", ""))
+                await ws.send(json.dumps({"type": "v15_kg_added", "edge_id": eid}))
+
+        elif msg_type == "v15_kg_query":
+            kg = self._v15.get("knowledge_graph")
+            if kg:
+                results = kg.kg_query(msg.get("pattern", {}))
+                await ws.send(json.dumps({"type": "v15_kg_results",
+                                          "results": results}))
+
+        elif msg_type == "v15_infer":
+            eng = self._v15.get("inference")
+            if eng:
+                mode = msg.get("mode", "logical")
+                if mode == "causal":
+                    r = eng.infer_causal(msg.get("chain", []))
+                elif mode == "temporal":
+                    r = eng.infer_temporal(msg.get("sequence", []))
+                elif mode == "contextual":
+                    r = eng.infer_contextual(msg.get("context", {}))
+                else:
+                    r = eng.infer_logical(msg.get("query", {}))
+                await ws.send(json.dumps({"type": "v15_inference_result", **r}))
+
+        elif msg_type == "v15_plan":
+            cog = self._v15.get("cognitive_agent")
+            if cog:
+                plan = cog.plan(msg.get("intent", {}))
+                await ws.send(json.dumps({"type": "v15_plan_result", **plan}))
+
+        elif msg_type == "v15_execute":
+            cog = self._v15.get("cognitive_agent")
+            if cog:
+                result = cog.execute(msg.get("plan", {}))
+                await ws.send(json.dumps({"type": "v15_exec_result", **result}))
+
+        elif msg_type == "v15_reflect":
+            mc = self._v15.get("meta_cognition")
+            if mc:
+                result = mc.reflect(msg.get("trace", {}))
+                await ws.send(json.dumps({"type": "v15_reflect_result", **result}))
+
+        elif msg_type == "v15_simulate":
+            pe = self._v15.get("prospective")
+            if pe:
+                result = pe.simulate(msg.get("plan", {}))
+                await ws.send(json.dumps({"type": "v15_simulate_result", **result}))
+
+        elif msg_type == "v15_futures":
+            pe = self._v15.get("prospective")
+            if pe:
+                result = pe.generate_futures(msg.get("plan", {}),
+                                             msg.get("n", 3))
+                await ws.send(json.dumps({"type": "v15_futures_result", **result}))
+
+        elif msg_type == "v15_supervise":
+            sup = self._v15.get("supervisor_v5")
+            if sup:
+                result = sup.supervise_all()
+                await ws.send(json.dumps({"type": "v15_supervise_result", **result}))
+
+        elif msg_type == "v15_validate":
+            sup = self._v15.get("supervisor_v5")
+            if sup:
+                result = sup.validate_decision(msg.get("decision", {}))
+                await ws.send(json.dumps({"type": "v15_validate_result", **result}))
+
+        elif msg_type == "v15_explain":
+            exp = self._v15.get("explainability_v5")
+            if exp:
+                mode = msg.get("mode", "decision")
+                if mode == "inference":
+                    r = exp.explain_inference(msg.get("inference", {}))
+                elif mode == "future":
+                    r = exp.explain_future(msg.get("future", {}))
+                elif mode == "conflict":
+                    r = exp.explain_conflict(msg.get("conflict", {}))
+                elif mode == "full":
+                    r = exp.explain_full(msg.get("session", {}))
+                else:
+                    r = exp.explain_decision(msg.get("decision", {}))
+                await ws.send(json.dumps({"type": "v15_explain_result", **r}))
+
+        elif msg_type == "v15_dispatch":
+            dc = self._v15.get("distributed")
+            if dc:
+                result = dc.dispatch(msg.get("task", {}))
+                await ws.send(json.dumps({"type": "v15_dispatch_result", **result}))
+
+        elif msg_type == "v15_stats":
+            stats = {}
+            for name, mod in self._v15.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v15_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -953,9 +1079,37 @@ async def main() -> None:
     logger.info("EXO v14 distributed cognition modules initialized "
                 "(%d modules, %d agents)", len(v14_modules), len(agents))
 
+    # ── v15 — Architecture cognitive complète ─────────────────
+    expert_system = ExpertSystemEngine(meta_memory, governance)
+    knowledge_graph = KnowledgeGraph(meta_memory)
+    inference_eng = InferenceEngine(knowledge_graph, expert_system, meta_memory)
+    cognitive_agent = CognitiveAgentCore(meta_memory, governance, inference_eng)
+    meta_cognition = MetaCognitionEngine(meta_memory, governance)
+    prospective = ProspectiveEngine(meta_memory, inference_eng)
+    distrib_cognition = DistributedCognitionLayer(
+        meta_memory, governance, agent_mgr)
+    supervisor_v5 = GlobalSupervisorV5(
+        meta_memory, governance, meta_cognition, distrib_cognition)
+    explainability_v5 = ExplainabilityEngineV5(
+        meta_memory, knowledge_graph, inference_eng)
+
+    v15_modules = {
+        "expert_system": expert_system,
+        "knowledge_graph": knowledge_graph,
+        "inference": inference_eng,
+        "cognitive_agent": cognitive_agent,
+        "meta_cognition": meta_cognition,
+        "prospective": prospective,
+        "distributed": distrib_cognition,
+        "supervisor_v5": supervisor_v5,
+        "explainability_v5": explainability_v5,
+    }
+    logger.info("EXO v15 cognitive architecture initialized (%d modules)",
+                len(v15_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
-                    v13_modules, v14_modules)
+                    v13_modules, v14_modules, v15_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
