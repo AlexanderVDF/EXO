@@ -176,6 +176,14 @@ from strategic_arbitration_engine import StrategicArbitrationEngine
 from temporal_planning_engine import TemporalPlanningEngine
 from plan_coherence_engine import PlanCoherenceEngine
 from planning_explainability_engine import PlanningExplainabilityEngine
+from context_simulation_sandbox import ContextSimulationSandbox
+from multi_scenario_simulation_engine import MultiScenarioSimulationEngine
+from predictive_modeling_engine import PredictiveModelingEngine
+from outcome_analysis_engine import OutcomeAnalysisEngine
+from temporal_simulation_engine import TemporalSimulationEngine
+from simulation_coherence_engine import SimulationCoherenceEngine
+from simulation_governance_engine import SimulationGovernanceEngine
+from simulation_explainability_engine import SimulationExplainabilityEngine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -218,7 +226,8 @@ class GUIServer:
                  v19: dict | None = None,
                  v20: dict | None = None,
                  v21: dict | None = None,
-                 v22: dict | None = None) -> None:
+                 v22: dict | None = None,
+                 v23: dict | None = None) -> None:
         self._sync = sync
         self._pipeline = pipeline_mgr
         self._agent = agent_mgr
@@ -234,6 +243,7 @@ class GUIServer:
         self._v20 = v20 or {}
         self._v21 = v21 or {}
         self._v22 = v22 or {}
+        self._v23 = v23 or {}
         self._clients: set[websockets.server.WebSocketServerProtocol] = set()
         self._state = "IDLE"
         self._volume = 0.0
@@ -1843,6 +1853,112 @@ class GUIServer:
                     stats[name] = mod.get_stats()
             await ws.send(json.dumps({"type": "v22_stats", **stats}))
 
+        # ── v23 contextual simulation ──────────────────────
+        elif msg_type == "v23_sandbox_init":
+            eng = self._v23.get("sandbox")
+            if eng:
+                ctx = msg.get("context", {})
+                result = eng.sandbox_init(ctx)
+                await ws.send(json.dumps({"type": "v23_sandbox_init_result", **result}))
+
+        elif msg_type == "v23_sandbox_run":
+            eng = self._v23.get("sandbox")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.sandbox_run(plan)
+                await ws.send(json.dumps({"type": "v23_sandbox_run_result", **result}))
+
+        elif msg_type == "v23_generate_scenarios":
+            eng = self._v23.get("multi_scenario")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.generate_scenarios(plan)
+                await ws.send(json.dumps({"type": "v23_generate_scenarios_result", **result}))
+
+        elif msg_type == "v23_simulate_scenarios":
+            eng = self._v23.get("multi_scenario")
+            if eng:
+                scenarios = msg.get("scenarios", [])
+                result = eng.simulate_scenarios(scenarios)
+                await ws.send(json.dumps({"type": "v23_simulate_scenarios_result", **result}))
+
+        elif msg_type == "v23_compare_scenarios":
+            eng = self._v23.get("multi_scenario")
+            if eng:
+                scenarios = msg.get("scenarios", [])
+                result = eng.compare_scenarios(scenarios)
+                await ws.send(json.dumps({"type": "v23_compare_scenarios_result", **result}))
+
+        elif msg_type == "v23_predict_outcomes":
+            eng = self._v23.get("predictive")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.predict_outcomes(plan)
+                await ws.send(json.dumps({"type": "v23_predict_outcomes_result", **result}))
+
+        elif msg_type == "v23_predict_event":
+            eng = self._v23.get("predictive")
+            if eng:
+                event = msg.get("event", {})
+                result = eng.predict_event(event)
+                await ws.send(json.dumps({"type": "v23_predict_event_result", **result}))
+
+        elif msg_type == "v23_analyze_outcomes":
+            eng = self._v23.get("outcome_analysis")
+            if eng:
+                results_data = msg.get("results", {})
+                result = eng.analyze_outcomes(results_data)
+                await ws.send(json.dumps({"type": "v23_analyze_outcomes_result", **result}))
+
+        elif msg_type == "v23_classify_risks":
+            eng = self._v23.get("outcome_analysis")
+            if eng:
+                results_data = msg.get("results", {})
+                result = eng.classify_risks(results_data)
+                await ws.send(json.dumps({"type": "v23_classify_risks_result", **result}))
+
+        elif msg_type == "v23_temporal_flow":
+            eng = self._v23.get("temporal_sim")
+            if eng:
+                plan = msg.get("plan", {})
+                result = eng.simulate_temporal_flow(plan)
+                await ws.send(json.dumps({"type": "v23_temporal_flow_result", **result}))
+
+        elif msg_type == "v23_check_coherence":
+            eng = self._v23.get("coherence")
+            if eng:
+                sim = msg.get("simulation", {})
+                result = eng.check_simulation_coherence(sim)
+                await ws.send(json.dumps({"type": "v23_check_coherence_result", **result}))
+
+        elif msg_type == "v23_validate_simulation":
+            eng = self._v23.get("governance")
+            if eng:
+                sim = msg.get("simulation", {})
+                result = eng.validate_simulation(sim)
+                await ws.send(json.dumps({"type": "v23_validate_simulation_result", **result}))
+
+        elif msg_type == "v23_explain_simulation":
+            eng = self._v23.get("explainability")
+            if eng:
+                sim = msg.get("simulation", {})
+                result = eng.explain_simulation(sim)
+                await ws.send(json.dumps({"type": "v23_explain_simulation_result", **result}))
+
+        elif msg_type == "v23_explain_outcome":
+            eng = self._v23.get("explainability")
+            if eng:
+                outcome = msg.get("outcome", {})
+                result = eng.explain_outcome(outcome)
+                await ws.send(json.dumps({"type": "v23_explain_outcome_result", **result}))
+
+        elif msg_type == "v23_stats":
+            stats = {}
+            for name, mod in self._v23.items():
+                if hasattr(mod, "get_stats"):
+                    stats[name] = mod.get_stats()
+            await ws.send(json.dumps({"type": "v23_stats", **stats}))
+
     async def broadcast(self, data: dict) -> None:
         if not self._clients:
             return
@@ -2344,11 +2460,40 @@ async def main() -> None:
     logger.info("EXO v22 strategic planning initialized (%d modules)",
                 len(v22_modules))
 
+    # ── EXO v23: Contextual Simulation ─────────────────────
+    sim_governance = SimulationGovernanceEngine(governance=v11_modules.get("governance"))
+    sim_sandbox = ContextSimulationSandbox(governance=sim_governance)
+    multi_scenario = MultiScenarioSimulationEngine(
+        governance=sim_governance, sandbox=sim_sandbox)
+    predictive = PredictiveModelingEngine(
+        governance=sim_governance, sandbox=sim_sandbox)
+    outcome_analysis = OutcomeAnalysisEngine(
+        governance=sim_governance, sandbox=sim_sandbox)
+    temporal_sim = TemporalSimulationEngine(
+        governance=sim_governance, sandbox=sim_sandbox)
+    sim_coherence = SimulationCoherenceEngine(
+        governance=sim_governance, sandbox=sim_sandbox)
+    sim_explain = SimulationExplainabilityEngine(
+        governance=sim_governance, sandbox=sim_sandbox)
+
+    v23_modules = {
+        "sandbox": sim_sandbox,
+        "multi_scenario": multi_scenario,
+        "predictive": predictive,
+        "outcome_analysis": outcome_analysis,
+        "temporal_sim": temporal_sim,
+        "coherence": sim_coherence,
+        "governance": sim_governance,
+        "explainability": sim_explain,
+    }
+    logger.info("EXO v23 contextual simulation initialized (%d modules)",
+                len(v23_modules))
+
     # GUI server
     gui = GUIServer(sync, pipeline_mgr, agent_mgr, v11_modules, v12_modules,
                     v13_modules, v14_modules, v15_modules, v16_modules,
                     v17_modules, v18_modules, v19_modules, v20_modules,
-                    v21_modules, v22_modules)
+                    v21_modules, v22_modules, v23_modules)
     sync.set_gui_broadcast(gui.broadcast)
 
     # Start GUI WS server
