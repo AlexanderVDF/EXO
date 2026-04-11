@@ -1,7 +1,7 @@
 # Version simplifiée pour compilation initiale
 cmake_minimum_required(VERSION 3.21)
 
-project(RaspberryAssistant VERSION 28.0.0 LANGUAGES CXX)
+project(RaspberryAssistant VERSION 29.5.0 LANGUAGES CXX)
 
 # ── Options ──
 option(ENABLE_RTAUDIO "Enable RtAudio backend (WASAPI on Windows)" ON)
@@ -67,6 +67,21 @@ set(SOURCES
     app/simulation/SimulationResult.cpp
     app/simulation/SimulationEngine.cpp
     app/simulation/SimulationController.cpp
+    app/spatialcognition/SpatialKnowledgeGraph.cpp
+    app/spatialcognition/SpatialContext.cpp
+    app/spatialcognition/SpatialMemory.cpp
+    app/spatialcognition/SpatialReasoner.cpp
+    app/spatialcognition/SpatialPlanner.cpp
+    app/spatialcognition/SpatialSupervisor.cpp
+    app/spatialcognition/SpatialCognitiveEngine.cpp
+    app/spatialsecurity/SpatialSecurityContext.cpp
+    app/spatialsecurity/SpatialSecurityMemory.cpp
+    app/spatialsecurity/IntrusionDetector.cpp
+    app/spatialsecurity/FireDetector.cpp
+    app/spatialsecurity/ElectricalRiskDetector.cpp
+    app/spatialsecurity/NetworkRiskDetector.cpp
+    app/spatialsecurity/DomoticAnomalyDetector.cpp
+    app/spatialsecurity/SpatialSecurityEngine.cpp
     app/test/TestController.cpp
 )
 
@@ -113,6 +128,23 @@ set(HEADERS
     app/simulation/SimulationResult.h
     app/simulation/SimulationEngine.h
     app/simulation/SimulationController.h
+    app/spatialcognition/SpatialEnums.h
+    app/spatialcognition/SpatialKnowledgeGraph.h
+    app/spatialcognition/SpatialContext.h
+    app/spatialcognition/SpatialMemory.h
+    app/spatialcognition/SpatialReasoner.h
+    app/spatialcognition/SpatialPlanner.h
+    app/spatialcognition/SpatialSupervisor.h
+    app/spatialcognition/SpatialCognitiveEngine.h
+    app/spatialsecurity/SpatialSecurityEnums.h
+    app/spatialsecurity/SpatialSecurityContext.h
+    app/spatialsecurity/SpatialSecurityMemory.h
+    app/spatialsecurity/IntrusionDetector.h
+    app/spatialsecurity/FireDetector.h
+    app/spatialsecurity/ElectricalRiskDetector.h
+    app/spatialsecurity/NetworkRiskDetector.h
+    app/spatialsecurity/DomoticAnomalyDetector.h
+    app/spatialsecurity/SpatialSecurityEngine.h
     app/test/TestController.h
 )
 
@@ -189,6 +221,7 @@ qt_add_qml_module(RaspberryAssistant
         qml/components/FloorPlanProperties.qml
         qml/components/CameraCone.qml
         qml/components/FurniturePalette.qml
+        qml/components/SpatialNetworkIntegration.qml
         qml/components/CognitiveTimeline.qml
         qml/components/EngineHeatmap.qml
         qml/components/ExoContextPanel.qml
@@ -219,6 +252,21 @@ qt_add_qml_module(RaspberryAssistant
         qml/cognitive/SimulationRiskPanel.qml
         qml/cognitive/SimulationTimeline.qml
         qml/cognitive/SimulationMinimap.qml
+        # ── Cognitive / Spatial Cognition ──
+        qml/cognitive/SpatialCognitionPanel.qml
+        qml/cognitive/SpatialExplanationPanel.qml
+        qml/cognitive/SpatialPredictionPanel.qml
+        qml/cognitive/SpatialRiskPanel.qml
+        qml/cognitive/SpatialDecisionPanel.qml
+        # ── Spatial Security ──
+        qml/cognitive/SecurityPanel.qml
+        qml/cognitive/IntrusionPanel.qml
+        qml/cognitive/FirePanel.qml
+        qml/cognitive/ElectricalRiskPanel.qml
+        qml/cognitive/NetworkRiskPanel.qml
+        qml/cognitive/DomoticAnomalyPanel.qml
+        qml/cognitive/SecurityExplanationPanel.qml
+        qml/cognitive/SecurityDecisionPanel.qml
     RESOURCES
         qml/theme/qmldir
         qml/components/qmldir
@@ -248,6 +296,8 @@ target_include_directories(RaspberryAssistant PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/app/floorplan
     ${CMAKE_CURRENT_SOURCE_DIR}/app/simulation
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/spatialcognition
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/spatialsecurity
     ${CMAKE_CURRENT_SOURCE_DIR}/app/test
 )
 

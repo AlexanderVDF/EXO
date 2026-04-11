@@ -17,3 +17,16 @@ SimulationCausalityGraph 1.0 SimulationCausalityGraph.qml
 SimulationRiskPanel 1.0 SimulationRiskPanel.qml
 SimulationTimeline 1.0 SimulationTimeline.qml
 SimulationMinimap 1.0 SimulationMinimap.qml
+SpatialCognitionPanel 1.0 SpatialCognitionPanel.qml
+SpatialExplanationPanel 1.0 SpatialExplanationPanel.qml
+SpatialPredictionPanel 1.0 SpatialPredictionPanel.qml
+SpatialRiskPanel 1.0 SpatialRiskPanel.qml
+SpatialDecisionPanel 1.0 SpatialDecisionPanel.qml
+SecurityPanel 1.0 SecurityPanel.qml
+IntrusionPanel 1.0 IntrusionPanel.qml
+FirePanel 1.0 FirePanel.qml
+ElectricalRiskPanel 1.0 ElectricalRiskPanel.qml
+NetworkRiskPanel 1.0 NetworkRiskPanel.qml
+DomoticAnomalyPanel 1.0 DomoticAnomalyPanel.qml
+SecurityExplanationPanel 1.0 SecurityExplanationPanel.qml
+SecurityDecisionPanel 1.0 SecurityDecisionPanel.qml

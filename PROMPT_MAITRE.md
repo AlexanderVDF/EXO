@@ -32,7 +32,7 @@ Modules obligatoires :
 - LatencyMetrics (pipeline latency instrumentation)
 - PipelineTracer (analyse post-interaction, timeline, anomalies)
 - TestController (Stability Test Runner QML)
-- FloorPlanController (plan d'étage interactif : modèle, items, sérialisation)
+- FloorPlanController (plan d'étage interactif : modèle, items, sérialisation, liaison d'appareils réseau)
 - WeatherManager
 - SimulationController (simulation spatiale avancée : propagation, entités, risques, causalité)
 

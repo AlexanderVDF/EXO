@@ -88,6 +88,13 @@ Rectangle {
             case "action":   return "#CE9178"
             case "decision": return "#C586C0"
             case "anomaly":  return Theme.error
+            // Sécurité spatiale
+            case "intrusion":   return "#FF0040"
+            case "fire":        return "#FF6600"
+            case "electrical":  return "#FFD700"
+            case "network_risk":return "#00BFFF"
+            case "domotic":     return "#FF69B4"
+            case "security_action": return "#FF4060"
             default:         return Theme.textMuted
         }
     }
@@ -99,8 +106,54 @@ Rectangle {
             case "action":   return "🎯"
             case "decision": return "🧠"
             case "anomaly":  return "⚠"
+            // Sécurité spatiale
+            case "intrusion":   return "🚨"
+            case "fire":        return "🔥"
+            case "electrical":  return "⚡"
+            case "network_risk":return "🌐"
+            case "domotic":     return "🏠"
+            case "security_action": return "🛡"
             default:         return "●"
         }
+    }
+
+    // ── Injection d'alertes sécurité ──
+    function addSecurityAlert(alert) {
+        var typeMap = { 0: "intrusion", 1: "fire", 2: "fire", 3: "electrical", 4: "network_risk", 5: "domotic" }
+        var nodeType = typeMap[alert.riskType] || "anomaly"
+        var alertNodeId = "sec_" + alert.id
+        _ensureNode(alertNodeId, nodeType, alert.description || "Alerte")
+
+        // Lien causal : capteur → alerte si roomId
+        if (alert.roomId) {
+            var roomNodeId = "room_" + alert.roomId
+            _ensureNode(roomNodeId, "sensor", alert.roomId)
+            var linksCopy = root.links.slice()
+            linksCopy.push({
+                from: roomNodeId,
+                to: alertNodeId,
+                weight: alert.confidence || 0.5,
+                label: "détecté"
+            })
+            if (linksCopy.length > 200) linksCopy = linksCopy.slice(-200)
+            root.links = linksCopy
+        }
+    }
+
+    function addSecurityAction(alertId, actionDesc) {
+        var actionNodeId = "act_" + alertId + "_" + Date.now()
+        _ensureNode(actionNodeId, "security_action", actionDesc)
+        var srcId = "sec_" + alertId
+        _ensureNode(srcId, "anomaly", alertId)
+        var linksCopy = root.links.slice()
+        linksCopy.push({
+            from: srcId,
+            to: actionNodeId,
+            weight: 1.0,
+            label: "action"
+        })
+        if (linksCopy.length > 200) linksCopy = linksCopy.slice(-200)
+        root.links = linksCopy
     }
 
     // ════════════════════════════
@@ -312,7 +365,12 @@ Rectangle {
                     { type: "sensor",   label: "Capteur" },
                     { type: "action",   label: "Action" },
                     { type: "decision", label: "Décision" },
-                    { type: "anomaly",  label: "Anomalie" }
+                    { type: "anomaly",  label: "Anomalie" },
+                    { type: "intrusion",       label: "Intrusion" },
+                    { type: "fire",            label: "Incendie" },
+                    { type: "electrical",      label: "Électrique" },
+                    { type: "network_risk",    label: "Réseau" },
+                    { type: "security_action", label: "Action sécu." }
                 ]
 
                 RowLayout {

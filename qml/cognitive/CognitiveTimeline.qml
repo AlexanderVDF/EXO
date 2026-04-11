@@ -40,7 +40,8 @@ Rectangle {
         { id: "planning",       label: "Planification",  icon: "📐", color: "#CE9178", desc: "Stratégie & ordonnancement" },
         { id: "simulation",     label: "Simulation",     icon: "🔮", color: "#D4D4D4", desc: "Prédiction & what-if" },
         { id: "decision",       label: "Décision",       icon: "🎯", color: "#4FC1FF", desc: "Sélection d'action optimale" },
-        { id: "supervision",    label: "Supervision",    icon: "🛡", color: "#B5CEA8", desc: "Méta-cognition & contrôle" }
+        { id: "supervision",    label: "Supervision",    icon: "🛡", color: "#B5CEA8", desc: "Méta-cognition & contrôle" },
+        { id: "security",       label: "Sécurité",       icon: "🔒", color: "#FF4060", desc: "Détection risques & alertes spatiales" }
     ]
 
     // ── Connexion pipelineEventBus ──
@@ -80,7 +81,9 @@ Rectangle {
             "orchestrator": "planning",
             "scenario": "simulation",
             "decision": "decision", "tools": "decision",
-            "tts": "supervision", "health": "supervision"
+            "tts": "supervision", "health": "supervision",
+            "security": "security", "intrusion": "security", "fire": "security",
+            "electrical": "security", "network_risk": "security", "domotic_anomaly": "security"
         }
         return map[mod] || null
     }

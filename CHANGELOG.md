@@ -5,6 +5,99 @@
 
 ---
 
+## v29.5 — Module de sécurité spatiale avancée — Mai 2026
+
+### Ajouté
+- **Module spatialsecurity** (`app/spatialsecurity/`) — 18 fichiers C++ (9 headers + 9 implémentations)
+  - `SpatialSecurityEnums.h` — 6 enums (RiskType, SecuritySeverity, SecurityPhase, DetectorType, SecurityActionType, SubsystemStatus) + 10 constantes seuil
+  - `SpatialSecurityContext` — État sécurité multi-sous-systèmes, pondération risque (fire=0.30, intrusion=0.25, electrical=0.15, network=0.10, domotic=0.10, simulation=0.05, cognition=0.05)
+  - `SpatialSecurityMemory` — Mémoire d'incidents persistante (JSON, Jaccard similarity, éviction LRU pondérée résolu)
+  - `IntrusionDetector` — Détection intrusion (mouvement pièce vide, mouvement sans chaleur humaine, ouverture inattendue, vitesse suspecte >5m/s, zones interdites). Struct `SecurityAlert` partagée par tous les détecteurs
+  - `FireDetector` — Détection incendie (température ≥50°C, hausse >2°C/min, fumée ≥0.3, CO2 ≥1500ppm, anomalie thermique >0.7)
+  - `ElectricalRiskDetector` — Détection risque électrique (surcharge circuit, proche surcharge ≥85%, surcharge globale, appareil défaillant >150% nominal, consommation fantôme >50W, anomalie tension/fréquence)
+  - `NetworkRiskDetector` — Détection risque réseau (appareil hors-ligne, déconnexion massive >33%, latence ≥500ms, perte paquets >10%, zone morte <-80dBm)
+  - `DomoticAnomalyDetector` — Détection anomalies domotiques (lumière pièce vide, HVAC fenêtre ouverte, incohérence capteurs >5°C, boucle automation >5 actions, caméra hors-ligne)
+  - `SpatialSecurityEngine` — Orchestrateur pipeline 6 phases (Perception→Analyse→Détection→Évaluation→Planification→Supervision), QML_ELEMENT, auto-cycle 3s, escalade urgence
+- **8 panneaux QML** (`qml/cognitive/`)
+  - `SecurityPanel` — Dashboard sécurité (niveau global, barre sévérité, alertes actives, contrôle cycle)
+  - `IntrusionPanel` — Détail alertes intrusion filtrées (riskType===0)
+  - `FirePanel` — Détail alertes incendie/fumée (riskType===1||2) avec indicateurs seuil
+  - `ElectricalRiskPanel` — Détail alertes risque électrique (riskType===3)
+  - `NetworkRiskPanel` — Détail alertes réseau (riskType===4)
+  - `DomoticAnomalyPanel` — Détail alertes anomalies domotiques (riskType===5)
+  - `SecurityExplanationPanel` — Sélecteur ComboBox + vue explication détaillée (type, pièce, confiance, analyse)
+  - `SecurityDecisionPanel` — Section urgence, actions recommandées, historique incidents
+
+### Modifié
+- **SpatialOverlay.qml** — 5 couches sécurité ajoutées (zones interdites avec hachures, alertes sécurité avec pulse urgence, propagation incendie canvas, trajectoires suspectes canvas, appareils hors-ligne)
+- **CognitiveTimeline.qml** — Couche "Sécurité" ajoutée (9ème couche, 🔒, #FF4060) + mapping modules sécurité
+- **CausalityGraph.qml** — 6 types de nœuds sécurité (intrusion, fire, electrical, network_risk, domotic, security_action) + fonctions `addSecurityAlert()`, `addSecurityAction()` + légende étendue
+- `CMakeLists.txt` — 8 sources, 9 headers, 8 QML, include dir `app/spatialsecurity`
+- `qml/cognitive/qmldir` — 8 nouvelles entrées
+- Version bump 29.0.0 → 29.5.0 (CMakeLists.txt, __init__.py, assistant.conf.example, main.cpp, README.md)
+
+---
+
+## v29.0 — Module de cognition spatiale — Mai 2026
+
+### Ajouté
+- **Module spatialcognition** (`app/spatialcognition/`) — 8 fichiers C++, moteur cognitif complet
+  - `SpatialEnums.h` — 8 enums (SpatialRelation, KnowledgeNodeType, InferenceType, CognitiveSeverity, GoalType, ActionType, CognitivePhase, SupervisorDecision)
+  - `SpatialKnowledgeGraph` — Graphe de connaissances spatial (nœuds, arêtes, BFS, inférence adjacence/accessibilité/visibilité)
+  - `SpatialContext` — État contextuel temps réel (pièces, capteurs, appareils, réseau, simulation)
+  - `SpatialMemory` — Mémoire épisodique persistante (JSON, Jaccard similarity, éviction LRU pondérée)
+  - `SpatialReasoner` — Moteur d'inférence à règles (5 règles par défaut, détection anomalies/risques)
+  - `SpatialPlanner` — Planification par objectif (Secure, Illuminate, Ventilate, SaveEnergy, Monitor, Alert)
+  - `SpatialSupervisor` — Gouvernance cognitive (validation plans, contraintes sécurité, cohérence, précédent historique)
+  - `SpatialCognitiveEngine` — Orchestrateur pipeline 7 phases (Perception→Symbolique→Inférence→Planification→Simulation→Décision→Supervision), QML_ELEMENT, auto-cycle
+- **5 panneaux QML** (`qml/cognitive/`)
+  - `SpatialCognitionPanel` — Vue d'ensemble (phase, cycle, risque global, métriques graphe, boutons cycle/auto)
+  - `SpatialExplanationPanel` — Explications des inférences (sévérité, confiance, détail sélectionnable)
+  - `SpatialPredictionPanel` — Prédictions spatiales (confiance, pièce, barre visuelle)
+  - `SpatialRiskPanel` — Risques cognitifs (distinct de SimulationRiskPanel, basé sur inférence)
+  - `SpatialDecisionPanel` — Plans validés et actions recommandées (priorité, type, cible)
+
+### Modifié
+- `CMakeLists.txt` — 7 sources, 8 headers, 5 QML, include dir `app/spatialcognition`
+- `qml/cognitive/qmldir` — 5 nouvelles entrées (SpatialCognitionPanel, SpatialExplanationPanel, SpatialPredictionPanel, SpatialRiskPanel, SpatialDecisionPanel)
+- Version bump 28.1.0 → 29.0.0 (CMakeLists.txt, __init__.py, assistant.conf.example, main.cpp, README.md)
+
+---
+
+## v28.1 — Intégration réseau/domotique spatiale — Avril 2026
+
+### Ajouté
+- **SpatialNetworkIntegration** (`qml/components/SpatialNetworkIntegration.qml`) — bridge WebSocket vers NetworkMap (8790) et HomeGraph (8784)
+  - Connexion automatique avec reconnexion, polling 30s
+  - Modèles JS : networkDevices, networkLinks, wifiZones, deadZones, domoticEntities, cameras, rooms
+  - API publique : refreshNetwork(), refreshHomeGraph(), getDeviceById(), getEntityById(), getCameraById(), getDevicesInRoom(), linkDeviceToItem()
+- **5 nouvelles couches SpatialOverlay** (couches 6-10)
+  - Couche 6 : Appareils réseau (icône protocole, badge vendor, indicateur RSSI)
+  - Couche 7 : Liens réseau (Canvas, couleur par protocole, épaisseur par bande passante, label latence)
+  - Couche 8 : Caméras (cône de vision Canvas, angle/FOV/range)
+  - Couche 9 : Entités domotiques (icône type, badge valeur, couleur état)
+  - Couche 10 : Heatmap WiFi + zones mortes (gradients radiaux, rectangles tirets rouges)
+- **Onglet Réseau** dans CognitiveSpatialView — 8ème onglet (🌐), stats connexion, toggles couches overlay
+- **Device Picker** dans FloorPlanProperties — popup recherche/sélection d'appareil réseau, affichage vendor/protocol/RSSI/latence
+
+### Étendu
+- **FloorPlanController** — 4 nouvelles méthodes C++ : `linkDevice()`, `unlinkDevice()`, `linkedDeviceForItem()`, `deviceInfoForItem()` + signaux `deviceLinked`/`deviceUnlinked` + `m_deviceLinks` hash
+- **SpatialOverlay** — 6 nouvelles propriétés (networkDevices, networkLinks, cameras, domoticEntities, wifiZones, deadZones) + 6 toggles show* + 3 signaux (networkDeviceClicked, cameraClicked, domoticEntityClicked)
+- **FloorPlanProperties** — injection networkIntegration, section info appareil enrichie, bouton device picker
+- **CognitiveSpatialView** — SpatialNetworkIntegration wiring, connexion signaux overlay réseau, tab Réseau
+
+### Fichiers modifiés
+- `app/floorplan/FloorPlanController.h` — +12 lignes (méthodes, signal, membre)
+- `app/floorplan/FloorPlanController.cpp` — +65 lignes (implémentations device linking)
+- `qml/cognitive/SpatialOverlay.qml` — +340 lignes (propriétés, couches 6-10, helpers)
+- `qml/cognitive/CognitiveSpatialView.qml` — +120 lignes (netIntegration, tab Réseau, signaux)
+- `qml/components/FloorPlanProperties.qml` — +130 lignes (device info, picker popup)
+- `qml/components/SpatialNetworkIntegration.qml` — nouveau, ~300 lignes
+- `CMakeLists.txt` — +1 QML_FILES (69 total)
+- `qml/components/qmldir` — +1 entrée
+
+---
+
 ## v28.0 — Simulation spatiale avancée — Avril 2026
 
 ### Ajouté

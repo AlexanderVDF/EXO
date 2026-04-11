@@ -1,6 +1,6 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 28.0** | Avril 2026
+**Version 29.5** | Mai 2026
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)

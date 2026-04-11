@@ -124,6 +124,63 @@
   SimulationScenario.cpp -> SimulationScenario.h
   SimulationScenario.h -> SimulationEnums.h
   SimulationScenario.h -> SimulationEntity.h
+  SpatialCognitiveEngine.cpp -> SpatialCognitiveEngine.h
+  SpatialCognitiveEngine.cpp -> FloorPlanModel.h
+  SpatialCognitiveEngine.h -> SpatialEnums.h
+  SpatialCognitiveEngine.h -> SpatialKnowledgeGraph.h
+  SpatialCognitiveEngine.h -> SpatialContext.h
+  SpatialCognitiveEngine.h -> SpatialMemory.h
+  SpatialCognitiveEngine.h -> SpatialReasoner.h
+  SpatialCognitiveEngine.h -> SpatialPlanner.h
+  SpatialCognitiveEngine.h -> SpatialSupervisor.h
+  SpatialContext.cpp -> SpatialContext.h
+  SpatialContext.h -> SpatialEnums.h
+  SpatialKnowledgeGraph.cpp -> SpatialKnowledgeGraph.h
+  SpatialKnowledgeGraph.cpp -> FloorPlanModel.h
+  SpatialKnowledgeGraph.h -> SpatialEnums.h
+  SpatialMemory.cpp -> SpatialMemory.h
+  SpatialMemory.h -> SpatialEnums.h
+  SpatialMemory.h -> SpatialContext.h
+  SpatialPlanner.cpp -> SpatialPlanner.h
+  SpatialPlanner.h -> SpatialEnums.h
+  SpatialPlanner.h -> SpatialReasoner.h
+  SpatialReasoner.cpp -> SpatialReasoner.h
+  SpatialReasoner.h -> SpatialEnums.h
+  SpatialReasoner.h -> SpatialKnowledgeGraph.h
+  SpatialReasoner.h -> SpatialContext.h
+  SpatialSupervisor.cpp -> SpatialSupervisor.h
+  SpatialSupervisor.h -> SpatialEnums.h
+  SpatialSupervisor.h -> SpatialPlanner.h
+  SpatialSupervisor.h -> SpatialContext.h
+  SpatialSupervisor.h -> SpatialMemory.h
+  DomoticAnomalyDetector.cpp -> DomoticAnomalyDetector.h
+  DomoticAnomalyDetector.h -> SpatialSecurityEnums.h
+  DomoticAnomalyDetector.h -> IntrusionDetector.h
+  ElectricalRiskDetector.cpp -> ElectricalRiskDetector.h
+  ElectricalRiskDetector.h -> SpatialSecurityEnums.h
+  ElectricalRiskDetector.h -> IntrusionDetector.h
+  FireDetector.cpp -> FireDetector.h
+  FireDetector.h -> SpatialSecurityEnums.h
+  FireDetector.h -> IntrusionDetector.h
+  IntrusionDetector.cpp -> IntrusionDetector.h
+  IntrusionDetector.h -> SpatialSecurityEnums.h
+  IntrusionDetector.h -> SpatialSecurityContext.h
+  NetworkRiskDetector.cpp -> NetworkRiskDetector.h
+  NetworkRiskDetector.h -> SpatialSecurityEnums.h
+  NetworkRiskDetector.h -> IntrusionDetector.h
+  SpatialSecurityContext.cpp -> SpatialSecurityContext.h
+  SpatialSecurityContext.h -> SpatialSecurityEnums.h
+  SpatialSecurityEngine.cpp -> SpatialSecurityEngine.h
+  SpatialSecurityEngine.h -> SpatialSecurityEnums.h
+  SpatialSecurityEngine.h -> SpatialSecurityContext.h
+  SpatialSecurityEngine.h -> SpatialSecurityMemory.h
+  SpatialSecurityEngine.h -> IntrusionDetector.h
+  SpatialSecurityEngine.h -> FireDetector.h
+  SpatialSecurityEngine.h -> ElectricalRiskDetector.h
+  SpatialSecurityEngine.h -> NetworkRiskDetector.h
+  SpatialSecurityEngine.h -> DomoticAnomalyDetector.h
+  SpatialSecurityMemory.cpp -> SpatialSecurityMemory.h
+  SpatialSecurityMemory.h -> SpatialSecurityEnums.h
   TestController.cpp -> TestController.h
   TestController.cpp -> ConfigManager.h
   TestController.h -> WebSocketClient.h
@@ -227,6 +284,44 @@
 - `app/simulation/SimulationResult.h` (2 include(s))
 - `app/simulation/SimulationScenario.cpp` (1 include(s))
 - `app/simulation/SimulationScenario.h` (2 include(s))
+
+### spatialcognition/
+
+- `app/spatialcognition/SpatialCognitiveEngine.cpp` (2 include(s))
+- `app/spatialcognition/SpatialCognitiveEngine.h` (7 include(s))
+- `app/spatialcognition/SpatialContext.cpp` (1 include(s))
+- `app/spatialcognition/SpatialContext.h` (1 include(s))
+- `app/spatialcognition/SpatialEnums.h` (0 include(s))
+- `app/spatialcognition/SpatialKnowledgeGraph.cpp` (2 include(s))
+- `app/spatialcognition/SpatialKnowledgeGraph.h` (1 include(s))
+- `app/spatialcognition/SpatialMemory.cpp` (1 include(s))
+- `app/spatialcognition/SpatialMemory.h` (2 include(s))
+- `app/spatialcognition/SpatialPlanner.cpp` (1 include(s))
+- `app/spatialcognition/SpatialPlanner.h` (2 include(s))
+- `app/spatialcognition/SpatialReasoner.cpp` (1 include(s))
+- `app/spatialcognition/SpatialReasoner.h` (3 include(s))
+- `app/spatialcognition/SpatialSupervisor.cpp` (1 include(s))
+- `app/spatialcognition/SpatialSupervisor.h` (4 include(s))
+
+### spatialsecurity/
+
+- `app/spatialsecurity/DomoticAnomalyDetector.cpp` (1 include(s))
+- `app/spatialsecurity/DomoticAnomalyDetector.h` (2 include(s))
+- `app/spatialsecurity/ElectricalRiskDetector.cpp` (1 include(s))
+- `app/spatialsecurity/ElectricalRiskDetector.h` (2 include(s))
+- `app/spatialsecurity/FireDetector.cpp` (1 include(s))
+- `app/spatialsecurity/FireDetector.h` (2 include(s))
+- `app/spatialsecurity/IntrusionDetector.cpp` (1 include(s))
+- `app/spatialsecurity/IntrusionDetector.h` (2 include(s))
+- `app/spatialsecurity/NetworkRiskDetector.cpp` (1 include(s))
+- `app/spatialsecurity/NetworkRiskDetector.h` (2 include(s))
+- `app/spatialsecurity/SpatialSecurityContext.cpp` (1 include(s))
+- `app/spatialsecurity/SpatialSecurityContext.h` (1 include(s))
+- `app/spatialsecurity/SpatialSecurityEngine.cpp` (1 include(s))
+- `app/spatialsecurity/SpatialSecurityEngine.h` (8 include(s))
+- `app/spatialsecurity/SpatialSecurityEnums.h` (0 include(s))
+- `app/spatialsecurity/SpatialSecurityMemory.cpp` (1 include(s))
+- `app/spatialsecurity/SpatialSecurityMemory.h` (1 include(s))
 
 ### test/
 
