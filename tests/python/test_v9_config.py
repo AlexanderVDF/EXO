@@ -66,7 +66,7 @@ class TestConfigManager:
     def test_dot_notation_get(self, tmp_path):
         cfg = ConfigManager(tmp_path / "config.json")
         assert cfg.get("llm.timeout_s") == 10
-        assert cfg.get("stt.beam_size") == 3
+        assert cfg.get("stt.beam_size") == 1
 
     def test_dot_notation_get_default(self, tmp_path):
         cfg = ConfigManager(tmp_path / "config.json")

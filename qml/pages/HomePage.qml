@@ -28,9 +28,47 @@ Item {
     property alias planProgress: planWidget
     property alias contextPanel: ctxPanel
 
+    // v9: Mode Expert
+    property bool expertMode: false
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        // ── v9: Mode Switch + PipelineView Expert ──
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing8
+            Layout.rightMargin: Theme.spacing8
+            Layout.topMargin: Theme.spacing4
+            spacing: Theme.spacing8
+
+            ModeSwitch {
+                id: modeSwitch
+                expertMode: root.expertMode
+                onModeChanged: function(isExpert) {
+                    root.expertMode = isExpert
+                    if (typeof configManager !== 'undefined')
+                        configManager.setUserValue("gui/expertMode", isExpert)
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+        }
+
+        // ── v9: Pipeline horizontal (Expert only) ──
+        PipelineView {
+            Layout.fillWidth: true
+            Layout.leftMargin: Theme.spacing8
+            Layout.rightMargin: Theme.spacing8
+            Layout.topMargin: Theme.spacing4
+            Layout.preferredHeight: root.expertMode ? 140 : 0
+            visible: root.expertMode
+            collapsed: !root.expertMode
+            clip: true
+
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: Theme.animNormal; easing.type: Easing.InOutQuad } }
+        }
 
         // ── v8: Context panel ──
         ExoContextPanel {
@@ -60,6 +98,18 @@ Item {
             Layout.fillHeight: true
             orientation: Qt.Vertical
 
+            // ── v9: CognitiveTimeline compact (Expert only) ──
+            CognitiveTimeline {
+                SplitView.fillWidth: true
+                SplitView.preferredHeight: root.expertMode ? 200 : 0
+                SplitView.minimumHeight: 0
+                visible: root.expertMode
+                compact: true
+                clip: true
+
+                Behavior on SplitView.preferredHeight { NumberAnimation { duration: Theme.animNormal; easing.type: Easing.InOutQuad } }
+            }
+
             ExoTranscriptView {
                 id: transcript
                 SplitView.fillWidth: true
@@ -83,6 +133,15 @@ Item {
                        ? Theme.borderFocus : Theme.border
                 Behavior on color { ColorAnimation { duration: Theme.animFast } }
             }
+        }
+    }
+
+    // Load saved expert mode
+    Component.onCompleted: {
+        if (typeof configManager !== 'undefined') {
+            var saved = configManager.getUserValue("gui/expertMode", false)
+            root.expertMode = (saved === true || saved === "true")
+            modeSwitch.expertMode = root.expertMode
         }
     }
 }

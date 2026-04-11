@@ -30,6 +30,7 @@
 #include "core/AssistantManager.h"
 #include "core/LogManager.h"
 #include "core/ServiceSupervisor.h"
+#include "test/TestController.h"
 
 // ═══════════════════════════════════════════════════════
 //  Crash handler — write minidump + log before dying
@@ -142,7 +143,7 @@ int main(int argc, char *argv[])
 
     // === Configuration de base de l'application ===
     app.setApplicationName("EXO Assistant");
-    app.setApplicationVersion("5.1");
+    app.setApplicationVersion("28.0");
     app.setOrganizationName("EXOAssistant");
     app.setOrganizationDomain("exo-assistant.local");
 
@@ -169,7 +170,7 @@ int main(int argc, char *argv[])
     LogManager::instance()->initialize(LogManager::Debug, true, true);
     hLog() << "Fichier de log:" << LogManager::instance()->getRecentLogs();
 
-    qInfo() << "=== Démarrage d'EXO Assistant v5.1 ===";
+    qInfo() << "=== Démarrage d'EXO Assistant v28.0 ===";
     qInfo() << "Plateforme:" 
 #ifdef RASPBERRY_PI
                  << "Raspberry Pi 5 (EGLFS)"
@@ -187,6 +188,9 @@ int main(int argc, char *argv[])
     
     // Créer l'AssistantManager réel
     AssistantManager assistantManager;
+
+    // Créer le TestController (stability tests)
+    TestController testController;
     
     // Créer le moteur QML
     QQmlApplicationEngine engine;
@@ -203,6 +207,7 @@ int main(int argc, char *argv[])
     // Exposer l'AssistantManager et le ServiceSupervisor à QML
     engine.rootContext()->setContextProperty("assistantManager", &assistantManager);
     engine.rootContext()->setContextProperty("serviceSupervisor", &serviceSupervisor);
+    engine.rootContext()->setContextProperty("testController", &testController);
 
     // Créer et exposer ConfigManager AVANT le chargement QML
     // pour que les ComboBox voient les vraies valeurs dans Component.onCompleted
@@ -223,6 +228,8 @@ int main(int argc, char *argv[])
     QObject::connect(&serviceSupervisor, &ServiceSupervisor::allServicesReady, [&]() {
         qInfo() << "[GUI] All services ready → initializing assistant";
         assistantManager.initializeWithConfig();
+        // Configure TestController with the same ConfigManager
+        testController.configure(assistantManager.configManager());
     });
 
     // Ajouter le dossier qml comme import path pour les sous-dossiers (vscode/)

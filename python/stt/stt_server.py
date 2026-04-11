@@ -1,12 +1,13 @@
 """
-stt_server.py — EXO STT Streaming Server (dual backend: whisper.cpp GPU / faster-whisper CPU)
+stt_server.py — EXO STT Streaming Server (multi-backend: whisper.cpp GPU / faster-whisper GPU/CPU)
 
 WebSocket server that receives audio chunks (PCM16 16kHz mono)
 and returns streaming transcription results.
 
 Backends:
   - whispercpp: Whisper.cpp + Vulkan GPU (default, fast)
-  - faster_whisper: faster-whisper CPU (fallback)
+  - faster_whisper: faster-whisper GPU (CUDA float16) or CPU (int8 fallback)
+  - fasterwhisper_gpu: faster-whisper forced CUDA GPU
 
 Protocol:
   → Binary: PCM16 audio chunks
@@ -40,7 +41,7 @@ import numpy as np
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
-from shared.base_service import init_v9
+from shared.base_service import init_v9, json_loads, json_dumps
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,7 +89,7 @@ def _apply_noise_reduction(pcm16: np.ndarray, sr: int = 16000,
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8766
-DEFAULT_MODEL = "medium"        # medium = 700MB RAM, good quality — was large-v3 (~2GB)
+DEFAULT_MODEL = "small"          # v26.2: small = 460MB, ~1.2–1.6s latency (was medium ~3.5s)
 DEFAULT_LANGUAGE = "fr"
 DEFAULT_BEAM_SIZE = 1            # v25.1: beam=1 for real-time latency (was 3)
 DEFAULT_DEVICE = "vulkan"        # Force Vulkan GPU (RTX 3070)
@@ -196,6 +197,8 @@ class STTEngine:
             self._load_whispercpp(use_gpu=False)
         elif self.backend == "faster_whisper":
             self._load_faster_whisper()
+        elif self.backend == "fasterwhisper_gpu":
+            self._load_faster_whisper(force_cuda=True)
         else:
             logger.warning("Unknown backend '%s', trying whispercpp then faster_whisper", self.backend)
             try:
@@ -247,42 +250,24 @@ class STTEngine:
         logger.info("[STT] Whisper backend: Vulkan (RTX 3070)")
         logger.info("[GPU] STT: Vulkan → RTX 3070 (OK)")
 
-    def _load_faster_whisper(self) -> None:
-        """Load faster-whisper CPU backend."""
-        try:
-            from faster_whisper import WhisperModel
-        except ImportError:
-            logger.error("faster-whisper not installed. Run: pip install faster-whisper")
-            raise
+    def _load_faster_whisper(self, force_cuda: bool = False) -> None:
+        """Load faster-whisper backend (CUDA GPU or CPU)."""
+        from faster_whisper_backend import FasterWhisperEngine
 
-        device = self.device
+        device = "cuda" if force_cuda else self.device
         compute = self.compute_type
 
-        if device == "auto":
-            try:
-                import torch
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            except ImportError:
-                device = "cpu"
-
-        if device == "cpu":
-            compute = "int8"
-
-        logger.info(
-            "Loading faster-whisper model '%s' on %s (%s)...",
-            self.model_size, device, compute,
-        )
-        t0 = time.monotonic()
-        self._engine = WhisperModel(
-            self.model_size,
+        engine = FasterWhisperEngine(
+            model_size=self.model_size,
             device=device,
             compute_type=compute,
+            language=self.language,
+            beam_size=self.beam_size,
         )
-        self._actual_device = device
+        engine.load()
+        self._engine = engine
+        self._actual_device = engine.actual_device
         self._active_backend = "faster_whisper"
-        dt = time.monotonic() - t0
-        logger.info("Model loaded in %.1fs (backend: faster-whisper, device: %s)", dt, device)
-        logger.info("[FALLBACK] Vulkan → CPU (faster-whisper)")
 
     def transcribe(
         self,
@@ -305,7 +290,7 @@ class STTEngine:
         if self._active_backend == "whispercpp":
             result = self._engine.transcribe(audio_pcm16)
         else:
-            result = self._transcribe_faster_whisper(audio_pcm16, initial_prompt)
+            result = self._engine.transcribe(audio_pcm16, initial_prompt=initial_prompt)
 
         # Filter hallucinations regardless of backend
         if result["text"] and _is_hallucination(result["text"]):
@@ -315,71 +300,13 @@ class STTEngine:
 
         return result
 
-    def _transcribe_faster_whisper(
-        self,
-        audio_pcm16: np.ndarray,
-        initial_prompt: str | None = None,
-    ) -> dict:
-        """Transcribe using faster-whisper backend."""
-        audio_f32 = audio_pcm16.astype(np.float32) / 32768.0
-        duration = len(audio_f32) / SAMPLE_RATE
-
-        if duration < 0.3:
-            logger.warning("Audio %.2fs < 0.3s threshold — ignoré", duration)
-            return {"text": "", "segments": [], "duration": duration}
-
-        t0 = time.monotonic()
-        prompt = initial_prompt or "EXO est un assistant vocal domotique français. Jarvis, allume, éteins, météo, température, lumière."
-        segments_gen, info = self._engine.transcribe(
-            audio_f32,
-            language=self.language,
-            beam_size=self.beam_size,
-            word_timestamps=False,
-            initial_prompt=prompt,
-            condition_on_previous_text=False,
-            no_speech_threshold=0.4,
-            log_prob_threshold=-1.0,
-            vad_filter=True,
-            vad_parameters={
-                "min_silence_duration_ms": 400,   # v5.1: réduit de 600ms pour latence
-                "speech_pad_ms": 200,             # v5.1: réduit de 300ms
-            },
-        )
-
-        segments = []
-        full_text_parts = []
-        for seg in segments_gen:
-            segments.append({
-                "start": round(seg.start, 2),
-                "end": round(seg.end, 2),
-                "text": seg.text.strip(),
-            })
-            full_text_parts.append(seg.text.strip())
-
-        full_text = " ".join(full_text_parts).strip()
-        dt = time.monotonic() - t0
-
-        dt_ms = dt * 1000
-        logger.info(
-            "[Latency] STT: %.0f ms (audio=%.1fs RTF=%.2f): %s",
-            dt_ms, duration, dt / max(duration, 0.01), full_text[:80],
-        )
-        if dt_ms > 450:
-            logger.warning("[Latency] STT exceeded target (%.0f ms > 450 ms)", dt_ms)
-
-        return {
-            "text": full_text,
-            "segments": segments,
-            "duration": round(duration, 2),
-        }
-
     @property
     def actual_device(self) -> str:
         return self._actual_device
 
     def close(self) -> None:
         """Clean up resources."""
-        if self._active_backend == "whispercpp" and self._engine:
+        if self._engine:
             self._engine.close()
             self._engine = None
 
@@ -401,6 +328,7 @@ class STTSession:
         self._partial_interval = 2.0  # seconds between partial results
         self._last_partial_time = 0.0
         self._consecutive_hallucinations = 0
+        self._partial_running = False  # True while a partial transcription is in executor
 
     async def handle(self, ws) -> None:
         """Handle a WebSocket connection."""
@@ -426,14 +354,21 @@ class STTSession:
             logger.info("STT client disconnected")
 
     async def _on_json(self, ws, raw: str) -> None:
+        # v9.1: delegate standard protocol messages (ping, health, metrics, traces, errors)
+        v9_resp = await _v9.handle_ws_message(ws, raw)
+        if v9_resp is not None:
+            await ws.send(v9_resp)
+            return
+
         try:
-            msg = json.loads(raw)
-        except json.JSONDecodeError:
+            msg = json_loads(raw)
+        except (ValueError, TypeError):
             return
 
         msg_type = msg.get("type", "")
 
         if msg_type == "start":
+            self._req_id = _v9.begin_request()
             self._audio_buffer.clear()
             self._recording = True
             self._last_partial_time = time.monotonic()
@@ -443,21 +378,25 @@ class STTSession:
         elif msg_type == "end":
             self._recording = False
             await self._finalize(ws)
+            if hasattr(self, '_req_id'):
+                _v9.end_request(self._req_id)
 
         elif msg_type == "cancel":
             self._recording = False
             self._audio_buffer.clear()
+            if hasattr(self, '_req_id'):
+                _v9.end_request(self._req_id)
             logger.debug("Recording cancelled")
-
-        elif msg_type == "ping":
-            await ws.send(json.dumps({"type": "pong"}))
 
         elif msg_type == "config":
             # Dynamic configuration update
             if "language" in msg:
                 self.engine.language = msg["language"]
             if "beam_size" in msg:
-                self.engine.beam_size = int(msg["beam_size"])
+                requested_beam = int(msg["beam_size"])
+                if requested_beam != self.engine.beam_size:
+                    logger.warning("Client requested beam_size=%d — ignoring (server enforces beam_size=%d)",
+                                   requested_beam, self.engine.beam_size)
             logger.info("Config updated: lang=%s beam=%d",
                         self.engine.language, self.engine.beam_size)
 
@@ -467,17 +406,18 @@ class STTSession:
 
         self._audio_buffer.extend(data)
 
-        # Send partial transcription periodically
+        # Send partial transcription periodically (non-blocking)
         now = time.monotonic()
         buf_duration = len(self._audio_buffer) / (SAMPLE_RATE * 2)  # 2 bytes per sample
 
         if (buf_duration >= 1.5
-                and now - self._last_partial_time >= self._partial_interval):
+                and now - self._last_partial_time >= self._partial_interval
+                and not self._partial_running):
             self._last_partial_time = now
-            await self._send_partial(ws)
+            asyncio.create_task(self._send_partial(ws))
 
     async def _send_partial(self, ws) -> None:
-        """Transcribe current buffer for partial result."""
+        """Transcribe current buffer for partial result (runs as background task)."""
         if not self._audio_buffer:
             return
 
@@ -485,12 +425,16 @@ class STTSession:
         if self._consecutive_hallucinations >= MAX_CONSECUTIVE_HALLUCINATIONS:
             return
 
+        self._partial_running = True
         pcm = np.frombuffer(bytes(self._audio_buffer), dtype=np.int16)
         try:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
                 None, lambda: self.engine.transcribe(pcm)
             )
+            if not self._recording:
+                # Recording stopped while partial was running — skip sending
+                return
             if result["text"]:
                 self._consecutive_hallucinations = 0
                 await ws.send(json.dumps({
@@ -507,9 +451,21 @@ class STTSession:
                     )
         except Exception as e:
             logger.warning("Partial transcription error: %s", e)
+        finally:
+            self._partial_running = False
 
     async def _finalize(self, ws) -> None:
         """Transcribe final utterance."""
+        # Wait for any in-progress partial to finish (engine is not thread-safe)
+        wait_start = time.monotonic()
+        while self._partial_running:
+            await asyncio.sleep(0.05)
+            if time.monotonic() - wait_start > 2.0:
+                logger.warning("Waited 2s for partial — proceeding anyway (partial may overlap)")
+                break
+        if self._partial_running:
+            logger.warning("Partial still running, but proceeding with finalize")
+
         if not self._audio_buffer:
             await ws.send(json.dumps({
                 "type": "final",
@@ -581,7 +537,7 @@ class STTSession:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    global NOISE_REDUCTION_STRENGTH
+    global NOISE_REDUCTION_STRENGTH, _v9
 
     import argparse
 
@@ -596,8 +552,8 @@ async def main() -> None:
     parser.add_argument("--compute-type", default=DEFAULT_COMPUTE_TYPE)
     parser.add_argument("--beam-size", type=int, default=DEFAULT_BEAM_SIZE)
     parser.add_argument("--backend", default=DEFAULT_BACKEND,
-                        choices=["whispercpp", "faster_whisper", "whispercpp_cpu", "auto"],
-                        help="STT backend: whispercpp (Vulkan GPU), whispercpp_cpu (CPU), faster_whisper (CPU), auto")
+                        choices=["whispercpp", "faster_whisper", "fasterwhisper_gpu", "whispercpp_cpu", "auto"],
+                        help="STT backend: whispercpp (Vulkan GPU), fasterwhisper_gpu (CUDA), faster_whisper (auto GPU/CPU), whispercpp_cpu (CPU), auto")
     parser.add_argument("--threads", type=int, default=DEFAULT_THREADS,
                         help="Number of threads for whisper.cpp (default: 6)")
     parser.add_argument("--noise-reduction", type=float, default=NOISE_REDUCTION_STRENGTH,
@@ -615,6 +571,10 @@ async def main() -> None:
         logger.info("Noise reduction enabled (strength=%.2f)", NOISE_REDUCTION_STRENGTH)
     elif not _noisereduce_available:
         logger.info("Noise reduction unavailable (pip install noisereduce)")
+
+    # ── STT CONFIG (obligatory startup log) ──
+    logger.info("STT CONFIG: model=%s beam_size=%d device=%s compute_type=%s backend=%s threads=%d",
+                args.model, args.beam_size, args.device, args.compute_type, args.backend, args.threads)
 
     engine = STTEngine(
         model_size=args.model,
@@ -650,8 +610,7 @@ async def main() -> None:
 
     server = await websockets.serve(
         handler, args.host, args.port,
-        ping_interval=None, ping_timeout=None,    # localhost — no keepalive needed
-        max_size=10 * 1024 * 1024,                # 10 MB max message
+        **_v9.ws_serve_kwargs(max_size=10 * 1024 * 1024),
     )
     logger.info("STT server running on ws://%s:%d (model=%s, device=%s, backend=%s)",
                 args.host, args.port, args.model, engine.actual_device, engine._active_backend)

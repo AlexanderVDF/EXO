@@ -4,7 +4,7 @@
     "port": 8767,
     "venv": ".venv_stt_tts",
     "script": "python/tts/tts_server.py",
-    "args": ["--lang", "fr"],
+    "args": ["--lang", "fr", "--streaming", "--chunk-size", "16000", "--max-chunk-length", "2048", "--latency-optimized"],
     "startup_timeout_ms": 120000
   },
   {
@@ -12,7 +12,7 @@
     "port": 8766,
     "venv": ".venv_stt_tts",
     "script": "python/stt/stt_server.py",
-    "args": ["--backend", "whispercpp", "--model", "medium", "--beam-size", "3", "--language", "fr", "--device", "vulkan"]
+    "args": ["--backend", "whispercpp", "--model", "small", "--beam-size", "1", "--language", "fr", "--device", "vulkan", "--compute-type", "int8"]
   },
   {
     "name": "VAD",
@@ -145,6 +145,34 @@
     "port": 8790,
     "venv": ".venv_stt_tts",
     "script": "python/network/network_map_service.py",
+    "args": []
+  },
+  {
+    "name": "WebSearch",
+    "port": 8773,
+    "venv": ".venv",
+    "script": "python/websearch/websearch_server.py",
+    "args": []
+  },
+  {
+    "name": "News",
+    "port": 8774,
+    "venv": ".venv",
+    "script": "python/news/news_server.py",
+    "args": []
+  },
+  {
+    "name": "Knowledge",
+    "port": 8775,
+    "venv": ".venv",
+    "script": "python/knowledge/knowledge_server.py",
+    "args": []
+  },
+  {
+    "name": "Tools",
+    "port": 8776,
+    "venv": ".venv",
+    "script": "python/tools/tools_server.py",
     "args": []
   }
 ]

@@ -33,7 +33,7 @@ import numpy as np
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
-from shared.base_service import init_v9
+from shared.base_service import init_v9, json_loads, json_dumps
 
 logging.basicConfig(
     level=logging.INFO,
@@ -176,17 +176,20 @@ class WakeWordSession:
             logger.info("WakeWord client disconnected")
 
     async def _on_json(self, ws, raw: str) -> None:
+        # v9.1: delegate standard protocol messages
+        v9_resp = await _v9.handle_ws_message(ws, raw)
+        if v9_resp is not None:
+            await ws.send(v9_resp)
+            return
+
         try:
-            msg = json.loads(raw)
-        except json.JSONDecodeError:
+            msg = json_loads(raw)
+        except (ValueError, TypeError):
             return
 
         msg_type = msg.get("type", "")
 
-        if msg_type == "ping":
-            await ws.send(json.dumps({"type": "pong"}))
-
-        elif msg_type == "config":
+        if msg_type == "config":
             if "threshold" in msg:
                 self.engine.threshold = float(msg["threshold"])
                 logger.info("Threshold: %.2f", self.engine.threshold)
@@ -229,6 +232,8 @@ class WakeWordSession:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
+    global _v9
+
     import argparse
 
     parser = argparse.ArgumentParser(description="EXO OpenWakeWord Server")
@@ -258,7 +263,7 @@ async def main() -> None:
 
     server = await websockets.serve(
         handler, args.host, args.port,
-        ping_interval=None, ping_timeout=None,
+        **_v9.ws_serve_kwargs(),
     )
     logger.info("WakeWord server running on ws://%s:%d (models=%s, threshold=%.2f)",
                 args.host, args.port, engine.active_models, engine.threshold)

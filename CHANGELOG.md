@@ -5,6 +5,45 @@
 
 ---
 
+## v28.0 — Simulation spatiale avancée — Avril 2026
+
+### Ajouté
+- **Module Simulation C++** (`app/simulation/`) — 7 classes, 13 fichiers (headers + sources)
+  - `SimulationEnums` — 7 enums (ScenarioType, EntityType, PropagationType, EntityState, SimState, Severity, CausalNodeType) + constantes
+  - `SimulationEntity` — entité légère (UUID, position, vitesse, trajectoire, rayon, intensité, expiration)
+  - `SimulationScenario` — scénario configurable + 5 presets (Fire, Intrusion, Blackout, NetworkFailure, Flood) + triggers + JSON persistence
+  - `SimulationPropagation` — grille 2D diffusion : fumée, chaleur, bruit, lumière, eau + obstacles + A* pathfinding + heatmap export
+  - `SimulationResult` — événements, risques (P×I), graphe causal (nœuds + liens), snapshots par tick
+  - `SimulationEngine` — moteur principal : chargement scénario, step entities/propagation/triggers/risks, intégration FloorPlanModel
+  - `SimulationController` — bridge QML (14 Q_PROPERTY, 10 Q_INVOKABLE, QTimer playback)
+- **6 panneaux cognitifs QML** (`qml/cognitive/`)
+  - `SimulationScenarioPanel` — sélection preset, sliders vitesse/intensité/durée, contrôles play/pause/step/stop
+  - `SimulationOverlay` — Canvas multi-couches (fumée, chaleur, eau, entités, trajectoires, capteurs)
+  - `SimulationCausalityGraph` — graphe interactif (colonnes par type, liens Bézier, pan/zoom)
+  - `SimulationRiskPanel` — cartes risques (score global, jauge, barres sévérité/probabilité/impact)
+  - `SimulationTimeline` — timeline 5 couches (propagation/capteur/appareil/agent/risque), zoomable
+  - `SimulationMinimap` — minimap (pièces, propagation, entités, trajectoires)
+- **SimulationPage** (`qml/pages/SimulationPage.qml`) — page 3 colonnes : scénario+minimap | overlay/causalité/timeline | risques
+- **50 tests unitaires C++** (`tests/cpp/test_simulation.cpp`) — 50/50 PASS en 11 ms
+  - 7 tests SimulationEntity, 7 tests SimulationScenario, 7 tests SimulationPropagation
+  - 7 tests SimulationResult, 12 tests SimulationEngine, 1 test constantes
+
+### Modifié
+- **Sidebar.qml** — ajout entrée "Simulation" (index 15, icône pipeline.svg)
+- **MainWindow.qml** — ajout routage case "simulation" → centralStack index 15
+- **CMakeLists.txt** — 6 .cpp sources, 7 .h headers, 7 QML files, include `app/simulation`
+- **qml/pages/qmldir** — ajout `SimulationPage 1.0 SimulationPage.qml`
+- **qml/cognitive/qmldir** — ajout 6 entrées Simulation*
+- **tests/cpp/CMakeLists.txt** — ajout sources simulation + floorplan + LatencyMetrics à exo_testlib
+- **PROMPT_MAITRE.md** — v26 → v28, ajout SimulationController aux modules C++, tests → 2349
+
+### Architecture
+- **10 pages QML** (était 9) — nouvelle page Simulation
+- **56 composants QML** (était 50) — 6 panneaux cognitifs simulation ajoutés
+- **Total tests** : 2349 (2299 existants + 50 simulation C++)
+
+---
+
 ## v26.1 — Optimisation latence (3 objectifs) — 5 avril 2026
 
 ### Modifié

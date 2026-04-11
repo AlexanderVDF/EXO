@@ -1,7 +1,7 @@
 # Version simplifiée pour compilation initiale
 cmake_minimum_required(VERSION 3.21)
 
-project(RaspberryAssistant VERSION 5.1.0 LANGUAGES CXX)
+project(RaspberryAssistant VERSION 28.0.0 LANGUAGES CXX)
 
 # ── Options ──
 option(ENABLE_RTAUDIO "Enable RtAudio backend (WASAPI on Windows)" ON)
@@ -57,6 +57,17 @@ set(SOURCES
     app/llm/ClaudeAPI.cpp
     app/llm/AIMemoryManager.cpp
     app/utils/WeatherManager.cpp
+    app/floorplan/FloorPlanItem.cpp
+    app/floorplan/FloorPlanSerializer.cpp
+    app/floorplan/FloorPlanModel.cpp
+    app/floorplan/FloorPlanController.cpp
+    app/simulation/SimulationEntity.cpp
+    app/simulation/SimulationScenario.cpp
+    app/simulation/SimulationPropagation.cpp
+    app/simulation/SimulationResult.cpp
+    app/simulation/SimulationEngine.cpp
+    app/simulation/SimulationController.cpp
+    app/test/TestController.cpp
 )
 
 set(HEADERS
@@ -90,6 +101,19 @@ set(HEADERS
     app/llm/ClaudeAPI.h
     app/llm/AIMemoryManager.h
     app/utils/WeatherManager.h
+    app/floorplan/FloorPlanEnums.h
+    app/floorplan/FloorPlanItem.h
+    app/floorplan/FloorPlanSerializer.h
+    app/floorplan/FloorPlanModel.h
+    app/floorplan/FloorPlanController.h
+    app/simulation/SimulationEnums.h
+    app/simulation/SimulationEntity.h
+    app/simulation/SimulationScenario.h
+    app/simulation/SimulationPropagation.h
+    app/simulation/SimulationResult.h
+    app/simulation/SimulationEngine.h
+    app/simulation/SimulationController.h
+    app/test/TestController.h
 )
 
 # ── RtAudio (optional) ──
@@ -103,10 +127,10 @@ if(ENABLE_RTAUDIO)
     list(APPEND HEADERS app/audio/AudioInputRtAudio.h)
 endif()
 
-# Exécutable avec console pour debug
+# Exécutable GUI (pas de console Windows)
 qt_add_executable(RaspberryAssistant ${SOURCES} ${HEADERS})
 set_target_properties(RaspberryAssistant PROPERTIES
-    WIN32_EXECUTABLE FALSE  # Console app sur Windows pour voir les erreurs
+    WIN32_EXECUTABLE TRUE
 )
 
 # Qt QML policies
@@ -128,10 +152,16 @@ qt_add_qml_module(RaspberryAssistant
         qml/pages/PipelinePage.qml
         qml/pages/LogsPage.qml
         qml/pages/HistoryPage.qml
+        qml/pages/FloorPlanPage.qml
+        qml/pages/MaisonPage.qml
+        qml/pages/ReseauPage.qml
+        qml/pages/ScenariosPage.qml
+        qml/pages/SimulationPage.qml
         # ── Panels ──
         qml/panels/Sidebar.qml
         qml/panels/BottomBar.qml
         qml/panels/HeaderBar.qml
+        qml/panels/StabilityPanel.qml
         # ── Theme ──
         qml/theme/Theme.qml
         # ── Components ──
@@ -152,13 +182,49 @@ qt_add_qml_module(RaspberryAssistant
         qml/components/ExoVisualizer.qml
         qml/components/ExoTranscriptView.qml
         qml/components/ExoResponseView.qml
+        qml/components/ExoOrbVisualizer.qml
         qml/components/ExoSplashScreen.qml
         qml/components/AudioWaveformView.qml
+        qml/components/FloorPlanTools.qml
+        qml/components/FloorPlanProperties.qml
+        qml/components/CameraCone.qml
+        qml/components/FurniturePalette.qml
+        qml/components/CognitiveTimeline.qml
+        qml/components/EngineHeatmap.qml
+        qml/components/ExoContextPanel.qml
+        qml/components/ExoPlanProgress.qml
+        qml/components/GovernancePanel.qml
+        qml/components/MemoryInspector.qml
+        qml/components/ModeSwitch.qml
+        qml/components/ObservabilityDashboard.qml
+        qml/components/PipelineView.qml
+        qml/components/VoicePipelineView.qml
+        # ── Cognitive ──
+        qml/cognitive/CognitiveSpatialView.qml
+        qml/cognitive/CognitiveTimeline.qml
+        qml/cognitive/PipelineTimeline.qml
+        qml/cognitive/SpatialOverlay.qml
+        qml/cognitive/TracePanel.qml
+        qml/cognitive/MetricsPanel.qml
+        qml/cognitive/AgentsPanel.qml
+        qml/cognitive/ScenarioPanel.qml
+        qml/cognitive/AnomalyPanel.qml
+        qml/cognitive/RiskPanel.qml
+        qml/cognitive/CausalityGraph.qml
+        qml/cognitive/CognitiveMinimap.qml
+        # ── Cognitive / Simulation ──
+        qml/cognitive/SimulationScenarioPanel.qml
+        qml/cognitive/SimulationOverlay.qml
+        qml/cognitive/SimulationCausalityGraph.qml
+        qml/cognitive/SimulationRiskPanel.qml
+        qml/cognitive/SimulationTimeline.qml
+        qml/cognitive/SimulationMinimap.qml
     RESOURCES
         qml/theme/qmldir
         qml/components/qmldir
         qml/pages/qmldir
         qml/panels/qmldir
+        qml/cognitive/qmldir
         qml/icons/chat.svg
         qml/icons/debug.svg
         qml/icons/history.svg
@@ -180,6 +246,9 @@ target_include_directories(RaspberryAssistant PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app/audio
     ${CMAKE_CURRENT_SOURCE_DIR}/app/llm
     ${CMAKE_CURRENT_SOURCE_DIR}/app/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/floorplan
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/simulation
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/test
 )
 
 # ── RtAudio include + compile definition ──

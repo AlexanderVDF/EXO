@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Optional
@@ -23,7 +24,7 @@ logger = logging.getLogger("exo.tts")
 # Audio constants — must match C++ TTSManager expectations
 COSYVOICE_SAMPLE_RATE = 24000  # CosyVoice2-0.5B native rate (from yaml)
 OUTPUT_SAMPLE_RATE = 24000
-CHUNK_FRAMES = 1024  # ~21 ms @ 24 kHz mono16
+CHUNK_FRAMES = 128  # ~5.3 ms @ 24 kHz mono16 — aggressive streaming
 
 
 class CosyVoiceEngine:
@@ -61,6 +62,9 @@ class CosyVoiceEngine:
         self._prompt_text: str = ""
         # Available speakers from spk2info
         self._available_spks: list[str] = []
+        # Latency optimization flags (set by tts_server from CLI)
+        self.latency_optimized: bool = False
+        self.max_chunk_length: int = 4096
 
     # ------------------------------------------------------------------
     # Device detection
@@ -92,6 +96,12 @@ class CosyVoiceEngine:
         self._set_phase(self.PHASE_LOADING)
         t0 = time.monotonic()
 
+        # ── MODEL CHOICE (non appliqué automatiquement) ──
+        # Si first-chunk > 1s sur RTX 3070 après toutes les optimisations :
+        #   Option A : CosyVoice2-0.25B → inférence plus rapide, qualité légèrement inférieure
+        #              → Changer EXO_COSYVOICE_MODELS vers le dossier CosyVoice2-0.25B
+        #   Option B : Rester sur CosyVoice2-0.5B si la qualité prime
+        # Le changement est trivial : modifier la variable d'environnement EXO_COSYVOICE_MODELS.
         model_dir = os.environ.get(
             "EXO_COSYVOICE_MODELS",
             os.environ.get("EXO_XTTS_MODELS", r"D:\EXO\models\CosyVoice2-0.5B"),
@@ -145,17 +155,34 @@ class CosyVoiceEngine:
             except Exception as exc:
                 logger.warning("Failed to register zero-shot speaker: %s", exc)
 
-        # CUDA settings
+        # CUDA optimizations
         if torch.cuda.is_available():
             torch.backends.cudnn.benchmark = True
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
+            torch.set_float32_matmul_precision("high")
+
+            # Pre-allocate CUDA context to avoid first-call overhead
+            logger.info("CUDA pre-allocation …")
+            t0 = time.monotonic()
+            _a = torch.randn((4096, 4096), device="cuda")
+            _b = torch.randn((4096, 4096), device="cuda")
+            _ = _a @ _b
+            del _a, _b
+            torch.cuda.synchronize()
+            torch.cuda.empty_cache()
+            self._profile["cuda_prealloc_ms"] = (time.monotonic() - t0) * 1000
+            logger.info("CUDA pre-allocation done in %.0f ms", self._profile["cuda_prealloc_ms"])
 
         # ── Phase 3: WARMUP ──
         self._set_phase(self.PHASE_WARMUP)
         self._warmup_gpu()
         self._warmup_streaming()
         self._warmup_audio()
+
+        # Ensure all CUDA operations from warmup are complete
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
 
         self._loaded = True
 
@@ -202,8 +229,8 @@ class CosyVoiceEngine:
             # If no prompt wav, we'll use SFT mode with available speakers
             logger.info("No voice prompt WAV found — will use SFT mode if speakers available")
 
-        # Default prompt text for zero-shot (short French sentence)
-        self._prompt_text = "Bonjour, je suis votre assistant vocal."
+        # Default prompt text for zero-shot (must match prompt.wav content)
+        self._prompt_text = "Bonjour, je suis votre assistant vocal EXO. Je suis là pour vous aider."
 
     # ------------------------------------------------------------------
     # Phase management
@@ -229,6 +256,7 @@ class CosyVoiceEngine:
             logger.info("GPU warm-up (CosyVoice2) …")
             for _ in self._inference_internal("Bonjour.", stream=False):
                 pass
+            torch.cuda.synchronize()
             self._profile["gpu_warmup_ms"] = (time.monotonic() - t0) * 1000
             logger.info("GPU warm-up done in %.0f ms", self._profile["gpu_warmup_ms"])
         except Exception as exc:
@@ -244,25 +272,70 @@ class CosyVoiceEngine:
             logger.info("Streaming warm-up (CosyVoice2) …")
             for _ in self._inference_internal("Bonjour.", stream=True):
                 break  # first chunk enough
+            torch.cuda.synchronize()
             self._profile["streaming_warmup_ms"] = (time.monotonic() - t0) * 1000
             logger.info("Streaming warm-up done in %.0f ms", self._profile["streaming_warmup_ms"])
         except Exception as exc:
             logger.warning("Streaming warm-up failed: %s", exc)
 
     def _warmup_audio(self) -> None:
-        """Generate silence to prime the audio pipeline."""
+        """Generate silence PCM16 to prime the audio conversion pipeline."""
         t0 = time.monotonic()
-        silence = np.zeros(OUTPUT_SAMPLE_RATE, dtype=np.float32)
+        # 300 ms silence at 24 kHz
+        n_samples = int(OUTPUT_SAMPLE_RATE * 0.3)
+        silence = np.zeros(n_samples, dtype=np.float32)
         pcm = np.clip(silence * 32767, -32768, 32767).astype(np.int16)
-        _ = pcm.tobytes()
+        self._silence_pcm = pcm.tobytes()
         del pcm, silence
         self._profile["audio_warmup_ms"] = (time.monotonic() - t0) * 1000
+        logger.info("Audio warmup done (%.0f ms, %d bytes silence)",
+                     self._profile["audio_warmup_ms"], len(self._silence_pcm))
 
     def warmup(self) -> None:
         """Public warmup entry point."""
         self._warmup_gpu()
         self._warmup_streaming()
         self._warmup_audio()
+
+    # ------------------------------------------------------------------
+    # Text normalization and sentence splitting
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        """Light text normalization for TTS input."""
+        # Collapse whitespace
+        text = re.sub(r"\s+", " ", text).strip()
+        # Remove control characters (keep all printable unicode)
+        text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+        return text.strip()
+
+    @staticmethod
+    def _split_sentences(text: str) -> list[str]:
+        """Split text into sentences for incremental streaming.
+
+        First sentence is sent ASAP to reduce first-chunk latency.
+        """
+        parts = re.split(r"(?<=[.!?])\s+", text)
+        result = [p.strip() for p in parts if p.strip()]
+        return result if result else [text]
+
+    @staticmethod
+    def _split_long_text(text: str, max_len: int) -> list[str]:
+        """Split text into blocks of max_len chars, breaking at sentence boundaries."""
+        if len(text) <= max_len:
+            return [text]
+        parts = re.split(r"(?<=[.!?])\s+", text)
+        blocks: list[str] = []
+        current = ""
+        for p in parts:
+            if current and len(current) + len(p) + 1 > max_len:
+                blocks.append(current.strip())
+                current = p
+            else:
+                current = (current + " " + p).strip() if current else p
+        if current.strip():
+            blocks.append(current.strip())
+        return blocks if blocks else [text]
 
     # ------------------------------------------------------------------
     # Voice / language management
@@ -307,32 +380,66 @@ class CosyVoiceEngine:
         Priority: registered zero-shot speaker (cached) > raw prompt wav > fallback.
         Yields dicts with 'tts_speech' tensor key (shape [1, N]).
         """
-        if self.voice_name and self.voice_name in self._available_spks:
-            # Registered zero-shot speaker: use cross-lingual with
-            # zero_shot_spk_id to leverage cached embeddings.
-            # (inference_sft only works with native SFT speakers that have
-            # a single 'embedding' key; add_zero_shot_spk stores separate
-            # llm_embedding / flow_embedding.)
-            yield from self.model.inference_cross_lingual(
-                tts_text=text,
-                prompt_wav=self._prompt_wav or "",
-                zero_shot_spk_id=self.voice_name,
-                stream=stream,
-                speed=speed,
-            )
-        elif self._prompt_wav and os.path.isfile(self._prompt_wav):
-            # Raw cross-lingual mode: reprocesses prompt wav each call
-            yield from self.model.inference_cross_lingual(
-                tts_text=text,
-                prompt_wav=self._prompt_wav,
-                stream=stream,
-                speed=speed,
-            )
-        else:
-            raise RuntimeError(
-                "No voice prompt WAV and no speakers available. "
-                "Place a prompt.wav in the model directory."
-            )
+        with torch.inference_mode():
+            if self.voice_name and self.voice_name in self._available_spks:
+                # Registered zero-shot speaker: use cross-lingual with
+                # zero_shot_spk_id to leverage cached embeddings.
+                # (inference_sft only works with native SFT speakers that have
+                # a single 'embedding' key; add_zero_shot_spk stores separate
+                # llm_embedding / flow_embedding.)
+                yield from self.model.inference_cross_lingual(
+                    tts_text=text,
+                    prompt_wav=self._prompt_wav or "",
+                    zero_shot_spk_id=self.voice_name,
+                    stream=stream,
+                    speed=speed,
+                )
+            elif self._prompt_wav and os.path.isfile(self._prompt_wav):
+                # Raw cross-lingual mode: reprocesses prompt wav each call
+                yield from self.model.inference_cross_lingual(
+                    tts_text=text,
+                    prompt_wav=self._prompt_wav,
+                    stream=stream,
+                    speed=speed,
+                )
+            else:
+                raise RuntimeError(
+                    "No voice prompt WAV and no speakers available. "
+                    "Place a prompt.wav in the model directory."
+                )
+
+    # ------------------------------------------------------------------
+    # Dedicated streaming inference (zero-shot speaker)
+    # ------------------------------------------------------------------
+    def infer_stream(self, text: str, speaker_id: str = "exo_default", speed: float = 1.0):
+        """Streaming inference via inference_cross_lingual for zero-shot speakers.
+
+        Yields dicts with 'tts_speech' tensor key (shape [1, N]).
+        Always uses stream=True; always uses inference_cross_lingual
+        (never inference_sft for add_zero_shot_spk speakers).
+        """
+        if self.model is None:
+            raise RuntimeError("Model not loaded")
+        with torch.inference_mode():
+            if speaker_id in self._available_spks:
+                yield from self.model.inference_cross_lingual(
+                    tts_text=text,
+                    prompt_wav=self._prompt_wav or "",
+                    zero_shot_spk_id=speaker_id,
+                    stream=True,
+                    speed=speed,
+                )
+            elif self._prompt_wav and os.path.isfile(self._prompt_wav):
+                yield from self.model.inference_cross_lingual(
+                    tts_text=text,
+                    prompt_wav=self._prompt_wav,
+                    stream=True,
+                    speed=speed,
+                )
+            else:
+                raise RuntimeError(
+                    "No speaker or prompt WAV available for streaming inference"
+                )
 
     # ------------------------------------------------------------------
     # Tensor → PCM16 bytes conversion
@@ -341,19 +448,13 @@ class CosyVoiceEngine:
     def _tensor_to_pcm16(speech_tensor: torch.Tensor, target_sr: int = OUTPUT_SAMPLE_RATE) -> bytes:
         """Convert a CosyVoice speech tensor to PCM16 bytes at target sample rate."""
         wav = speech_tensor.squeeze()
-        if wav.dim() == 0:
+        if wav.dim() == 0 or wav.numel() == 0:
             return b""
-        if hasattr(wav, "cpu"):
-            wav = wav.cpu()
-        wav_np = wav.numpy().astype(np.float32)
-        if wav_np.size == 0:
-            return b""
-        # Normalize to [-1, 1] range if needed
-        peak = np.max(np.abs(wav_np))
+        # GPU-side: normalize + scale + clamp → int16, then transfer
+        peak = wav.abs().max()
         if peak > 1.0:
-            wav_np = wav_np / peak
-        # float32 → int16
-        pcm = np.clip(wav_np * 32767, -32768, 32767).astype(np.int16)
+            wav = wav / peak
+        pcm = torch.clamp(wav * 32767, -32768, 32767).to(torch.int16).cpu().numpy()
         return pcm.tobytes()
 
     @staticmethod
@@ -383,57 +484,88 @@ class CosyVoiceEngine:
         """Streaming synthesis: yield PCM16 byte chunks as CosyVoice2 generates them.
 
         Each yielded chunk is raw PCM16 bytes at OUTPUT_SAMPLE_RATE.
-        Token-level streaming — chunks are sent as soon as they are available.
+        Splits text into sentences — first sentence streamed ASAP
+        to minimize first-chunk latency.
         """
         if not self._loaded or self.model is None:
             raise RuntimeError("Model not loaded")
         if not text or not text.strip():
             return
 
+        # Normalize and split into sentences for faster first-chunk
+        text = self._normalize_text(text)
+        if not text:
+            return
+
+        # ── Latency-optimized: merge all sentences into ONE inference call ──
+        # Avoids per-sentence model warmup overhead (biggest latency win).
+        if self.latency_optimized:
+            # Truncate to max_chunk_length if needed
+            if len(text) > self.max_chunk_length:
+                sentences = self._split_long_text(text, self.max_chunk_length)
+            else:
+                sentences = [text]  # Single pass — 1 warmup only
+            logger.info(
+                "[Latency] latency_optimized=ON → %d block(s) for %d chars",
+                len(sentences), len(text),
+            )
+        else:
+            sentences = self._split_sentences(text)
+
         t0 = time.monotonic()
         chunk_idx = 0
         native_sr = getattr(self.model, "sample_rate", COSYVOICE_SAMPLE_RATE)
 
         try:
-            for output in self._inference_internal(text, stream=True, speed=rate):
-                speech = output.get("tts_speech")
-                if speech is None:
-                    continue
+            with torch.inference_mode():
+                for sent_idx, sentence in enumerate(sentences):
+                    for output in self._inference_internal(sentence, stream=True, speed=rate):
+                        speech = output.get("tts_speech")
+                        if speech is None:
+                            continue
 
-                # Convert tensor to numpy float32
-                wav = speech.squeeze()
-                if hasattr(wav, "cpu"):
-                    wav = wav.cpu()
-                wav_np = wav.numpy().astype(np.float32)
-                if wav_np.size == 0:
-                    continue
+                        wav = speech.squeeze()
+                        if wav.numel() == 0:
+                            continue
 
-                # Resample if needed
-                if native_sr != OUTPUT_SAMPLE_RATE:
-                    wav_np = self._resample(wav_np, native_sr, OUTPUT_SAMPLE_RATE)
+                        # Optimized tensor → PCM16 conversion
+                        if native_sr != OUTPUT_SAMPLE_RATE:
+                            # Resample path: requires numpy intermediate
+                            wav_np = wav.float().cpu().numpy()
+                            wav_np = self._resample(wav_np, native_sr, OUTPUT_SAMPLE_RATE)
+                            peak = np.max(np.abs(wav_np))
+                            if peak > 1.0:
+                                wav_np = wav_np / peak
+                            pcm_int16 = np.clip(wav_np * 32767, -32768, 32767).astype(np.int16)
+                        else:
+                            # Fast path: scale + clamp on GPU, transfer as int16
+                            # (halves PCIe bandwidth vs float32)
+                            peak = wav.abs().max()
+                            if peak > 1.0:
+                                wav = wav / peak
+                            pcm_int16 = torch.clamp(
+                                wav * 32767, -32768, 32767
+                            ).to(torch.int16).cpu().numpy()
 
-                # Normalize
-                peak = np.max(np.abs(wav_np))
-                if peak > 1.0:
-                    wav_np = wav_np / peak
+                        pcm_bytes = pcm_int16.tobytes()
 
-                # float32 → int16 PCM
-                pcm_int16 = np.clip(wav_np * 32767, -32768, 32767).astype(np.int16)
-                pcm_bytes = pcm_int16.tobytes()
+                        if chunk_idx == 0:
+                            first_chunk_ms = (time.monotonic() - t0) * 1000
+                            print("TTS first-chunk latency:", round(first_chunk_ms), "ms")
+                            logger.info(
+                                "[Latency] TTS first-chunk: %.0f ms (%d bytes) "
+                                "sent=%d/%d text=%s",
+                                first_chunk_ms, len(pcm_bytes),
+                                sent_idx + 1, len(sentences), sentences[0][:50],
+                            )
+                            if first_chunk_ms > 600:
+                                logger.warning(
+                                    "[Latency] TTS first-chunk slow (%.0f ms > 600 ms)",
+                                    first_chunk_ms,
+                                )
 
-                if chunk_idx == 0:
-                    first_chunk_ms = (time.monotonic() - t0) * 1000
-                    logger.info(
-                        "[Latency] TTS first-chunk: %.0f ms (%d bytes) text=%s",
-                        first_chunk_ms, len(pcm_bytes), text[:50],
-                    )
-                    if first_chunk_ms > 600:
-                        logger.warning(
-                            "[Latency] TTS first-chunk slow (%.0f ms > 600 ms)", first_chunk_ms
-                        )
-
-                chunk_idx += 1
-                yield pcm_bytes
+                        chunk_idx += 1
+                        yield pcm_bytes
 
         except Exception as exc:
             logger.error("CosyVoice2 streaming error: %s", exc)
@@ -446,7 +578,10 @@ class CosyVoiceEngine:
 
         dt = time.monotonic() - t0
         self._last_synth_time = time.monotonic()
-        logger.info("[STREAM] done: %d chunks in %.2fs text=%s", chunk_idx, dt, text[:50])
+        logger.info(
+            "[STREAM] done: %d chunks, %d sentences in %.2fs text=%s",
+            chunk_idx, len(sentences), dt, text[:50],
+        )
 
     def synthesize(
         self,
@@ -466,24 +601,30 @@ class CosyVoiceEngine:
         native_sr = getattr(self.model, "sample_rate", COSYVOICE_SAMPLE_RATE)
         all_pcm = bytearray()
 
-        for output in self._inference_internal(text, stream=False, speed=rate):
-            speech = output.get("tts_speech")
-            if speech is None:
-                continue
-            wav = speech.squeeze()
-            if hasattr(wav, "cpu"):
-                wav = wav.cpu()
-            wav_np = wav.numpy().astype(np.float32)
-            if wav_np.size == 0:
-                continue
-            # Resample if needed
-            if native_sr != OUTPUT_SAMPLE_RATE:
-                wav_np = self._resample(wav_np, native_sr, OUTPUT_SAMPLE_RATE)
-            peak = np.max(np.abs(wav_np))
-            if peak > 1.0:
-                wav_np = wav_np / peak
-            pcm_int16 = np.clip(wav_np * 32767, -32768, 32767).astype(np.int16)
-            all_pcm.extend(pcm_int16.tobytes())
+        with torch.inference_mode():
+            for output in self._inference_internal(text, stream=False, speed=rate):
+                speech = output.get("tts_speech")
+                if speech is None:
+                    continue
+                wav = speech.squeeze()
+                if wav.numel() == 0:
+                    continue
+                if native_sr != OUTPUT_SAMPLE_RATE:
+                    wav_np = wav.float().cpu().numpy()
+                    wav_np = self._resample(wav_np, native_sr, OUTPUT_SAMPLE_RATE)
+                    peak = np.max(np.abs(wav_np))
+                    if peak > 1.0:
+                        wav_np = wav_np / peak
+                    pcm_int16 = np.clip(wav_np * 32767, -32768, 32767).astype(np.int16)
+                else:
+                    # GPU-side: scale + clamp → int16, halves transfer bandwidth
+                    peak = wav.abs().max()
+                    if peak > 1.0:
+                        wav = wav / peak
+                    pcm_int16 = torch.clamp(
+                        wav * 32767, -32768, 32767
+                    ).to(torch.int16).cpu().numpy()
+                all_pcm.extend(pcm_int16.tobytes())
 
         dt = time.monotonic() - t0
         duration = len(all_pcm) / (OUTPUT_SAMPLE_RATE * 2)

@@ -71,7 +71,8 @@ if ($env:PATH -notlike "*$qtPath*") {
 # --- Variables d'environnement EXO (chemins SSD) ---
 $env:EXO_WHISPER_MODELS = "$ssdRoot\models\whisper"
 $env:EXO_WHISPERCPP_BIN = "$ssdRoot\whispercpp\build_vk\bin\Release"
-$env:EXO_XTTS_MODELS    = "$ssdRoot\models\xtts"
+$env:EXO_COSYVOICE_MODELS = "$ssdRoot\models\CosyVoice2-0.5B"
+$env:COSYVOICE_ROOT      = "$ssdRoot\CosyVoice"
 $env:EXO_FAISS_DIR      = "$ssdRoot\faiss\semantic_memory"
 $env:EXO_WAKEWORD_MODELS = "$ssdRoot\models\wakeword"
 $env:HF_HOME            = "$ssdRoot\cache\huggingface"
@@ -98,7 +99,7 @@ $sttRunning = Get-NetTCPConnection -LocalPort 8766 -ErrorAction SilentlyContinue
 if (-not $sttRunning) {
     if (Test-Path $pythonSTT) {
         Write-Host "Demarrage du serveur STT (whisper.cpp medium — Vulkan GPU)..." -ForegroundColor Yellow
-        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model medium --beam-size 3 --language fr --threads 6 --device vulkan" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
+        $sttProc = Start-Process -FilePath $pythonSTT -ArgumentList "$sttServer --backend whispercpp --model small --beam-size 1 --language fr --device vulkan" -PassThru -WindowStyle Minimized -RedirectStandardOutput "$logDir\stt_stdout.log" -RedirectStandardError "$logDir\stt_stderr.log"
         Write-Host "STT server lance (PID: $($sttProc.Id)) - attente connexion..." -ForegroundColor Yellow
         # Attendre que le serveur soit pret (max 30s)
         $timeout = 30

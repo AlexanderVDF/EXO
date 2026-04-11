@@ -451,6 +451,7 @@ TTSManager::~TTSManager()
 
 void TTSManager::initTTS(const QString &pythonWsUrl)
 {
+    m_ttsServerUrl = pythonWsUrl;
     // Create worker and move to thread
     m_worker = new TTSWorker();
     m_worker->moveToThread(&m_workerThread);
@@ -512,13 +513,35 @@ void TTSManager::initDSP()
     // v26.1 Latency: pre-allocate DSP float buffer (avoids first-chunk heap alloc)
     m_dsp.preAllocate(4096);
 
+    // v27 Latency: pre-allocate pump staging buffer + anti-jitter clock
+    m_pumpBuf.resize(PUMP_BUF_SIZE);
+    m_pumpClock.start();
+    m_pumpEpochNs = 0;
+    m_pumpBytesSent = 0;
+    m_ringBuffer.clear();
+
     // === Persistent sink — created once, never destroyed between phrases ===
     // v26.1 Latency: open sink at init, not on first speech request
     ensureSinkReady();
     // Start pump timer immediately so it's ready when first audio arrives
     if (m_pumpTimer && !m_pumpTimer->isActive())
         m_pumpTimer->start();
-    hVoice() << "[Latency] Audio sink pré-ouvert — zero latence au premier chunk";
+    hVoice() << "[Latency] Audio sink pré-ouvert — pump" << PUMP_INTERVAL_MS << "ms, anti-jitter actif";
+}
+
+// ── v26.2 Latency: pre-warm TTS pipeline during Claude thinking ──
+
+void TTSManager::prepareNext()
+{
+    if (m_speaking) return;  // don't interfere with active speech
+
+    m_dsp.preAllocate(4096);
+    m_ringBuffer.clear();
+    ensureSinkReady();
+    if (m_pumpTimer && !m_pumpTimer->isActive())
+        m_pumpTimer->start();
+
+    hVoice() << "[Latency] prepareNext: TTS pipeline pré-chauffé pour prochain speech";
 }
 
 // ── prosody analysis ─────────────────────────────────
@@ -737,6 +760,9 @@ void TTSManager::processQueue()
     if (!m_turnActive) {
         m_dsp.reset();
         m_turnActive = true;
+        // v27: reset anti-jitter counters for new audio stream
+        m_pumpEpochNs = m_pumpClock.nsecsElapsed();
+        m_pumpBytesSent = 0;
     }
     // Chained phrases: no reset at all — EQ/compressor envelope stays continuous
 
@@ -778,7 +804,15 @@ void TTSManager::onWorkerChunk(const QByteArray &pcm)
     if (!m_firstChunkReceived) {
         m_firstChunkReceived = true;
         LatencyMetrics::instance()->markTtsFirstChunk();
-        hVoice() << "[Latency] TTS first-chunk C++:" << m_speakRequestTime.elapsed() << "ms";
+        // v27: mark ttsFirstAudio dès le premier chunk (not at pump delay)
+        if (!m_firstAudioPumped) {
+            LatencyMetrics::instance()->markTtsFirstAudio();
+            m_firstAudioPumped = true;
+            // Reset anti-jitter epoch — audio data starts flowing
+            m_pumpEpochNs = m_pumpClock.nsecsElapsed();
+            m_pumpBytesSent = 0;
+        }
+        hVoice() << "[Latency] TTS first-chunk C++:" << m_speakRequestTime.elapsed() << "ms (ttsFirstAudio marqué)";
         PIPELINE_EVENT(PipelineModule::AudioOutput, EventType::PcmChunk,
                        {{"bytes", pcm.size()}, {"first", true}});
     }
@@ -908,7 +942,7 @@ void TTSManager::ensureSinkReady()
     // Pump timer — feeds ring buffer → sink at steady pace
     if (!m_pumpTimer) {
         m_pumpTimer = new QTimer(this);
-        m_pumpTimer->setInterval(10); // 10ms pump cycle
+        m_pumpTimer->setInterval(PUMP_INTERVAL_MS); // v27: 5ms pump cycle (anti-jitter)
         connect(m_pumpTimer, &QTimer::timeout, this, &TTSManager::pumpBuffer);
     }
 
@@ -934,19 +968,24 @@ void TTSManager::pumpBuffer()
     if (canWrite <= 0) return;
 
     if (!m_ringBuffer.isEmpty()) {
-        // ── Feed real audio data from ring buffer ──
-        char buf[8192];
+        // ── Anti-jitter: time-proportional writes (v27) ──
+        const qint64 nowNs = m_pumpClock.nsecsElapsed();
+        const qint64 idealPos = (m_pumpEpochNs > 0)
+            ? (nowNs - m_pumpEpochNs) * BYTES_PER_SEC / 1000000000LL
+            : m_pumpBytesSent + static_cast<qint64>(m_pumpBuf.size());
+        int budget = static_cast<int>(idealPos - m_pumpBytesSent);
+        // Clamp: min 1ms worth, max 20ms worth (prevents burst on catch-up)
+        budget = std::clamp(budget, BYTES_PER_SEC / 1000, BYTES_PER_SEC * 20 / 1000);
+        budget &= ~1; // align to 16-bit sample boundary
+
         const int toRead = std::min({static_cast<int>(canWrite),
                                      m_ringBuffer.availableRead(),
-                                     static_cast<int>(sizeof(buf))});
-        const int actual = m_ringBuffer.read(buf, toRead);
+                                     static_cast<int>(m_pumpBuf.size()),
+                                     budget});
+        const int actual = m_ringBuffer.read(m_pumpBuf.data(), toRead);
         if (actual > 0) {
-            m_sinkIO->write(buf, actual);
-            if (!m_firstAudioPumped) {
-                m_firstAudioPumped = true;
-                LatencyMetrics::instance()->markTtsFirstAudio();
-                hVoice() << "[Latency] TTS first audio to sink:" << m_speakRequestTime.elapsed() << "ms";
-            }
+            m_sinkIO->write(m_pumpBuf.data(), actual);
+            m_pumpBytesSent += actual;
         }
         return;
     }
@@ -1014,6 +1053,9 @@ void TTSManager::finalizeSpeech()
     m_speaking = false;
     m_synthesizing = false;
     m_turnActive = false;
+    // v27: reset anti-jitter state
+    m_pumpEpochNs = 0;
+    m_pumpBytesSent = 0;
     m_lastSpeechEnd.restart();
     PIPELINE_STATE(PipelineModule::TTS, ModuleState::Idle);
     PIPELINE_STATE(PipelineModule::AudioOutput, ModuleState::Idle);
@@ -1055,6 +1097,7 @@ void TTSManager::setCascadeEnabled(bool on) { m_cascadeEnabled = on; }
 
 void TTSManager::setPythonUrl(const QString &url)
 {
+    m_ttsServerUrl = url;
     hVoice() << "TTS setPythonUrl:" << url;
     if (m_worker) {
         QMetaObject::invokeMethod(m_worker, [this, url]() {
@@ -1063,6 +1106,54 @@ void TTSManager::setPythonUrl(const QString &url)
         }, Qt::QueuedConnection);
     }
     m_cascadeEnabled = !url.isEmpty();
+}
+
+void TTSManager::fetchAvailableVoices()
+{
+    if (m_ttsServerUrl.isEmpty()) {
+        qWarning() << "[TTS] fetchAvailableVoices: no server URL";
+        return;
+    }
+
+    auto *ws = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+    connect(ws, &QWebSocket::textMessageReceived, this, [this, ws](const QString &msg) {
+        QJsonDocument doc = QJsonDocument::fromJson(msg.toUtf8());
+        if (!doc.isObject()) return;
+        QJsonObject obj = doc.object();
+        QString type = obj["type"].toString();
+
+        if (type == "ready") {
+            // Server ready — request voice list
+            ws->sendTextMessage(QStringLiteral(R"({"type":"list_voices"})"));
+        } else if (type == "voices") {
+            QStringList voices;
+            for (const auto &v : obj["available"].toArray())
+                voices << v.toString();
+            if (voices != m_ttsVoices) {
+                m_ttsVoices = voices;
+                emit ttsVoicesChanged();
+            }
+            hVoice() << "TTS available voices:" << m_ttsVoices;
+            ws->close();
+            ws->deleteLater();
+        }
+    });
+
+    connect(ws, &QWebSocket::errorOccurred, this, [ws](QAbstractSocket::SocketError err) {
+        Q_UNUSED(err)
+        qWarning() << "[TTS] fetchAvailableVoices error:" << ws->errorString();
+        ws->deleteLater();
+    });
+
+    // Timeout: if no response in 5s, clean up
+    QTimer::singleShot(5000, ws, [ws]() {
+        if (ws->state() == QAbstractSocket::ConnectedState)
+            ws->close();
+        ws->deleteLater();
+    });
+
+    ws->open(QUrl(m_ttsServerUrl));
 }
 
 // ── WebSocket ────────────────────────────────────────

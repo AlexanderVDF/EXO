@@ -22,9 +22,9 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     },
     "stt": {
         "backend": "whispercpp",
-        "model": "medium",
+        "model": "small",
         "language": "fr",
-        "beam_size": 3,
+        "beam_size": 1,
         "timeout_s": 3,
         "retries": 1,
     },

@@ -17,6 +17,7 @@ set(EXO_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/app/core/LogManager.cpp
     ${CMAKE_SOURCE_DIR}/app/core/WebSocketClient.cpp
     ${CMAKE_SOURCE_DIR}/app/core/HealthCheck.cpp
+    ${CMAKE_SOURCE_DIR}/app/core/LatencyMetrics.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSManager.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/VoicePipeline.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackendQt.cpp
@@ -26,6 +27,15 @@ set(EXO_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/app/llm/ClaudeAPI.cpp
     ${CMAKE_SOURCE_DIR}/app/llm/AIMemoryManager.cpp
     ${CMAKE_SOURCE_DIR}/app/utils/WeatherManager.cpp
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanItem.cpp
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanModel.cpp
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanSerializer.cpp
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanController.cpp
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationEntity.cpp
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationScenario.cpp
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationPropagation.cpp
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationResult.cpp
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationEngine.cpp
 )
 
 set(EXO_TEST_HEADERS
@@ -36,6 +46,7 @@ set(EXO_TEST_HEADERS
     ${CMAKE_SOURCE_DIR}/app/core/LogManager.h
     ${CMAKE_SOURCE_DIR}/app/core/WebSocketClient.h
     ${CMAKE_SOURCE_DIR}/app/core/HealthCheck.h
+    ${CMAKE_SOURCE_DIR}/app/core/LatencyMetrics.h
     ${CMAKE_SOURCE_DIR}/app/audio/VoicePipeline.h
     ${CMAKE_SOURCE_DIR}/app/audio/TTSManager.h
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackend.h
@@ -47,6 +58,17 @@ set(EXO_TEST_HEADERS
     ${CMAKE_SOURCE_DIR}/app/llm/ClaudeAPI.h
     ${CMAKE_SOURCE_DIR}/app/llm/AIMemoryManager.h
     ${CMAKE_SOURCE_DIR}/app/utils/WeatherManager.h
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanEnums.h
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanItem.h
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanModel.h
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanSerializer.h
+    ${CMAKE_SOURCE_DIR}/app/floorplan/FloorPlanController.h
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationEnums.h
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationEntity.h
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationScenario.h
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationPropagation.h
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationResult.h
+    ${CMAKE_SOURCE_DIR}/app/simulation/SimulationEngine.h
 )
 
 add_library(exo_testlib STATIC ${EXO_TEST_SOURCES} ${EXO_TEST_HEADERS})
@@ -56,6 +78,8 @@ target_include_directories(exo_testlib PUBLIC
     ${CMAKE_SOURCE_DIR}/app/audio
     ${CMAKE_SOURCE_DIR}/app/llm
     ${CMAKE_SOURCE_DIR}/app/utils
+    ${CMAKE_SOURCE_DIR}/app/floorplan
+    ${CMAKE_SOURCE_DIR}/app/simulation
 )
 target_link_libraries(exo_testlib PUBLIC
     Qt6::Core Qt6::Network Qt6::WebSockets
@@ -91,3 +115,4 @@ exo_add_test(test_audiopreprocessor)
 exo_add_test(test_tts_dsp)
 exo_add_test(test_pipelinetracer)
 exo_add_test(test_healthcheck)
+exo_add_test(test_simulation)

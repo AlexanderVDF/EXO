@@ -15,6 +15,9 @@ import signal
 import subprocess
 from pathlib import Path
 
+# Flag Windows pour masquer les fenêtres console des sous-processus
+_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
 # ── Chemins projet ───────────────────────────────────────────────
 PROJECT_DIR = Path(__file__).resolve().parent
 SSD_ROOT = Path(os.environ.get("EXO_ROOT", "D:/EXO"))
@@ -29,7 +32,6 @@ GUI_EXE = PROJECT_DIR / "build" / "Release" / "RaspberryAssistant.exe"
 EXO_ENV = {
     "EXO_WHISPER_MODELS":  str(SSD_ROOT / "models" / "whisper"),
     "EXO_WHISPERCPP_BIN":  str(SSD_ROOT / "whispercpp" / "build_vk" / "bin" / "Release"),
-    "EXO_XTTS_MODELS":     str(SSD_ROOT / "models" / "xtts"),
     "EXO_COSYVOICE_MODELS": str(SSD_ROOT / "models" / "CosyVoice2-0.5B"),
     "COSYVOICE_ROOT":      str(SSD_ROOT / "CosyVoice"),
     "EXO_FAISS_DIR":       str(SSD_ROOT / "faiss" / "semantic_memory"),
@@ -42,7 +44,7 @@ EXO_ENV = {
 # (nom, python_exe, script, arguments)
 SERVICES = [
     ("STT Server",      VENV_STT_TTS, "python/stt/stt_server.py",
-     ["--backend", "whispercpp", "--model", "medium", "--beam-size", "3", "--language", "fr"]),
+     ["--backend", "whispercpp", "--model", "small", "--beam-size", "1", "--language", "fr"]),
     ("TTS Server",      VENV_STT_TTS, "python/tts/tts_server.py",
      ["--lang", "fr"]),
     ("VAD Server",      VENV_STT_TTS, "python/vad/vad_server.py", []),
@@ -108,6 +110,7 @@ def start_services() -> None:
             env=env,
             stdout=open(stdout_log, "w", encoding="utf-8"),
             stderr=open(stderr_log, "w", encoding="utf-8"),
+            creationflags=_CREATE_NO_WINDOW,
         )
         processes[name] = proc
         time.sleep(0.5)
@@ -125,6 +128,7 @@ def start_gui() -> None:
             [str(GUI_EXE)],
             cwd=str(GUI_EXE.parent),
             env=env,
+            creationflags=subprocess.DETACHED_PROCESS if sys.platform == "win32" else 0,
         )
         processes["GUI"] = proc
     else:

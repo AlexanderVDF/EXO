@@ -8,6 +8,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QDataStream>
+#include <QLocale>
 #include <cstring>
 #include <algorithm>
 #include <numeric>
@@ -787,6 +788,8 @@ void VoicePipeline::onWakeWordWsMessage(const QString &msg)
             && m_lastWakeWordClock.elapsed() > WAKE_COOLDOWN_MS
             && m_ttsEndClock.elapsed() > TTS_GUARD_MS) {
             hVoice() << "OpenWakeWord detected:" << word << "score:" << score;
+            // Démarrer l'interaction dès le wake-word pour corréler VAD/STT
+            PipelineEventBus::instance()->beginInteraction();
             PIPELINE_EVENT(PipelineModule::WakeWord, EventType::WakeWordDetected,
                            {{"word", word}, {"score", score}, {"source", "neural"}});
             m_wakeWordTriggered = true;
@@ -943,7 +946,8 @@ void VoicePipeline::setTTSStyle(const QString &style)
 void VoicePipeline::setTTSEngine(const QString &engine)
 {
     QString url;
-    if (engine == "xtts_directml" || engine == "xtts_cuda" || engine == "xtts_auto")
+    if (engine == "cosyvoice2_cuda" || engine == "cosyvoice2_cpu" || engine == "cosyvoice2_auto"
+        || engine == "xtts_directml" || engine == "xtts_cuda" || engine == "xtts_auto")
         url = m_ttsServerUrl.isEmpty() ? QStringLiteral("ws://localhost:8767") : m_ttsServerUrl;
     else // qt_fallback or unknown
         url = QString();
@@ -962,6 +966,20 @@ void VoicePipeline::setTTSRate(float r)
 {
     if (m_ttsManager) m_ttsManager->setRate(r);
     hVoice() << "TTS rate:" << r;
+}
+
+void VoicePipeline::fetchTTSVoices()
+{
+    if (m_ttsManager) {
+        connect(m_ttsManager, &TTSManager::ttsVoicesChanged,
+                this, &VoicePipeline::ttsVoicesChanged, Qt::UniqueConnection);
+        m_ttsManager->fetchAvailableVoices();
+    }
+}
+
+QStringList VoicePipeline::ttsVoices() const
+{
+    return m_ttsManager ? m_ttsManager->ttsVoices() : QStringList();
 }
 
 void VoicePipeline::setAudioBackend(const QString &backend)
@@ -1350,13 +1368,24 @@ void VoicePipeline::dispatchTranscript(const QString &text)
     hVoice() << "=== dispatchTranscript ===" << text.left(80);
     hVoice() << "[Latency] STT → dispatch (" << m_interactionClock.elapsed() << "ms since VAD)";
 
-    // Début d'une nouvelle interaction
-    PipelineEventBus::instance()->beginInteraction();
+    // Interaction déjà démarrée au wake-word ; sinon (mode conversation) la démarrer ici
+    if (PipelineEventBus::instance()->currentCorrelationId().isEmpty())
+        PipelineEventBus::instance()->beginInteraction();
     PIPELINE_EVENT(PipelineModule::Orchestrator, EventType::TranscriptDispatched,
                    {{"text", text}, {"length", text.length()}});
 
     m_lastCommand = text;
     hVoice() << "Transcript final:" << text;
+
+    // v26.2 Latency: fast-path for simple intents (bypass Claude)
+    if (handleFastPath(text)) {
+        hVoice() << "[FastPath] Intent simple traité localement — Claude bypassed";
+        emit finalTranscript(text);
+        emit speechTranscribed(text);
+        emit commandDetected(text);
+        return;
+    }
+
     emit finalTranscript(text);
     hVoice() << "dispatchTranscript: finalTranscript émis";
     emit speechTranscribed(text);
@@ -1379,9 +1408,137 @@ void VoicePipeline::dispatchTranscript(const QString &text)
         hWarning(exoVoice) << "dispatchTranscript: WebSocket backend non connecté!";
     }
 
+    // v26.2 Latency: pre-warm TTS pipeline while Claude is thinking
+    if (m_ttsManager)
+        m_ttsManager->prepareNext();
+
     hVoice() << "dispatchTranscript: passage à Thinking";
     setState(PipelineState::Thinking);
     hVoice() << "dispatchTranscript: terminé";
+}
+
+// ── v26.2 Latency: fast-path for simple intents ─────
+
+bool VoicePipeline::handleFastPath(const QString &text)
+{
+    QString low = text.toLower().trimmed();
+
+    // ── DateTime ──
+    if (low.contains(QLatin1String("quelle heure")) || low.contains(QLatin1String("quel jour"))
+        || low.contains(QLatin1String("quelle date")) || low.contains(QLatin1String("on est quel jour"))
+        || low.contains(QLatin1String("quel mois")) || low.contains(QLatin1String("quelle année"))) {
+        QDateTime now = QDateTime::currentDateTime();
+        QLocale fr(QLocale::French);
+        QString response = QStringLiteral("Il est %1, nous sommes le %2.")
+            .arg(now.toString(QStringLiteral("HH'h'mm")))
+            .arg(fr.toString(now.date(), QStringLiteral("dddd d MMMM yyyy")));
+        hVoice() << "[FastPath] DateTime:" << response;
+        PIPELINE_EVENT(PipelineModule::Orchestrator, EventType::TranscriptDispatched,
+                       {{"text", text}, {"fast_path", "datetime"}});
+        setState(PipelineState::Speaking);
+        m_ttsManager->speakText(response);
+        return true;
+    }
+
+    // ── Timer / Minuteur ──
+    {
+        static QRegularExpression timerRx(
+            QStringLiteral("(?:minuteur|timer|chrono|compte à rebours|minuterie).*?(\\d+)\\s*"
+                           "(minutes?|min|secondes?|sec|heures?|h)"),
+            QRegularExpression::CaseInsensitiveOption);
+        auto match = timerRx.match(low);
+        if (match.hasMatch()) {
+            int value = match.captured(1).toInt();
+            QString unit = match.captured(2).toLower();
+            int ms = 0;
+            QString unitStr;
+            if (unit.startsWith(QLatin1String("min")))      { ms = value * 60000;   unitStr = QStringLiteral("minutes"); }
+            else if (unit.startsWith(QLatin1String("sec")))  { ms = value * 1000;    unitStr = QStringLiteral("secondes"); }
+            else if (unit.startsWith(QLatin1String("h")))    { ms = value * 3600000; unitStr = QStringLiteral("heures"); }
+
+            if (ms > 0 && ms <= 86400000) { // max 24h
+                QTimer::singleShot(ms, this, [this]() {
+                    if (m_ttsManager) {
+                        setState(PipelineState::Speaking);
+                        m_ttsManager->speakText(QStringLiteral("Votre minuteur est terminé."));
+                    }
+                });
+                QString response = QStringLiteral("Minuteur de %1 %2 lancé.").arg(value).arg(unitStr);
+                hVoice() << "[FastPath] Timer:" << response;
+                PIPELINE_EVENT(PipelineModule::Orchestrator, EventType::TranscriptDispatched,
+                               {{"text", text}, {"fast_path", "timer"}, {"duration_ms", ms}});
+                setState(PipelineState::Speaking);
+                m_ttsManager->speakText(response);
+                return true;
+            }
+        }
+    }
+
+    // ── Weather (remote fast-path) ──
+    if (low.contains(QLatin1String("météo")) || low.contains(QLatin1String("quel temps"))
+        || low.contains(QLatin1String("température dehors")) || low.contains(QLatin1String("va pleuvoir"))
+        || low.contains(QLatin1String("prévision")) || low.contains(QLatin1String("fait beau"))
+        || low.contains(QLatin1String("fait froid")) || low.contains(QLatin1String("fait chaud"))) {
+        if (m_ws && m_ws->state() == QAbstractSocket::ConnectedState) {
+            QJsonObject msg;
+            msg[QStringLiteral("type")]      = QStringLiteral("direct_tool_call");
+            msg[QStringLiteral("tool")]      = QStringLiteral("get_weather");
+            msg[QStringLiteral("text")]      = text;
+            msg[QStringLiteral("timestamp")] = QDateTime::currentMSecsSinceEpoch();
+            m_ws->sendTextMessage(QString::fromUtf8(QJsonDocument(msg).toJson(QJsonDocument::Compact)));
+            hVoice() << "[FastPath] Weather: direct_tool_call envoyé";
+            PIPELINE_EVENT(PipelineModule::Orchestrator, EventType::TranscriptDispatched,
+                           {{"text", text}, {"fast_path", "weather"}});
+            if (m_ttsManager) m_ttsManager->prepareNext();
+            setState(PipelineState::Thinking);
+            return true;
+        }
+    }
+
+    // ── Simple domotique (remote fast-path) ──
+    if ((low.contains(QLatin1String("allume")) || low.contains(QLatin1String("éteins"))
+         || low.contains(QLatin1String("éteindre")) || low.contains(QLatin1String("allumer"))
+         || low.contains(QLatin1String("baisse")) || low.contains(QLatin1String("monte")))
+        && (low.contains(QLatin1String("lumière")) || low.contains(QLatin1String("lampe"))
+            || low.contains(QLatin1String("salon")) || low.contains(QLatin1String("chambre"))
+            || low.contains(QLatin1String("cuisine")) || low.contains(QLatin1String("volet"))
+            || low.contains(QLatin1String("chauffage")))) {
+        if (m_ws && m_ws->state() == QAbstractSocket::ConnectedState) {
+            QJsonObject msg;
+            msg[QStringLiteral("type")]      = QStringLiteral("direct_tool_call");
+            msg[QStringLiteral("tool")]      = QStringLiteral("domotic_action");
+            msg[QStringLiteral("text")]      = text;
+            msg[QStringLiteral("timestamp")] = QDateTime::currentMSecsSinceEpoch();
+            m_ws->sendTextMessage(QString::fromUtf8(QJsonDocument(msg).toJson(QJsonDocument::Compact)));
+            hVoice() << "[FastPath] Domotique: direct_tool_call envoyé";
+            PIPELINE_EVENT(PipelineModule::Orchestrator, EventType::TranscriptDispatched,
+                           {{"text", text}, {"fast_path", "domotic"}});
+            if (m_ttsManager) m_ttsManager->prepareNext();
+            setState(PipelineState::Thinking);
+            return true;
+        }
+    }
+
+    // ── Rappel (remote fast-path) ──
+    if (low.contains(QLatin1String("rappelle")) || low.contains(QLatin1String("rappel"))
+        || low.contains(QLatin1String("n'oublie pas")) || low.contains(QLatin1String("souviens"))) {
+        if (m_ws && m_ws->state() == QAbstractSocket::ConnectedState) {
+            QJsonObject msg;
+            msg[QStringLiteral("type")]      = QStringLiteral("direct_tool_call");
+            msg[QStringLiteral("tool")]      = QStringLiteral("remember_info");
+            msg[QStringLiteral("text")]      = text;
+            msg[QStringLiteral("timestamp")] = QDateTime::currentMSecsSinceEpoch();
+            m_ws->sendTextMessage(QString::fromUtf8(QJsonDocument(msg).toJson(QJsonDocument::Compact)));
+            hVoice() << "[FastPath] Rappel: direct_tool_call envoyé";
+            PIPELINE_EVENT(PipelineModule::Orchestrator, EventType::TranscriptDispatched,
+                           {{"text", text}, {"fast_path", "reminder"}});
+            if (m_ttsManager) m_ttsManager->prepareNext();
+            setState(PipelineState::Thinking);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // ── utterance timeout ────────────────────────────────
@@ -1442,6 +1599,8 @@ void VoicePipeline::onSTTPartial(const QString &text)
     if (!m_wakeWordTriggered && checkWakeWord(text)) {
         m_wakeWordTriggered = true;
         hVoice() << "Wake-word logiciel détecté dans transcript:" << text;
+        // Démarrer l'interaction dès le wake-word pour corréler VAD/STT
+        PipelineEventBus::instance()->beginInteraction();
         PIPELINE_EVENT(PipelineModule::WakeWord, EventType::WakeWordDetected,
                        {{"text", text.left(60)}, {"source", "transcript_partial"}});
         emit wakeWordDetected();
@@ -1472,6 +1631,8 @@ void VoicePipeline::onSTTFinal(const QString &text)
     if (!m_wakeWordTriggered && checkWakeWord(text)) {
         m_wakeWordTriggered = true;
         hVoice() << "Wake-word logiciel détecté dans transcript final:" << text;
+        // Démarrer l'interaction dès le wake-word pour corréler VAD/STT
+        PipelineEventBus::instance()->beginInteraction();
         PIPELINE_EVENT(PipelineModule::WakeWord, EventType::WakeWordDetected,
                        {{"text", text.left(60)}, {"source", "transcript_final"}});
         emit wakeWordDetected();

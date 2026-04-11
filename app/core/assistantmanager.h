@@ -106,6 +106,9 @@ private:
                                const QJsonObject &params);
     void onToolServiceMessage(const QString &service, const QString &message);
 
+    // v26.3: Fast-path — bypass Claude for simple intents
+    bool tryFastPath(const QString &message);
+
     // Membres privés
     bool m_isListening;
     bool m_isInitialized;

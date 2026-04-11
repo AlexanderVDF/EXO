@@ -118,7 +118,16 @@ Rectangle {
                         { name: "logs",     icon: "icons/logs.svg",     label: "Logs" },
                         { name: "pipeline", icon: "icons/pipeline.svg", label: "Pipeline" },
                         { name: "maison",   icon: "icons/maison.svg",   label: "Maison" },
-                        { name: "reseau",   icon: "icons/reseau.svg",   label: "Réseau" }
+                        { name: "reseau",   icon: "icons/reseau.svg",   label: "Réseau" },
+                        { name: "cognitive",     icon: "icons/pipeline.svg", label: "Cognitif" },
+                        { name: "heatmap",       icon: "icons/pipeline.svg", label: "Heatmap" },
+                        { name: "voicepipeline", icon: "icons/pipeline.svg", label: "Voice Flow" },
+                        { name: "memory",        icon: "icons/history.svg",  label: "Mémoire" },
+                        { name: "governance",    icon: "icons/settings.svg", label: "Gouvernance" },
+                        { name: "observability", icon: "icons/logs.svg",     label: "Observabilité" },
+                        { name: "floorplan",     icon: "icons/maison.svg",   label: "Plan" },
+                        { name: "simulation",    icon: "icons/pipeline.svg", label: "Simulation" },
+                        { name: "stability",     icon: "icons/pipeline.svg", label: "Stabilité" }
                     ]
 
                     delegate: Rectangle {

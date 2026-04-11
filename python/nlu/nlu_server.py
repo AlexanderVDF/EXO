@@ -36,7 +36,7 @@ except ImportError:
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
-from shared.base_service import init_v9
+from shared.base_service import init_v9, json_loads, json_dumps
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [NLU] %(message)s")
@@ -419,75 +419,85 @@ async def handle_client(ws):
     log.info(f"Client connected: {remote}")
     try:
         # Envoyer le message ready au client (ReadinessProtocol v5)
-        await ws.send(json.dumps({
+        await ws.send(json_dumps({
             "type": "ready",
             "service": "nlu",
             "intents": list(INTENTS.keys()),
         }))
         async for raw in ws:
+            # --- v9.1 standard protocol delegation ---
+            v9_resp = await _v9.handle_ws_message(ws, raw)
+            if v9_resp is not None:
+                await ws.send(v9_resp)
+                continue
+
             try:
-                msg = json.loads(raw)
-            except json.JSONDecodeError:
-                await ws.send(json.dumps({"type": "error", "message": "Invalid JSON"}))
+                msg = json_loads(raw)
+            except Exception:
+                await ws.send(json_dumps({"type": "error", "message": "Invalid JSON"}))
                 continue
 
             action = msg.get("action", "")
-            msg_type = msg.get("type", "")
 
-            # Support both "type": "ping" and "action": "ping" for consistency
-            if action == "ping" or msg_type == "ping":
-                await ws.send(json.dumps({"type": "pong"}))
-
-            elif action == "classify":
+            if action == "classify":
                 text = msg.get("text", "").strip()
                 if not text:
-                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    await ws.send(json_dumps({"type": "error", "message": "Empty text"}))
                     continue
-
+                _v9.begin_request()
                 result = regex_nlu.classify(text)
                 result["type"] = "nlu_result"
-                await ws.send(json.dumps(result, ensure_ascii=False))
+                await ws.send(json_dumps(result))
+                _v9.end_request()
 
             elif action == "parse_intent":
                 text = msg.get("text", "").strip()
                 if not text:
-                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    await ws.send(json_dumps({"type": "error", "message": "Empty text"}))
                     continue
+                _v9.begin_request()
                 intent = intent_engine.parse_intent(text)
                 resp = intent.to_dict()
                 resp["type"] = "intent_result"
-                await ws.send(json.dumps(resp, ensure_ascii=False))
+                await ws.send(json_dumps(resp))
+                _v9.end_request()
 
             elif action == "extract_goals":
                 text = msg.get("text", "").strip()
                 if not text:
-                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    await ws.send(json_dumps({"type": "error", "message": "Empty text"}))
                     continue
+                _v9.begin_request()
                 goals = intent_engine.extract_goals(text)
-                await ws.send(json.dumps({"type": "goals", "goals": goals}, ensure_ascii=False))
+                await ws.send(json_dumps({"type": "goals", "goals": goals}))
+                _v9.end_request()
 
             elif action == "extract_constraints":
                 text = msg.get("text", "").strip()
                 if not text:
-                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    await ws.send(json_dumps({"type": "error", "message": "Empty text"}))
                     continue
+                _v9.begin_request()
                 constraints = intent_engine.extract_constraints(text)
-                await ws.send(json.dumps({"type": "constraints", "constraints": constraints}, ensure_ascii=False))
+                await ws.send(json_dumps({"type": "constraints", "constraints": constraints}))
+                _v9.end_request()
 
             elif action == "extract_preferences":
                 text = msg.get("text", "").strip()
                 if not text:
-                    await ws.send(json.dumps({"type": "error", "message": "Empty text"}))
+                    await ws.send(json_dumps({"type": "error", "message": "Empty text"}))
                     continue
+                _v9.begin_request()
                 prefs = intent_engine.extract_preferences(text)
-                await ws.send(json.dumps({"type": "preferences", "preferences": prefs}, ensure_ascii=False))
+                await ws.send(json_dumps({"type": "preferences", "preferences": prefs}))
+                _v9.end_request()
 
             elif action == "list_intents":
                 intents = list(INTENTS.keys())
-                await ws.send(json.dumps({"type": "intents", "intents": intents}))
+                await ws.send(json_dumps({"type": "intents", "intents": intents}))
 
             else:
-                await ws.send(json.dumps({"type": "error", "message": f"Unknown action: {action}"}))
+                await ws.send(json_dumps({"type": "error", "message": f"Unknown action: {action}"}))
 
     except websockets.ConnectionClosed:
         pass
@@ -496,6 +506,8 @@ async def handle_client(ws):
 
 
 async def main(host: str, port: int, model: Optional[str]):
+    global _v9
+
     # Prevent duplicate instances
     ensure_single_instance(port, "nlu_server")
     _v9 = init_v9("nlu_server", port)
@@ -506,7 +518,7 @@ async def main(host: str, port: int, model: Optional[str]):
     log.info(f"NLU server starting on ws://{host}:{port}")
     async with websockets.serve(
         handle_client, host, port,
-        ping_interval=None, ping_timeout=None,
+        **_v9.ws_serve_kwargs(),
     ):
         await asyncio.Future()  # run forever
 

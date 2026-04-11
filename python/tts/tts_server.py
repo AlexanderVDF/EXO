@@ -37,7 +37,7 @@ import numpy as np
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
-from shared.base_service import init_v9
+from shared.base_service import init_v9, json_loads, json_dumps
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,7 +55,7 @@ DEFAULT_PORT = 8767
 DEFAULT_VOICE = "exo_default"
 DEFAULT_LANG = "fr"
 OUTPUT_SAMPLE_RATE = 24000  # C++ TTSManager expects 24kHz PCM16 mono
-CHUNK_SIZE = 1024           # v26.1: ~21ms @ 24kHz mono16
+CHUNK_SIZE = 256            # 128 frames × 2 bytes — ~5.3ms @ 24kHz mono16
 
 SUPPORTED_LANGUAGES = [
     "en", "es", "fr", "de", "it", "pt", "pl", "tr",
@@ -140,18 +140,20 @@ class TTSSession:
             logger.info("TTS client disconnected")
 
     async def _on_json(self, ws, raw: str) -> None:
+        # v9.1: delegate standard protocol messages
+        v9_resp = await _v9.handle_ws_message(ws, raw)
+        if v9_resp is not None:
+            await ws.send(v9_resp)
+            return
+
         try:
-            msg = json.loads(raw)
-        except json.JSONDecodeError:
+            msg = json_loads(raw)
+        except (ValueError, TypeError):
             return
 
         msg_type = msg.get("type", "")
 
-        if msg_type == "ping":
-            await ws.send(json.dumps({"type": "pong"}))
-            return
-
-        elif msg_type == "synthesize":
+        if msg_type == "synthesize":
             text = msg.get("text", "")
             voice = msg.get("voice", None)
             lang = msg.get("lang", None)
@@ -210,14 +212,15 @@ class TTSSession:
             cached = self.engine._cache.get(clean, use_voice, use_lang)
             if cached is not None:
                 logger.info("Cache hit: %s", clean[:40])
+                chunk_sz = getattr(self.engine, "_ws_chunk_size", CHUNK_SIZE)
                 await ws.send(json.dumps({"type": "start", "text": text}))
                 offset = 0
                 while offset < len(cached):
                     if self._cancel_flag:
                         return
-                    chunk = cached[offset : offset + CHUNK_SIZE]
+                    chunk = cached[offset : offset + chunk_sz]
                     await ws.send(chunk)
-                    offset += CHUNK_SIZE
+                    offset += chunk_sz
                     await asyncio.sleep(0)
                 duration = len(cached) / (OUTPUT_SAMPLE_RATE * 2)
                 await ws.send(json.dumps({
@@ -237,6 +240,7 @@ class TTSSession:
 
             def _stream_worker():
                 """Run CosyVoice2 streaming synthesis in thread, push chunks to async queue."""
+                chunk_sz = getattr(self.engine, "_ws_chunk_size", CHUNK_SIZE)
                 try:
                     for pcm_chunk in self.engine.synthesize_stream(
                         text, voice, lang, rate
@@ -244,12 +248,12 @@ class TTSSession:
                         if self._cancel_flag:
                             break
                         all_pcm.extend(pcm_chunk)
-                        # Split into CHUNK_SIZE frames for WebSocket
+                        # Split into chunk_sz frames for WebSocket
                         off = 0
                         while off < len(pcm_chunk):
-                            frame = pcm_chunk[off : off + CHUNK_SIZE]
+                            frame = pcm_chunk[off : off + chunk_sz]
                             loop.call_soon_threadsafe(queue.put_nowait, frame)
-                            off += CHUNK_SIZE
+                            off += chunk_sz
                 except Exception as e:
                     import traceback
                     logger.error("Stream worker error: %s\n%s", e, traceback.format_exc())
@@ -260,6 +264,7 @@ class TTSSession:
             fut = loop.run_in_executor(None, _stream_worker)
 
             total_bytes = 0
+            first_ws_sent = False
             while True:
                 chunk = await queue.get()
                 if chunk is None:
@@ -268,6 +273,10 @@ class TTSSession:
                     break
                 await ws.send(chunk)
                 total_bytes += len(chunk)
+                if not first_ws_sent:
+                    first_ws_sent = True
+                    fc_ms = (time.monotonic() - t0) * 1000
+                    logger.info("[Latency] TTS first-chunk WS: %.0f ms", fc_ms)
                 await asyncio.sleep(0)  # Yield to event loop
 
             await fut  # Ensure thread completed
@@ -308,6 +317,8 @@ class TTSSession:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
+    global _v9
+
     import argparse
 
     parser = argparse.ArgumentParser(description="EXO TTS Server (CosyVoice 2)")
@@ -317,6 +328,14 @@ async def main() -> None:
                         help="CosyVoice2 speaker or prompt name")
     parser.add_argument("--lang", default=DEFAULT_LANG,
                         help="Default language (e.g. fr, en, de)")
+    parser.add_argument("--streaming", action="store_true",
+                        help="Enable streaming mode (default behavior)")
+    parser.add_argument("--chunk-size", type=int, default=CHUNK_SIZE,
+                        help="Audio chunk size in bytes for WS frames")
+    parser.add_argument("--max-chunk-length", type=int, default=4096,
+                        help="Max text char length per single inference call")
+    parser.add_argument("--latency-optimized", action="store_true",
+                        help="Low-latency mode: merge sentences, larger chunks")
     args = parser.parse_args()
 
     # Prevent duplicate instances
@@ -331,6 +350,21 @@ async def main() -> None:
 
     engine = CosyVoiceEngine(voice=args.voice, lang=args.lang)
     engine._cache = PhraseCache()
+    engine.latency_optimized = getattr(args, "latency_optimized", False)
+    engine.max_chunk_length = getattr(args, "max_chunk_length", 4096)
+
+    # Use --chunk-size for WS frame size (replaces global CHUNK_SIZE)
+    ws_chunk_size = getattr(args, "chunk_size", CHUNK_SIZE)
+
+    logger.info(
+        "TTS CONFIG: voice=%s lang=%s streaming=%s chunk_size=%d "
+        "max_chunk_length=%d latency_optimized=%s",
+        args.voice, args.lang, getattr(args, "streaming", False),
+        ws_chunk_size, engine.max_chunk_length, engine.latency_optimized,
+    )
+
+    # Store WS chunk size on engine so TTSSession can access it
+    engine._ws_chunk_size = ws_chunk_size
 
     # Get event loop reference for thread-safe phase broadcasts
     _event_loop = asyncio.get_running_loop()
@@ -373,7 +407,7 @@ async def main() -> None:
 
     server = await websockets.serve(
         handler, args.host, args.port,
-        ping_interval=None, ping_timeout=None,
+        **_v9.ws_serve_kwargs(),
     )
     logger.info(
         "TTS WS server listening on ws://%s:%d — loading CosyVoice2 model…",

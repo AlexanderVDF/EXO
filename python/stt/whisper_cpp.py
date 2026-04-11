@@ -42,7 +42,7 @@ class WhisperCppEngine:
         server_exe: str | None = None,
         lib_dir: str | None = None,
         language: str = "fr",
-        beam_size: int = 3,
+        beam_size: int = 1,
         no_speech_thold: float = 0.4,
         threads: int = 6,
         initial_prompt: str = "EXO est un assistant vocal domotique français. Jarvis, allume, éteins, météo, température, lumière.",

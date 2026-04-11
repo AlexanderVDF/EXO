@@ -5,6 +5,7 @@ import "pages"
 import "panels"
 import "components"
 import "theme"
+import RaspberryAssistant  // FloorPlanModel QML_ELEMENT
 
 ApplicationWindow {
     id: mainWindow
@@ -15,6 +16,9 @@ ApplicationWindow {
     minimumHeight: 600
     title: "EXO Assistant"
     color: Theme.bgPrimary
+
+    // ── Floor Plan Model (QML_ELEMENT) ──
+    FloorPlanModel { id: floorPlanModel }
 
     // ── État global ──
     property string appStatus: "Idle"
@@ -198,6 +202,33 @@ ApplicationWindow {
                 case "reseau":
                     centralStack.currentIndex = 6
                     break
+                case "cognitive":
+                    centralStack.currentIndex = 7
+                    break
+                case "heatmap":
+                    centralStack.currentIndex = 8
+                    break
+                case "voicepipeline":
+                    centralStack.currentIndex = 9
+                    break
+                case "memory":
+                    centralStack.currentIndex = 10
+                    break
+                case "governance":
+                    centralStack.currentIndex = 11
+                    break
+                case "observability":
+                    centralStack.currentIndex = 12
+                    break
+                case "floorplan":
+                    centralStack.currentIndex = 13
+                    break
+                case "simulation":
+                    centralStack.currentIndex = 15
+                    break
+                case "stability":
+                    centralStack.currentIndex = 14
+                    break
                 }
             }
         }
@@ -325,6 +356,40 @@ ApplicationWindow {
                             assistantManager.requestNetworkScan(true)
                         }
                     }
+                }
+
+                // Index 7 : Cognitive Timeline
+                CognitiveTimeline {}
+
+                // Index 8 : Engine Heatmap
+                EngineHeatmap {}
+
+                // Index 9 : Voice Pipeline Flow
+                VoicePipelineView {}
+
+                // Index 10 : Memory Inspector
+                MemoryInspector {}
+
+                // Index 11 : Governance
+                GovernancePanel {}
+
+                // Index 12 : Observability Dashboard
+                ObservabilityDashboard {}
+
+                // Index 13 : Floor Plan Editor
+                FloorPlanPage {
+                    id: floorPlanPage
+                    floorModel: floorPlanModel
+                }
+
+                // Index 14 : Stability Tests
+                StabilityPanel {
+                    id: stabilityPanel
+                }
+
+                // Index 15 : Simulation Spatiale
+                SimulationPage {
+                    id: simulationPage
                 }
             }
 
@@ -516,9 +581,46 @@ ApplicationWindow {
     }
 
     // ══════════════════════════════════════════════
+    //  Persistance géométrie fenêtre
+    // ══════════════════════════════════════════════
+
+    function saveGeometry() {
+        if (typeof configManager === 'undefined') return
+        configManager.setUserValue("Window", "x", mainWindow.x)
+        configManager.setUserValue("Window", "y", mainWindow.y)
+        configManager.setUserValue("Window", "width", mainWindow.width)
+        configManager.setUserValue("Window", "height", mainWindow.height)
+    }
+
+    onXChanged: saveGeometryTimer.restart()
+    onYChanged: saveGeometryTimer.restart()
+    onWidthChanged: saveGeometryTimer.restart()
+    onHeightChanged: saveGeometryTimer.restart()
+
+    Timer {
+        id: saveGeometryTimer
+        interval: 500
+        onTriggered: mainWindow.saveGeometry()
+    }
+
+    // ══════════════════════════════════════════════
     //  Initialisation
     // ══════════════════════════════════════════════
 
     Component.onCompleted: {
+        if (typeof configManager !== 'undefined') {
+            var sx = configManager.getInt("Window", "x", -1)
+            var sy = configManager.getInt("Window", "y", -1)
+            var sw = configManager.getInt("Window", "width", 0)
+            var sh = configManager.getInt("Window", "height", 0)
+            if (sw > 0 && sh > 0) {
+                mainWindow.width = sw
+                mainWindow.height = sh
+            }
+            if (sx >= 0 && sy >= 0) {
+                mainWindow.x = sx
+                mainWindow.y = sy
+            }
+        }
     }
 }

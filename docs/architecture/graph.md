@@ -1,6 +1,6 @@
 # Graphe de dépendances C++
 
-> Auto-généré par `auto_maintain.py` — 2026-04-05
+> Auto-généré par `auto_maintain.py` — 2026-04-11
 
 ## Matrice d'inclusion
 
@@ -52,18 +52,22 @@
   ConfigManager.cpp -> LogManager.h
   ContextCache.cpp -> ContextCache.h
   ContextCache.cpp -> LogManager.h
+  ErrorManager.cpp -> ErrorManager.h
   HealthCheck.cpp -> HealthCheck.h
   HealthCheck.cpp -> ConfigManager.h
   HealthCheck.h -> WebSocketClient.h
   LatencyMetrics.cpp -> LatencyMetrics.h
   LatencyMetrics.cpp -> LogManager.h
   LogManager.cpp -> LogManager.h
+  MetricsManager.cpp -> MetricsManager.h
+  MetricsManager.h -> LatencyMetrics.h
   PipelineEvent.cpp -> PipelineEvent.h
   PipelineEvent.cpp -> LogManager.h
   PipelineEvent.h -> PipelineTypes.h
   PipelineTracer.cpp -> PipelineTracer.h
   PipelineTracer.cpp -> LogManager.h
   PipelineTracer.h -> PipelineEvent.h
+  SecurityManager.cpp -> SecurityManager.h
   ServiceManager.cpp -> ServiceManager.h
   ServiceManager.h -> WebSocketClient.h
   ServiceRegistry.cpp -> ServiceRegistry.h
@@ -75,8 +79,19 @@
   ServiceSupervisor.h -> ServiceRegistry.h
   ServiceSupervisor.h -> ServiceDescriptor.h
   ServiceSupervisor.h -> WebSocketClient.h
+  TraceManager.cpp -> TraceManager.h
+  TraceManager.h -> PipelineTracer.h
   WebSocketClient.cpp -> WebSocketClient.h
   WebSocketClient.cpp -> LogManager.h
+  FloorPlanController.cpp -> FloorPlanController.h
+  FloorPlanController.h -> FloorPlanModel.h
+  FloorPlanItem.cpp -> FloorPlanItem.h
+  FloorPlanItem.h -> FloorPlanEnums.h
+  FloorPlanModel.cpp -> FloorPlanModel.h
+  FloorPlanModel.h -> FloorPlanItem.h
+  FloorPlanModel.h -> FloorPlanSerializer.h
+  FloorPlanSerializer.cpp -> FloorPlanSerializer.h
+  FloorPlanSerializer.h -> FloorPlanItem.h
   AIMemoryManager.cpp -> AIMemoryManager.h
   AIMemoryManager.cpp -> LogManager.h
   AIMemoryManager.h -> WebSocketClient.h
@@ -87,6 +102,31 @@
   main.cpp -> AssistantManager.h
   main.cpp -> LogManager.h
   main.cpp -> ServiceSupervisor.h
+  main.cpp -> TestController.h
+  SimulationController.cpp -> SimulationController.h
+  SimulationController.h -> SimulationEngine.h
+  SimulationController.h -> SimulationEnums.h
+  SimulationEngine.cpp -> SimulationEngine.h
+  SimulationEngine.cpp -> FloorPlanModel.h
+  SimulationEngine.h -> SimulationEnums.h
+  SimulationEngine.h -> SimulationScenario.h
+  SimulationEngine.h -> SimulationEntity.h
+  SimulationEngine.h -> SimulationPropagation.h
+  SimulationEngine.h -> SimulationResult.h
+  SimulationEntity.cpp -> SimulationEntity.h
+  SimulationEntity.h -> SimulationEnums.h
+  SimulationPropagation.cpp -> SimulationPropagation.h
+  SimulationPropagation.h -> SimulationEnums.h
+  SimulationPropagation.h -> SimulationEntity.h
+  SimulationResult.cpp -> SimulationResult.h
+  SimulationResult.h -> SimulationEnums.h
+  SimulationResult.h -> SimulationEntity.h
+  SimulationScenario.cpp -> SimulationScenario.h
+  SimulationScenario.h -> SimulationEnums.h
+  SimulationScenario.h -> SimulationEntity.h
+  TestController.cpp -> TestController.h
+  TestController.cpp -> ConfigManager.h
+  TestController.h -> WebSocketClient.h
   WeatherManager.cpp -> WeatherManager.h
 ```
 
@@ -119,17 +159,23 @@
 - `app/core/ConfigManager.h` (0 include(s))
 - `app/core/ContextCache.cpp` (2 include(s))
 - `app/core/ContextCache.h` (0 include(s))
+- `app/core/ErrorManager.cpp` (1 include(s))
+- `app/core/ErrorManager.h` (0 include(s))
 - `app/core/HealthCheck.cpp` (2 include(s))
 - `app/core/HealthCheck.h` (1 include(s))
 - `app/core/LatencyMetrics.cpp` (2 include(s))
 - `app/core/LatencyMetrics.h` (0 include(s))
 - `app/core/LogManager.cpp` (1 include(s))
 - `app/core/LogManager.h` (0 include(s))
+- `app/core/MetricsManager.cpp` (1 include(s))
+- `app/core/MetricsManager.h` (1 include(s))
 - `app/core/PipelineEvent.cpp` (2 include(s))
 - `app/core/PipelineEvent.h` (1 include(s))
 - `app/core/PipelineTracer.cpp` (2 include(s))
 - `app/core/PipelineTracer.h` (1 include(s))
 - `app/core/PipelineTypes.h` (0 include(s))
+- `app/core/SecurityManager.cpp` (1 include(s))
+- `app/core/SecurityManager.h` (0 include(s))
 - `app/core/ServiceDescriptor.h` (0 include(s))
 - `app/core/ServiceManager.cpp` (1 include(s))
 - `app/core/ServiceManager.h` (1 include(s))
@@ -138,8 +184,22 @@
 - `app/core/ServiceState.h` (0 include(s))
 - `app/core/ServiceSupervisor.cpp` (2 include(s))
 - `app/core/ServiceSupervisor.h` (3 include(s))
+- `app/core/TraceManager.cpp` (1 include(s))
+- `app/core/TraceManager.h` (1 include(s))
 - `app/core/WebSocketClient.cpp` (2 include(s))
 - `app/core/WebSocketClient.h` (0 include(s))
+
+### floorplan/
+
+- `app/floorplan/FloorPlanController.cpp` (1 include(s))
+- `app/floorplan/FloorPlanController.h` (1 include(s))
+- `app/floorplan/FloorPlanEnums.h` (0 include(s))
+- `app/floorplan/FloorPlanItem.cpp` (1 include(s))
+- `app/floorplan/FloorPlanItem.h` (1 include(s))
+- `app/floorplan/FloorPlanModel.cpp` (1 include(s))
+- `app/floorplan/FloorPlanModel.h` (2 include(s))
+- `app/floorplan/FloorPlanSerializer.cpp` (1 include(s))
+- `app/floorplan/FloorPlanSerializer.h` (1 include(s))
 
 ### llm/
 
@@ -150,7 +210,28 @@
 
 ### root/
 
-- `app/main.cpp` (3 include(s))
+- `app/main.cpp` (4 include(s))
+
+### simulation/
+
+- `app/simulation/SimulationController.cpp` (1 include(s))
+- `app/simulation/SimulationController.h` (2 include(s))
+- `app/simulation/SimulationEngine.cpp` (2 include(s))
+- `app/simulation/SimulationEngine.h` (5 include(s))
+- `app/simulation/SimulationEntity.cpp` (1 include(s))
+- `app/simulation/SimulationEntity.h` (1 include(s))
+- `app/simulation/SimulationEnums.h` (0 include(s))
+- `app/simulation/SimulationPropagation.cpp` (1 include(s))
+- `app/simulation/SimulationPropagation.h` (2 include(s))
+- `app/simulation/SimulationResult.cpp` (1 include(s))
+- `app/simulation/SimulationResult.h` (2 include(s))
+- `app/simulation/SimulationScenario.cpp` (1 include(s))
+- `app/simulation/SimulationScenario.h` (2 include(s))
+
+### test/
+
+- `app/test/TestController.cpp` (2 include(s))
+- `app/test/TestController.h` (1 include(s))
 
 ### utils/
 

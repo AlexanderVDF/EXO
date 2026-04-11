@@ -1,0 +1,19 @@
+module cognitive
+CognitiveSpatialView 1.0 CognitiveSpatialView.qml
+CognitiveTimeline 1.0 CognitiveTimeline.qml
+PipelineTimeline 1.0 PipelineTimeline.qml
+SpatialOverlay 1.0 SpatialOverlay.qml
+TracePanel 1.0 TracePanel.qml
+MetricsPanel 1.0 MetricsPanel.qml
+AgentsPanel 1.0 AgentsPanel.qml
+ScenarioPanel 1.0 ScenarioPanel.qml
+AnomalyPanel 1.0 AnomalyPanel.qml
+RiskPanel 1.0 RiskPanel.qml
+CausalityGraph 1.0 CausalityGraph.qml
+CognitiveMinimap 1.0 CognitiveMinimap.qml
+SimulationScenarioPanel 1.0 SimulationScenarioPanel.qml
+SimulationOverlay 1.0 SimulationOverlay.qml
+SimulationCausalityGraph 1.0 SimulationCausalityGraph.qml
+SimulationRiskPanel 1.0 SimulationRiskPanel.qml
+SimulationTimeline 1.0 SimulationTimeline.qml
+SimulationMinimap 1.0 SimulationMinimap.qml

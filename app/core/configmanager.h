@@ -173,11 +173,11 @@ private:
     static constexpr const char *DEFAULT_STT_SERVER_URL  = "ws://localhost:8766";
     static constexpr const char *DEFAULT_TTS_SERVER_URL  = "ws://localhost:8767";
     static constexpr const char *DEFAULT_GUI_SERVER_URL  = "ws://localhost:8765";
-    static constexpr const char *DEFAULT_STT_MODEL       = "large-v3";
+    static constexpr const char *DEFAULT_STT_MODEL       = "small";
     static constexpr const char *DEFAULT_STT_LANGUAGE    = "fr";
-    static constexpr int         DEFAULT_STT_BEAM_SIZE   = 5;
-    static constexpr const char *DEFAULT_TTS_VOICE       = "Claribel Dervla";
-    static constexpr const char *DEFAULT_TTS_ENGINE      = "xtts_cuda";
+    static constexpr int         DEFAULT_STT_BEAM_SIZE   = 1;
+    static constexpr const char *DEFAULT_TTS_VOICE       = "exo_default";
+    static constexpr const char *DEFAULT_TTS_ENGINE      = "cosyvoice2_cuda";
     static constexpr const char *DEFAULT_VAD_BACKEND     = "hybrid";
     static constexpr double      DEFAULT_VAD_THRESHOLD   = 0.45;
 };

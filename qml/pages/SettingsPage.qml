@@ -840,13 +840,13 @@ Rectangle {
                     color: Theme.border
                 }
 
-                // ── Section : TTS Voice (XTTS v2) ──
+                // ── Section : TTS Voice (CosyVoice2) ──
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: Theme.spacing8
 
                     Text {
-                        text: "TTS Engine — XTTS v2"
+                        text: "TTS Engine — CosyVoice2"
                         font.family: Theme.fontMono
                         font.pixelSize: Theme.fontSmall
                         font.bold: true
@@ -870,9 +870,9 @@ Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 30
                             model: ListModel {
-                                ListElement { text: "XTTS v2 (DirectML)";  value: "xtts_directml" }
-                                ListElement { text: "XTTS v2 (CUDA)";      value: "xtts_cuda" }
-                                ListElement { text: "XTTS v2 (Auto)";      value: "xtts_auto" }
+                                ListElement { text: "CosyVoice2 (CUDA)";    value: "cosyvoice2_cuda" }
+                                ListElement { text: "CosyVoice2 (CPU)";     value: "cosyvoice2_cpu" }
+                                ListElement { text: "CosyVoice2 (Auto)";    value: "cosyvoice2_auto" }
                                 ListElement { text: "Qt TTS (fallback)";   value: "qt_fallback" }
                             }
                             textRole: "text"
@@ -880,7 +880,7 @@ Rectangle {
 
                             Component.onCompleted: {
                                 var engine = typeof configManager !== 'undefined'
-                                             ? configManager.getTTSEngine() : "xtts_directml"
+                                             ? configManager.getTTSEngine() : "cosyvoice2_cuda"
                                 for (var i = 0; i < model.count; i++) {
                                     if (model.get(i).value === engine) {
                                         currentIndex = i
@@ -963,36 +963,35 @@ Rectangle {
                             id: voiceCombo
                             Layout.fillWidth: true
                             Layout.preferredHeight: 30
-                            model: ListModel {
-                                ListElement { text: "Claribel Dervla";   value: "Claribel Dervla" }
-                                ListElement { text: "Daisy Studious";    value: "Daisy Studious" }
-                                ListElement { text: "Gracie Wise";       value: "Gracie Wise" }
-                                ListElement { text: "Brenda Stern";      value: "Brenda Stern" }
-                                ListElement { text: "Nova Hogarth";      value: "Nova Hogarth" }
-                                ListElement { text: "Sofia Hellen";      value: "Sofia Hellen" }
-                                ListElement { text: "Ana Florence";      value: "Ana Florence" }
-                                ListElement { text: "Alma María";        value: "Alma María" }
-                                ListElement { text: "Andrew Chipper";    value: "Andrew Chipper" }
-                                ListElement { text: "Damien Black";      value: "Damien Black" }
-                                ListElement { text: "Craig Gutsy";       value: "Craig Gutsy" }
-                                ListElement { text: "Viktor Menelaos";   value: "Viktor Menelaos" }
+                            model: {
+                                if (typeof voiceManager !== 'undefined'
+                                    && voiceManager.ttsVoices
+                                    && voiceManager.ttsVoices.length > 0)
+                                    return voiceManager.ttsVoices
+                                return ["exo_default"]
                             }
-                            textRole: "text"
-                            valueRole: "value"
 
                             Component.onCompleted: {
+                                if (typeof voiceManager !== 'undefined')
+                                    voiceManager.fetchTTSVoices()
                                 var voice = typeof configManager !== 'undefined'
-                                            ? configManager.getTTSVoice() : "Claribel Dervla"
-                                for (var i = 0; i < model.count; i++) {
-                                    if (model.get(i).value === voice) {
-                                        currentIndex = i
-                                        break
-                                    }
+                                            ? configManager.getTTSVoice() : "exo_default"
+                                var idx = voiceCombo.model.indexOf(voice)
+                                if (idx >= 0) currentIndex = idx
+                            }
+
+                            Connections {
+                                target: typeof voiceManager !== 'undefined' ? voiceManager : null
+                                function onTtsVoicesChanged() {
+                                    var voice = typeof configManager !== 'undefined'
+                                                ? configManager.getTTSVoice() : "exo_default"
+                                    var idx = voiceCombo.model.indexOf(voice)
+                                    if (idx >= 0) voiceCombo.currentIndex = idx
                                 }
                             }
 
                             onActivated: {
-                                var val = model.get(currentIndex).value
+                                var val = voiceCombo.model[currentIndex]
                                 if (typeof configManager !== 'undefined')
                                     configManager.setUserValue("TTS", "voice", val)
                                 if (typeof voiceManager !== 'undefined')
@@ -1017,7 +1016,7 @@ Rectangle {
                             delegate: ItemDelegate {
                                 width: voiceCombo.width
                                 contentItem: Text {
-                                    text: model.text
+                                    text: modelData
                                     font.family: Theme.fontMono
                                     font.pixelSize: Theme.fontSmall
                                     color: Theme.textPrimary
@@ -1716,6 +1715,62 @@ Rectangle {
                 }
 
                 // Séparateur
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: Theme.border
+                }
+
+                // ── Section : Stability Tests ──
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.spacing8
+
+                    Text {
+                        text: "Diagnostics"
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontSmall
+                        font.bold: true
+                        color: Theme.textPrimary
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: Theme.buttonHeight
+                        radius: Theme.radiusSmall
+                        color: stabilityMa.containsPress ? Theme.accentDark
+                             : stabilityMa.containsMouse ? Theme.accentHover
+                             : Theme.accent
+
+                        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Ouvrir Stability Tests"
+                            font.family: Theme.fontMono
+                            font.pixelSize: Theme.fontSmall
+                            font.weight: Font.Medium
+                            color: "#FFFFFF"
+                        }
+
+                        MouseArea {
+                            id: stabilityMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                // Index 14 = StabilityPanel
+                                var mw = root
+                                while (mw && !mw.hasOwnProperty("navigateTo"))
+                                    mw = mw.parent
+                                // fallback: directly set centralStack
+                                if (typeof centralStack !== 'undefined')
+                                    centralStack.currentIndex = 14
+                            }
+                        }
+                    }
+                }
+
                 Rectangle {
                     Layout.fillWidth: true
                     height: 1

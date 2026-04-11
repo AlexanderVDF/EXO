@@ -29,7 +29,7 @@ from pathlib import Path
 # Singleton guard — prevent duplicate instances
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.singleton_guard import ensure_single_instance
-from shared.base_service import init_v9
+from shared.base_service import init_v9, json_loads, json_dumps
 
 from memory.memory_manager import MemoryManager
 
@@ -85,16 +85,18 @@ class MemorySession:
             logger.info("Memory client disconnected")
 
     async def _on_json(self, ws, raw: str) -> None:
+        # v9.1: delegate standard protocol messages
+        v9_resp = await _v9.handle_ws_message(ws, raw)
+        if v9_resp is not None:
+            await ws.send(v9_resp)
+            return
+
         try:
-            msg = json.loads(raw)
-        except json.JSONDecodeError:
+            msg = json_loads(raw)
+        except (ValueError, TypeError):
             return
 
         msg_type = msg.get("type", "")
-
-        if msg_type == "ping":
-            await ws.send(json.dumps({"type": "pong"}))
-            return
 
         try:
             if msg_type == "add":
@@ -326,6 +328,8 @@ class MemorySession:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
+    global _v9
+
     import argparse
 
     parser = argparse.ArgumentParser(description="EXO Memory Server v2")
@@ -359,7 +363,7 @@ async def main() -> None:
 
     server = await websockets.serve(
         handler, args.host, args.port,
-        ping_interval=None, ping_timeout=None,
+        **_v9.ws_serve_kwargs(),
     )
     total = len(manager.hierarchy.get_all())
     logger.info("Memory server v2 running on ws://%s:%d (model=%s, memories=%d)",

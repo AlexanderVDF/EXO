@@ -12,6 +12,7 @@
 #include <QUrl>
 #include <QDateTime>
 #include <QThread>
+#include <QSet>
 
 // ═══════════════════════════════════════════════════════
 //  Construction / Destruction
@@ -54,6 +55,7 @@ ClaudeAPI::~ClaudeAPI()
 void ClaudeAPI::setApiKey(const QString &apiKey)
 {
     m_apiKey = apiKey;
+    m_requestDirty = true;
     bool wasReady = m_isReady;
     m_isReady = !apiKey.isEmpty();
 
@@ -69,6 +71,7 @@ void ClaudeAPI::setModel(const QString &model)
 {
     if (m_model != model) {
         m_model = model;
+        m_skeletonDirty = true;
         hClaude() << "Modèle:" << model;
         emit modelChanged();
     }
@@ -77,21 +80,25 @@ void ClaudeAPI::setModel(const QString &model)
 void ClaudeAPI::setTemperature(double temp)
 {
     m_temperature = qBound(0.0, temp, 1.0);
+    m_skeletonDirty = true;
 }
 
 void ClaudeAPI::setMaxTokens(int tokens)
 {
     m_maxTokens = qBound(1, tokens, 200000);
+    m_skeletonDirty = true;
 }
 
 void ClaudeAPI::setTopP(double topP)
 {
     m_topP = (topP >= 0.0 && topP <= 1.0) ? topP : -1.0;
+    m_skeletonDirty = true;
 }
 
 void ClaudeAPI::setTopK(int topK)
 {
     m_topK = (topK >= 1) ? topK : -1;
+    m_skeletonDirty = true;
 }
 
 void ClaudeAPI::setTimeout(int timeoutMs)
@@ -140,7 +147,10 @@ void ClaudeAPI::sendMessageFull(const QString &userMessage,
 
     // Stocker pour tool_result et retry
     m_pendingSystemPrompt = systemPrompt;
-    m_pendingTools = tools;
+
+    // v26.2 Latency: filter tools based on detected intent
+    QJsonArray filteredTools = tools.isEmpty() ? tools : filterToolsForMessage(userMessage, tools);
+    m_pendingTools = filteredTools;
     m_pendingStream = stream;
 
     // Ajouter le message utilisateur à l'historique
@@ -150,7 +160,7 @@ void ClaudeAPI::sendMessageFull(const QString &userMessage,
     m_conversationHistory.append(userMsg);
 
     // Construire et envoyer le payload
-    QJsonObject payload = buildPayload(userMessage, systemPrompt, tools, stream);
+    QJsonObject payload = buildPayload(userMessage, systemPrompt, filteredTools, stream);
     QJsonDocument doc(payload);
     QByteArray payloadBytes = doc.toJson(QJsonDocument::Compact);
 
@@ -214,16 +224,10 @@ void ClaudeAPI::sendToolResult(const QString &toolUseId,
     userToolMsg[QStringLiteral("content")] = toolResultContent;
     m_conversationHistory.append(userToolMsg);
 
-    // Rebuilder le payload avec l'historique complet
-    QJsonObject payload;
-    payload[QStringLiteral("model")] = m_model;
-    payload[QStringLiteral("max_tokens")] = m_maxTokens;
-    payload[QStringLiteral("temperature")] = m_temperature;
-
-    if (m_topP >= 0.0)
-        payload[QStringLiteral("top_p")] = m_topP;
-    if (m_topK >= 1)
-        payload[QStringLiteral("top_k")] = m_topK;
+    // v26.2 Latency: use pre-built skeleton (strips top_p, top_k, empty fields)
+    if (m_skeletonDirty)
+        rebuildSkeleton();
+    QJsonObject payload = m_payloadSkeleton;
 
     if (!m_pendingSystemPrompt.isEmpty())
         payload[QStringLiteral("system")] = m_pendingSystemPrompt;
@@ -292,15 +296,10 @@ QJsonObject ClaudeAPI::buildPayload(const QString &userMessage,
 {
     Q_UNUSED(userMessage) // déjà dans m_conversationHistory
 
-    QJsonObject payload;
-    payload[QStringLiteral("model")] = m_model;
-    payload[QStringLiteral("max_tokens")] = m_maxTokens;
-    payload[QStringLiteral("temperature")] = m_temperature;
-
-    if (m_topP >= 0.0)
-        payload[QStringLiteral("top_p")] = m_topP;
-    if (m_topK >= 1)
-        payload[QStringLiteral("top_k")] = m_topK;
+    // v26.2 Latency: use pre-built skeleton (model, max_tokens, temperature)
+    if (m_skeletonDirty)
+        rebuildSkeleton();
+    QJsonObject payload = m_payloadSkeleton;
 
     // System prompt (top-level dans Claude Messages v1)
     if (!systemPrompt.isEmpty())
@@ -331,13 +330,17 @@ QJsonObject ClaudeAPI::buildPayload(const QString &userMessage,
 
 QNetworkRequest ClaudeAPI::buildHttpRequest() const
 {
-    QNetworkRequest request;
-    request.setUrl(QUrl(QLatin1String(API_URL)));
-    request.setHeader(QNetworkRequest::ContentTypeHeader,
-                      QStringLiteral("application/json"));
-    request.setRawHeader("x-api-key", m_apiKey.toUtf8());
-    request.setRawHeader("anthropic-version", API_VERSION);
-    return request;
+    // v26.2 Latency: cache the request — only rebuild when API key changes
+    if (m_requestDirty) {
+        m_cachedRequest = QNetworkRequest();
+        m_cachedRequest.setUrl(QUrl(QLatin1String(API_URL)));
+        m_cachedRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+                                  QStringLiteral("application/json"));
+        m_cachedRequest.setRawHeader("x-api-key", m_apiKey.toUtf8());
+        m_cachedRequest.setRawHeader("anthropic-version", API_VERSION);
+        m_requestDirty = false;
+    }
+    return m_cachedRequest;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -674,6 +677,19 @@ void ClaudeAPI::trySplitSentences()
     while (it.hasNext()) {
         auto match = it.next();
         lastSplit = match.capturedStart();
+    }
+
+    // Fallback: split on ", " when buffer is long (reduces TTS first-chunk latency)
+    if (lastSplit < 0 && m_sentenceBuffer.size() > 50) {
+        static const QRegularExpression commaBreak(
+            QStringLiteral(",\\s"));
+        auto cit = commaBreak.globalMatch(m_sentenceBuffer);
+        while (cit.hasNext()) {
+            auto match = cit.next();
+            // Only split if the left part is substantial (>30 chars)
+            if (match.capturedEnd() > 30)
+                lastSplit = match.capturedEnd();
+        }
     }
 
     if (lastSplit < 0) return;
@@ -1214,6 +1230,7 @@ QJsonArray ClaudeAPI::buildEXOTools()
         QJsonObject schema;
         schema[QStringLiteral("type")] = QStringLiteral("object");
         schema[QStringLiteral("properties")] = QJsonObject();
+        schema[QStringLiteral("required")] = QJsonArray();
 
         tools.append(buildToolSchema(
             QStringLiteral("get_datetime"),
@@ -1866,6 +1883,122 @@ QJsonArray ClaudeAPI::buildEXOTools()
 // ═══════════════════════════════════════════════════════
 //  Helpers
 // ═══════════════════════════════════════════════════════
+
+// ── v26.2 Latency: pre-build static payload fields ──
+
+void ClaudeAPI::rebuildSkeleton() const
+{
+    m_payloadSkeleton = QJsonObject();
+    m_payloadSkeleton[QStringLiteral("model")]       = m_model;
+    m_payloadSkeleton[QStringLiteral("max_tokens")]   = m_maxTokens;
+    m_payloadSkeleton[QStringLiteral("temperature")]  = m_temperature;
+    // Include top_p/top_k only when explicitly set (avoids empty fields in payload)
+    if (m_topP >= 0.0 && m_topP <= 1.0)
+        m_payloadSkeleton[QStringLiteral("top_p")] = m_topP;
+    if (m_topK >= 1)
+        m_payloadSkeleton[QStringLiteral("top_k")] = m_topK;
+    m_skeletonDirty = false;
+}
+
+// ── v26.2 Latency: contextual tool filtering ─────────
+
+QJsonArray ClaudeAPI::filterToolsForMessage(const QString &message,
+                                            const QJsonArray &allTools)
+{
+    QString low = message.toLower();
+
+    // Base tools always included (context + memory + system)
+    static const QSet<QString> baseTools = {
+        QStringLiteral("get_context"),
+        QStringLiteral("remember_info"),
+        QStringLiteral("recall_info"),
+        QStringLiteral("system_info")
+    };
+
+    // Detect intent category
+    bool isWeather = low.contains(QLatin1String("météo"))
+                  || low.contains(QLatin1String("quel temps"))
+                  || low.contains(QLatin1String("température"))
+                  || low.contains(QLatin1String("pluie"))
+                  || low.contains(QLatin1String("soleil"))
+                  || low.contains(QLatin1String("prévision"));
+
+    bool isDomotic = low.contains(QLatin1String("allume"))
+                  || low.contains(QLatin1String("éteins"))
+                  || low.contains(QLatin1String("éteindre"))
+                  || low.contains(QLatin1String("allumer"))
+                  || low.contains(QLatin1String("lumière"))
+                  || low.contains(QLatin1String("lampe"))
+                  || low.contains(QLatin1String("volet"))
+                  || low.contains(QLatin1String("chauffage"))
+                  || low.contains(QLatin1String("radiateur"))
+                  || low.contains(QLatin1String("appareil"));
+
+    bool isTimer = low.contains(QLatin1String("minuteur"))
+                || low.contains(QLatin1String("timer"))
+                || low.contains(QLatin1String("chrono"))
+                || low.contains(QLatin1String("compte à rebours"));
+
+    bool isReminder = low.contains(QLatin1String("rappelle"))
+                   || low.contains(QLatin1String("rappel"))
+                   || low.contains(QLatin1String("n'oublie pas"))
+                   || low.contains(QLatin1String("souviens"));
+
+    bool isCalendar = low.contains(QLatin1String("calendrier"))
+                   || low.contains(QLatin1String("rendez-vous"))
+                   || low.contains(QLatin1String("événement"))
+                   || low.contains(QLatin1String("agenda"));
+
+    bool isDateTime = low.contains(QLatin1String("quelle heure"))
+                   || low.contains(QLatin1String("quel jour"))
+                   || low.contains(QLatin1String("quelle date"));
+
+    // If no specific intent detected → send all tools (complex query)
+    if (!isWeather && !isDomotic && !isTimer && !isReminder && !isCalendar && !isDateTime)
+        return allTools;
+
+    QSet<QString> allowed = baseTools;
+
+    if (isWeather) {
+        allowed.insert(QStringLiteral("get_weather"));
+    }
+    if (isDomotic) {
+        allowed.insert(QStringLiteral("ha_turn_on"));
+        allowed.insert(QStringLiteral("ha_turn_off"));
+        allowed.insert(QStringLiteral("ha_toggle"));
+        allowed.insert(QStringLiteral("ha_set_brightness"));
+        allowed.insert(QStringLiteral("ha_set_temperature"));
+        allowed.insert(QStringLiteral("ha_get_state"));
+        allowed.insert(QStringLiteral("domotic_action"));
+        allowed.insert(QStringLiteral("domotic_query"));
+    }
+    if (isTimer || isReminder) {
+        allowed.insert(QStringLiteral("remember_info"));
+        allowed.insert(QStringLiteral("recall_info"));
+    }
+    if (isCalendar) {
+        allowed.insert(QStringLiteral("calendar_add"));
+        allowed.insert(QStringLiteral("calendar_list"));
+    }
+    if (isDateTime) {
+        allowed.insert(QStringLiteral("get_datetime"));
+    }
+
+    QJsonArray filtered;
+    for (const auto &tool : allTools) {
+        QString name = tool.toObject().value(QStringLiteral("name")).toString();
+        if (allowed.contains(name))
+            filtered.append(tool);
+    }
+
+    hClaude() << "[Latency] Tools filtrés:" << filtered.size()
+              << "/" << allTools.size()
+              << (isWeather ? "(météo)" : isDomotic ? "(domotique)"
+                  : isTimer ? "(timer)" : isReminder ? "(rappel)"
+                  : isCalendar ? "(calendrier)" : "(date/heure)");
+
+    return filtered.isEmpty() ? allTools : filtered;
+}
 
 void ClaudeAPI::setError(const QString &error)
 {

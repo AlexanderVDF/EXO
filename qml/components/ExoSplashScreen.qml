@@ -58,7 +58,7 @@ Rectangle {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "v5.1"
+                text: "v28.0"
                 font.family: Theme.fontMono
                 font.pixelSize: Theme.fontBody
                 color: Theme.textSecondary

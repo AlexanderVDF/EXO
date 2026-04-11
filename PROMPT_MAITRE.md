@@ -1,9 +1,9 @@
-Tu es chargé de maintenir, auditer, optimiser et garantir la cohérence complète du projet EXO v26. EXO est un assistant vocal local premium, composé d'un moteur C++/Qt, de 15 microservices Python, et d'un framework cognitif Python complet (v1→v26). Tu dois respecter strictement l'architecture, les conventions, les invariants, les règles de gouvernance, les règles d'observabilité, les pipelines, les agents, les engines, les layers, et la structure du projet.
+Tu es chargé de maintenir, auditer, optimiser et garantir la cohérence complète du projet EXO v28. EXO est un assistant vocal local premium, composé d'un moteur C++/Qt, de 25 microservices Python, et d'un framework cognitif Python complet (v1→v26). Tu dois respecter strictement l'architecture, les conventions, les invariants, les règles de gouvernance, les règles d'observabilité, les pipelines, les agents, les engines, les layers, et la structure du projet.
 
 Aucune autonomie n’est autorisée. Aucune auto‑réécriture. Aucune modification non demandée. Tu dois agir uniquement sur demande explicite de l’utilisateur.
 
 ====================================================================
-1 — ARCHITECTURE GLOBALE EXO v26
+1 — ARCHITECTURE GLOBALE EXO v28
 ====================================================================
 
 EXO est composé de trois blocs :
@@ -22,13 +22,19 @@ Modules obligatoires :
 - AssistantManager (FSM)
 - VoicePipeline (DSP → VAD → WakeWord → STT)
 - TTSManager (DSP complet)
-- ClaudeAPI (SSE + 8 Function Calling)
+- ClaudeAPI (SSE + 29 Function Calling)
 - AIMemoryManager (3 couches + FAISS)
 - ConfigManager (hot‑reload)
+- HealthCheck (monitoring santé services WebSocket)
+- ServiceSupervisor (lancement / arrêt / supervision des microservices Python)
+- WebSocketClient (communication async avec les microservices)
 - LogManager, MetricsManager, TraceManager, ErrorManager, SecurityManager
 - LatencyMetrics (pipeline latency instrumentation)
 - PipelineTracer (analyse post-interaction, timeline, anomalies)
+- TestController (Stability Test Runner QML)
+- FloorPlanController (plan d'étage interactif : modèle, items, sérialisation)
 - WeatherManager
+- SimulationController (simulation spatiale avancée : propagation, entités, risques, causalité)
 
 Règles :
 - C++17, Qt 6.9.3
@@ -56,7 +62,17 @@ Services obligatoires :
 - planner/task_planner (8778)
 - executor/task_executor (8779)
 - verifier/task_verifier (8780)
+- tools/file_service (8781)
+- tools/calendar_service (8782)
+- tools/system_service (8783)
 - domotique/homegraph (8784)
+- domotique/domotic (8785)
+- domotique/camera (8786)
+- domotique/samsung (8787)
+- domotique/voltalis (8788)
+- domotique/echo (8789)
+- network/network_map (8790)
+- context/context_engine (8777)
 
 Règles :
 - WebSocket obligatoire
@@ -210,12 +226,13 @@ Règles :
 - aucun print()
 
 ====================================================================
-12 — TESTS (2335+ tests)
+12 — TESTS (2349 tests)
 ====================================================================
 
 Tests obligatoires :
 - 117 tests framework cognitif
-- 2218 tests existants
+- 2224 tests Python (services, intégration, performance)
+- 8 tests C++ (Qt Test Framework)
 - zéro régression
 - aucune dépendance externe non mockée
 

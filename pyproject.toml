@@ -1,7 +1,7 @@
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["python/orchestrator"]
-testpaths = ["tests/python", "tests/integration", "tests/performance"]
+testpaths = ["tests/python", "tests/integration", "tests/performance", "exo/tests"]
 markers = [
     "integration: tests nécessitant les serveurs en cours d'exécution",
     "performance: benchmarks de latence et débit",

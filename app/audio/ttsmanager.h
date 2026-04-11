@@ -239,6 +239,7 @@ class TTSManager : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool isSpeaking READ isSpeaking NOTIFY speakingChanged)
+    Q_PROPERTY(QStringList ttsVoices READ ttsVoices NOTIFY ttsVoicesChanged)
 
 public:
     explicit TTSManager(QObject *parent = nullptr);
@@ -267,6 +268,8 @@ public:
     Q_INVOKABLE void setDSPEnabled(bool on);
     Q_INVOKABLE void setCascadeEnabled(bool on);
     Q_INVOKABLE void setPythonUrl(const QString &url);
+    Q_INVOKABLE void fetchAvailableVoices();
+    QStringList ttsVoices() const { return m_ttsVoices; }
 
     // ── WebSocket bridge (for React GUI) ──
     void setWebSocket(QWebSocket *ws);
@@ -282,6 +285,7 @@ signals:
     void speakingChanged();
     void ttsError(const QString &msg);
     void statusChanged(const QString &status);
+    void ttsVoicesChanged();
 
     // internal → worker thread
     void _doRequest(const TTSRequest &req);
@@ -319,7 +323,7 @@ private:
     float m_basePitch  = 0.0f;
     float m_baseEnergy = 0.8f;
     QString m_baseStyle = "neutral";
-    QString m_voiceName = "Claribel Dervla";
+    QString m_voiceName = "exo_default";
     QString m_language  = "fr";
 
     // ── queue ──
@@ -347,13 +351,24 @@ private:
     bool m_firstChunkReceived = false;
     bool m_firstAudioPumped = false;  // v8.1: first audio written to sink
 
+    // ── anti-jitter (v27) ──
+    std::vector<char> m_pumpBuf;       // pre-allocated pump staging buffer
+    QElapsedTimer m_pumpClock;         // monotonic clock for timestamp correction
+    qint64 m_pumpEpochNs = 0;         // audio stream start timestamp (ns)
+    qint64 m_pumpBytesSent = 0;       // cumulative bytes pumped since epoch
+
     // ── WebSocket ──
     QWebSocket *m_ws = nullptr;
+    QStringList m_ttsVoices;
+    QString m_ttsServerUrl;
 
     // ── constants ──
     static constexpr int SAMPLE_RATE     = 24000; // CosyVoice2 native rate
     static constexpr int CHANNELS        = 1;
     static constexpr int BITS_PER_SAMPLE = 16;
+    static constexpr int BYTES_PER_SEC   = SAMPLE_RATE * CHANNELS * (BITS_PER_SAMPLE / 8); // 48000
+    static constexpr int PUMP_INTERVAL_MS = 5;    // v27: reduced from 10ms
+    static constexpr int PUMP_BUF_SIZE   = 4096;  // pre-allocated pump staging buffer
 };
 
 #endif // TTSMANAGER_H

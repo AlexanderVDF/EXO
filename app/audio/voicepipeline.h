@@ -202,7 +202,7 @@ private:
     bool m_connected = false;
     bool m_recording = false;
     QString m_language = "fr";
-    int m_beamSize = 3;
+    int m_beamSize = 1;
 };
 
 // ─────────────────────────────────────────────────────
@@ -230,6 +230,7 @@ class VoicePipeline : public QObject
     Q_PROPERTY(bool isSpeaking     READ isSpeaking     NOTIFY speakingChanged)
     Q_PROPERTY(QString lastCommand READ lastCommand     NOTIFY commandDetected)
     Q_PROPERTY(int    pipelineState READ pipelineStateInt NOTIFY stateChanged)
+    Q_PROPERTY(QStringList ttsVoices READ ttsVoices NOTIFY ttsVoicesChanged)
 
 public:
     explicit VoicePipeline(QObject *parent = nullptr);
@@ -272,6 +273,8 @@ public:
     Q_INVOKABLE void setTTSPitch(float p);
     Q_INVOKABLE void setTTSRate(float r);
     Q_INVOKABLE void setAudioBackend(const QString &backend);
+    Q_INVOKABLE void fetchTTSVoices();
+    QStringList ttsVoices() const;
 
     // ── AudioDeviceManager (QML exposure via AssistantManager) ──
     AudioDeviceManager* audioDeviceManager() const { return m_audioDeviceManager; }
@@ -295,6 +298,7 @@ signals:
     void statusChanged(const QString &status);
     void voiceError(const QString &error);
     void audioLevel(float rms, float vadScore);
+    void ttsVoicesChanged();
     void micPcmForVisualization(const QVariantList &samples);
     void ttsPcmForVisualization(const QVariantList &samples);
     void audioUnavailable();
@@ -328,6 +332,7 @@ private:
     int levenshteinDistance(const QString &a, const QString &b);
     void finishUtterance();
     void dispatchTranscript(const QString &text);
+    bool handleFastPath(const QString &text);
     void setState(PipelineState s);
     void broadcastState();
     void broadcastAudioLevel(float rms, float vadScore);

@@ -1,6 +1,6 @@
 # Index des modules EXO
 
-> Auto-généré par `auto_maintain.py` — 2026-04-05
+> Auto-généré par `auto_maintain.py` — 2026-04-11
 
 ## Modules Python
 
@@ -17,9 +17,10 @@
 | orchestrator | `python/orchestrator` | 149 | `python/orchestrator/exo_server.py` |
 | planner | `python/planner` | 2 | `python/planner/task_planner_server.py` |
 | shared | `python/shared` | 12 | `` |
-| stt | `python/stt` | 3 | `python/stt/stt_server.py` |
+| stt | `python/stt` | 4 | `python/stt/stt_server.py` |
+| test | `python/test` | 1 | `` |
 | tools | `python/tools` | 5 | `python/tools/tools_server.py` |
-| tts | `python/tts` | 2 | `python/tts/tts_server.py` |
+| tts | `python/tts` | 3 | `python/tts/tts_server.py` |
 | vad | `python/vad` | 2 | `python/vad/vad_server.py` |
 | verifier | `python/verifier` | 2 | `python/verifier/task_verifier_server.py` |
 | wakeword | `python/wakeword` | 2 | `python/wakeword/wakeword_server.py` |
@@ -35,6 +36,7 @@
 | `AudioInputRtAudio` | `app/audio/AudioInputRtAudio.h` | audio |
 | `TTSBackend` | `app/audio/TTSBackend.h` | audio |
 | `TTSBackendQt` | `app/audio/TTSBackendQt.h` | audio |
+| `name` | `app/audio/TTSBackendXTTS.h` | audio |
 | `TTSBackendXTTS` | `app/audio/TTSBackendXTTS.h` | audio |
 | `TTSEqualizer` | `app/audio/TTSManager.h` | audio |
 | `TTSCompressor` | `app/audio/TTSManager.h` | audio |
@@ -53,21 +55,45 @@
 | `AssistantManager` | `app/core/AssistantManager.h` | core |
 | `ConfigManager` | `app/core/ConfigManager.h` | core |
 | `ContextCache` | `app/core/ContextCache.h` | core |
+| `ErrorManager` | `app/core/ErrorManager.h` | core |
 | `HealthCheck` | `app/core/HealthCheck.h` | core |
 | `LatencyMetrics` | `app/core/LatencyMetrics.h` | core |
 | `LogManager` | `app/core/LogManager.h` | core |
+| `MetricsManager` | `app/core/MetricsManager.h` | core |
 | `PipelineModule` | `app/core/PipelineEvent.h` | core |
 | `ModuleState` | `app/core/PipelineEvent.h` | core |
 | `PipelineEventBus` | `app/core/PipelineEvent.h` | core |
 | `AnomalyType` | `app/core/PipelineTracer.h` | core |
 | `PipelineTracer` | `app/core/PipelineTracer.h` | core |
 | `EventType` | `app/core/PipelineTypes.h` | core |
+| `SecurityManager` | `app/core/SecurityManager.h` | core |
 | `ServiceManager` | `app/core/ServiceManager.h` | core |
 | `ServiceRegistry` | `app/core/ServiceRegistry.h` | core |
 | `ServiceState` | `app/core/ServiceState.h` | core |
 | `ReadinessPhase` | `app/core/ServiceState.h` | core |
 | `ServiceSupervisor` | `app/core/ServiceSupervisor.h` | core |
+| `TraceManager` | `app/core/TraceManager.h` | core |
 | `WebSocketClient` | `app/core/WebSocketClient.h` | core |
+| `FloorPlanController` | `app/floorplan/FloorPlanController.h` | floorplan |
+| `ItemType` | `app/floorplan/FloorPlanEnums.h` | floorplan |
+| `stored` | `app/floorplan/FloorPlanItem.h` | floorplan |
+| `FloorPlanItem` | `app/floorplan/FloorPlanItem.h` | floorplan |
+| `FloorPlanModel` | `app/floorplan/FloorPlanModel.h` | floorplan |
+| `FloorPlanSerializer` | `app/floorplan/FloorPlanSerializer.h` | floorplan |
 | `AIMemoryManager` | `app/llm/AIMemoryManager.h` | llm |
 | `ClaudeAPI` | `app/llm/ClaudeAPI.h` | llm |
+| `SimulationController` | `app/simulation/SimulationController.h` | simulation |
+| `SimulationEngine` | `app/simulation/SimulationEngine.h` | simulation |
+| `SimulationEntity` | `app/simulation/SimulationEntity.h` | simulation |
+| `ScenarioType` | `app/simulation/SimulationEnums.h` | simulation |
+| `EntityType` | `app/simulation/SimulationEnums.h` | simulation |
+| `PropagationType` | `app/simulation/SimulationEnums.h` | simulation |
+| `EntityState` | `app/simulation/SimulationEnums.h` | simulation |
+| `SimState` | `app/simulation/SimulationEnums.h` | simulation |
+| `Severity` | `app/simulation/SimulationEnums.h` | simulation |
+| `CausalNodeType` | `app/simulation/SimulationEnums.h` | simulation |
+| `SimulationPropagation` | `app/simulation/SimulationPropagation.h` | simulation |
+| `SimulationResult` | `app/simulation/SimulationResult.h` | simulation |
+| `SimulationScenario` | `app/simulation/SimulationScenario.h` | simulation |
+| `TestController` | `app/test/TestController.h` | test |
 | `WeatherManager` | `app/utils/WeatherManager.h` | utils |

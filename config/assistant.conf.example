@@ -29,7 +29,9 @@ file_enabled=false
 
 [STT]
 server_url=ws://localhost:8766
-model=large-v3
+backend=whispercpp
+model=small
+beam_size=1
 language=fr
 
 [TTS]
@@ -42,9 +44,44 @@ rate=1.0
 style=neutral
 sample_rate=24000
 
+[VAD]
+backend=hybrid
+server_url=ws://localhost:8768
+threshold=0.45
+
+[WakeWord]
+neural_enabled=false
+server_url=ws://localhost:8770
+
+[Memory]
+semantic_enabled=true
+semantic_server_url=ws://localhost:8771
+
+[NLU]
+local_enabled=false
+server_url=ws://localhost:8772
+
+[Audio]
+; Backend audio capture: qt (Qt Multimedia) ou rtaudio (RtAudio/WASAPI)
+backend=qt
+agc_enabled=true
+noise_gate=0.001
+
+[DSP]
+noise_reduction_enabled=true
+noise_reduction_strength=0.7
+
+[Tools]
+websearch_url=ws://localhost:8773
+news_url=ws://localhost:8774
+knowledge_url=ws://localhost:8775
+tools_url=ws://localhost:8776
+context_url=ws://localhost:8777
+planner_url=ws://localhost:8778
+
 [General]
 app_name=EXO Assistant
-version=4.0.0
+version=28.0.0
 
 # Base de données
 DATABASE_PATH=/home/pi/.raspberry-assistant/memory.db

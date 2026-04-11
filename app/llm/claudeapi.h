@@ -166,6 +166,8 @@ private:
     void setError(const QString &error);
     void cleanup();
     void setStreaming(bool on);
+    void rebuildSkeleton() const;
+    static QJsonArray filterToolsForMessage(const QString &message, const QJsonArray &allTools);
 
     // ── Réseau ───────────────────────────────────────
     QNetworkAccessManager *m_networkManager = nullptr;
@@ -217,6 +219,12 @@ private:
     // ── Stats ────────────────────────────────────────
     int m_totalRequests = 0;
     int m_totalErrors   = 0;
+
+    // ── v26.2 Latency: pre-built skeleton & cached request ──
+    mutable QJsonObject     m_payloadSkeleton;
+    mutable bool            m_skeletonDirty  = true;
+    mutable QNetworkRequest m_cachedRequest;
+    mutable bool            m_requestDirty   = true;
 
     // ── Constantes ───────────────────────────────────
     static constexpr const char *API_URL       = "https://api.anthropic.com/v1/messages";

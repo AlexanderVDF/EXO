@@ -105,6 +105,6 @@ private:
 
     QMap<QString, ServiceState> m_services;
     QTimer m_timer;
-    int m_timeoutMs = 5000;
+    int m_timeoutMs = 10000;
     int m_degradedThresholdMs = 2000;
 };

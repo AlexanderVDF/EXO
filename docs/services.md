@@ -1,6 +1,6 @@
 # Services EXO
 
-> Auto-généré par `auto_maintain.py` — 2026-04-05
+> Auto-généré par `auto_maintain.py` — 2026-04-11
 
 ## Microservices
 
@@ -16,7 +16,7 @@
 
 ## Tests disponibles
 
-### cpp/ (7 fichier(s))
+### cpp/ (8 fichier(s))
 
 - `tests/cpp/test_audiopreprocessor.cpp`
 - `tests/cpp/test_circularaudiobuffer.cpp`
@@ -24,6 +24,7 @@
 - `tests/cpp/test_healthcheck.cpp`
 - `tests/cpp/test_pipelineevent.cpp`
 - `tests/cpp/test_pipelinetracer.cpp`
+- `tests/cpp/test_simulation.cpp`
 - `tests/cpp/test_tts_dsp.cpp`
 
 ### integration/ (1 fichier(s))
@@ -88,4 +89,4 @@
 - `tests/python/test_vad_server.py`
 - `tests/python/test_websearch_server.py`
 
-**Total : 60 fichier(s) de test**
+**Total : 61 fichier(s) de test**

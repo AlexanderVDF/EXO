@@ -6,10 +6,11 @@
 class QWebSocket;
 
 // ─────────────────────────────────────────────────────
-//  TTSBackendXTTS — XTTS v2 Python backend (CUDA)
+//  TTSBackendXTTS — CosyVoice2-0.5B Python backend (CUDA)
 //
 //  Blocking WebSocket synthesis via processEvents.
 //  Protocol: JSON control + binary PCM16 chunks.
+//  (class name kept as TTSBackendXTTS for ABI compat)
 // ─────────────────────────────────────────────────────
 class TTSBackendXTTS : public TTSBackend
 {
@@ -18,7 +19,7 @@ public:
     explicit TTSBackendXTTS(QObject *parent = nullptr);
     ~TTSBackendXTTS() override;
 
-    QString name() const override { return QStringLiteral("XTTS"); }
+    QString name() const override { return QStringLiteral("CosyVoice2"); }
     bool isAvailable() const override;
     bool synthesize(const TTSRequest &req) override;
     void cancel() override;
@@ -34,7 +35,7 @@ private:
 
     QWebSocket *m_ws = nullptr;
     QString m_url;
-    QString m_voice = "Claribel Dervla";
+    QString m_voice = "exo_default";
     QString m_lang  = "fr";
     bool m_connected = false;
     bool m_readyReceived = false;

@@ -1,2 +1,2 @@
-"""EXO — Framework cognitif hiérarchique v1→v25."""
-__version__ = "25.0.0"
+"""EXO — Framework cognitif hiérarchique v1→v28."""
+__version__ = "28.0.0"

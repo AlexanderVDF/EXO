@@ -17,11 +17,19 @@ Rectangle {
     property string pipelineState: "Idle"
 
     readonly property var pageTitles: ({
-        "chat":     "Chat",
-        "settings": "Paramètres",
-        "history":  "Historique",
-        "logs":     "Logs système",
-        "pipeline": "Pipeline Monitor"
+        "chat":           "Chat",
+        "settings":       "Paramètres",
+        "history":        "Historique",
+        "logs":           "Logs système",
+        "pipeline":       "Pipeline Monitor",
+        "maison":         "Maison",
+        "reseau":         "Réseau",
+        "cognitive":      "Cognitive Timeline",
+        "heatmap":        "Engine Heatmap",
+        "voicepipeline":  "Voice Pipeline",
+        "memory":         "Memory Inspector",
+        "governance":     "Gouvernance",
+        "observability":  "Observabilité"
     })
 
     // Bordure inférieure
@@ -69,6 +77,11 @@ Rectangle {
         }
 
         Item { Layout.fillWidth: true }
+
+        // Mode switch Expert/Simple
+        ModeSwitch {
+            id: modeSwitch
+        }
 
         // Pipeline state pill
         ExoPipelineStatus {

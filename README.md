@@ -1,12 +1,12 @@
 # 🤖 EXO — Assistant Vocal Local Premium
 
-**Version 26.0** | Avril 2026 | **Source de vérité : [`PROMPT_MAITRE.md`](PROMPT_MAITRE.md)**
+**Version 28.0** | Avril 2026
 
 ![Qt 6.9.3](https://img.shields.io/badge/Qt-6.9.3-green?logo=qt)
 ![C++17](https://img.shields.io/badge/C++-17-blue?logo=cplusplus)
 ![Python 3.13](https://img.shields.io/badge/Python-3.13-yellow?logo=python)
-![Whisper.cpp](https://img.shields.io/badge/Whisper.cpp-Vulkan%20GPU-orange)
-![XTTS v2](https://img.shields.io/badge/XTTS%20v2-TTS%20Neural-green)
+![Whisper.cpp](https://img.shields.io/badge/Whisper.cpp-small%20Vulkan%20int8-orange)
+![CosyVoice2](https://img.shields.io/badge/CosyVoice2--0.5B-TTS%20Neural-green)
 ![Silero VAD](https://img.shields.io/badge/Silero-VAD%20Neural-purple)
 ![FAISS](https://img.shields.io/badge/FAISS-Mémoire%20Vectorielle-red)
 ![OpenWakeWord](https://img.shields.io/badge/OpenWakeWord-Wake%20Word-orange)
@@ -18,166 +18,275 @@
 
 ## Présentation
 
-EXO est un assistant vocal intelligent 100% local (sauf LLM Claude API), conçu pour tourner en temps réel sur un PC desktop ou un Raspberry Pi. Il combine un moteur C++/Qt haute performance avec 7 microservices Python spécialisés, communiquant par WebSocket.
+EXO est un assistant vocal intelligent 100 % local (sauf LLM Claude API), conçu pour tourner en temps réel sur un PC desktop. Il combine un moteur C++/Qt haute performance avec **25 microservices Python** spécialisés, communiquant par WebSocket.
 
 **Pourquoi EXO ?**
-- 🎙 **Voix naturelle** — XTTS v2 (58 voix, multilingue) + Whisper.cpp (Vulkan GPU, RTF 0.08–0.23)
+- 🎙 **Voix naturelle** — CosyVoice2‑0.5B (CUDA, streaming 24 kHz) + Whisper.cpp (Vulkan GPU, small, beam=1, int8)
 - 🧠 **Mémoire persistante** — 3 couches (court/long/sémantique) + FAISS vectoriel
-- 🏠 **Domotique** — Intégration Home Assistant (13 actions LLM)
-- 🎨 **Interface premium** — QML style VS Code + Fluent Design + React web
-- ⚡ **Ultra-Low Latency (v8.1)** — ContextCache, LatencyMetrics, warmup/keepalive ClaudeAPI
-- 🛡️ **Observability & Résilience (v9.0)** — LogManager, MetricsManager, TraceManager, ErrorManager, ConfigManager, SecurityManager, CircuitBreaker, BaseService
+- 🏠 **Domotique complète** — Home Assistant, Samsung SmartThings, Voltalis, Echo, caméras
+- 🎨 **Interface premium** — QML 10 pages + 56 composants style VS Code / Fluent Design
+- ⚡ **Ultra-Low Latency** — ContextCache, LatencyMetrics, warmup/keepalive ClaudeAPI, STT greedy decoding
+- 🛡️ **Observabilité & Résilience** — LogManager, MetricsManager, TraceManager, ErrorManager, CircuitBreaker, Stability Test Runner + autoheal
 
 ---
 
-## Architecture
+## Architecture générale
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        EXO Assistant v9.0                          │
-├──────────────┬──────────────────────────────────────────────────────┤
-│              │                                                      │
-│  Interface   │   ┌─────────────┐    ┌──────────────────────────┐   │
-│  QML / React │   │ Audio Input │───→│ VoicePipeline (C++ FSM) │   │
-│              │   │  (RtAudio   │    │  DSP → VAD → WakeWord   │   │
-│              │   │   WASAPI)   │    │       → STT stream      │   │
-│              │   └─────────────┘    └──────────┬───────────────┘   │
-│              │                                  │                   │
-│              │                    ┌─────────────▼──────────────┐   │
-│              │                    │     ClaudeAPI (SSE)        │   │
-│              │                    │  8 Function Calling + NLU  │   │
-│              │                    └─────────────┬──────────────┘   │
-│              │                                  │                   │
-│              │                    ┌─────────────▼──────────────┐   │
-│              │                    │  TTSManager (C++ DSP)      │   │
-│              │                    │  EQ → Compressor → Norm    │   │
-│              │                    │  → Fade → Anti-clip → Out  │   │
-│              │                    └────────────────────────────┘   │
-├──────────────┴──────────────────────────────────────────────────────┤
-│                    7 Microservices Python (WebSocket)               │
-│  ┌──────┐ ┌──────┐ ┌─────┐ ┌────────┐ ┌───────┐ ┌─────┐ ┌─────┐ │
-│  │ Orch │ │ STT  │ │ TTS │ │  VAD   │ │ Wake  │ │ Mem │ │ NLU │ │
-│  │ 8765 │ │ 8766 │ │ 8767│ │  8768  │ │ 8770  │ │ 8771│ │ 8772│ │
-│  └──────┘ └──────┘ └─────┘ └────────┘ └───────┘ └─────┘ └─────┘ │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          EXO Assistant v28.0                            │
+├──────────────┬───────────────────────────────────────────────────────────┤
+│              │                                                           │
+│  Interface   │   ┌─────────────┐    ┌────────────────────────────┐      │
+│  QML (10 p.) │   │ Audio Input │───→│ VoicePipeline (C++ FSM)   │      │
+│  56 compos.  │   │  (RtAudio   │    │  DSP → VAD → WakeWord     │      │
+│              │   │   WASAPI)   │    │       → STT stream        │      │
+│              │   └─────────────┘    └───────────┬────────────────┘      │
+│              │                                   │                      │
+│              │                     ┌─────────────▼───────────────┐      │
+│              │                     │     ClaudeAPI (SSE)         │      │
+│              │                     │  Function Calling + NLU     │      │
+│              │                     └─────────────┬───────────────┘      │
+│              │                                   │                      │
+│              │                     ┌─────────────▼───────────────┐      │
+│              │                     │  TTSManager (C++ DSP)       │      │
+│              │                     │  EQ → Compressor → Norm     │      │
+│              │                     │  → Fade → Anti-clip → Out   │      │
+│              │                     └─────────────────────────────┘      │
+├──────────────┴───────────────────────────────────────────────────────────┤
+│                    25 Microservices Python (WebSocket)                    │
+│                                                                          │
+│  ┌── Core ──────────────────────────────────────────────────────────┐    │
+│  │ Orch:8765  STT:8766  TTS:8767  VAD:8768  Wake:8770  Mem:8771   │    │
+│  │ NLU:8772                                                        │    │
+│  ├── Intelligence ─────────────────────────────────────────────────┤    │
+│  │ WebSearch:8773  News:8774  Knowledge:8775  Tools:8776           │    │
+│  │ Context:8777  Planner:8778  Executor:8779  Verifier:8780        │    │
+│  ├── Outils ───────────────────────────────────────────────────────┤    │
+│  │ FileService:8781  Calendar:8782  System:8783                    │    │
+│  ├── Domotique ────────────────────────────────────────────────────┤    │
+│  │ HomeGraph:8784  Domotic:8785  Camera:8786  Samsung:8787         │    │
+│  │ Voltalis:8788  Echo:8789                                        │    │
+│  ├── Réseau ───────────────────────────────────────────────────────┤    │
+│  │ NetworkMap:8790                                                  │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Les 7 microservices
+---
+
+## Pipeline vocal
+
+```
+Micro → RtAudio WASAPI → DSP (noisereduce) → VAD (Silero :8768)
+  → WakeWord (OpenWakeWord :8770) → STT (Whisper.cpp small Vulkan :8766)
+  → NLU (:8772) → Claude API (SSE + Function Calling)
+  → TTS (CosyVoice2‑0.5B CUDA :8767) → TTSManager (C++ DSP) → Speaker
+```
+
+| Étape | Technologie | Latence cible |
+|-------|-------------|---------------|
+| VAD | Silero neural (hybrid) | < 50 ms |
+| WakeWord | OpenWakeWord | < 100 ms |
+| STT | Whisper.cpp small, Vulkan, beam=1, int8 | < 2 s |
+| LLM | Claude Sonnet SSE | first token < 500 ms |
+| TTS | CosyVoice2‑0.5B, CUDA, streaming | first chunk < 1.5 s |
+| DSP | EQ → Compressor → Normalizer → Fade | < 5 ms |
+
+### État actuel des performances (v28)
+
+Les latences ci‑dessus représentent les objectifs cibles.
+Les mesures actuelles observées sur la configuration de développement sont :
+
+- STT Whisper.cpp small Vulkan : ~18 s pour 3.2 s d'audio (optimisation en cours)
+- TTS CosyVoice2‑0.5B : first chunk ~3 s, total ~10 s (optimisation en cours)
+
+Ces valeurs seront progressivement alignées avec les objectifs (< 2 s STT, < 1.5 s TTS).
+
+---
+
+## Services Python
+
+### Core (7 services)
 
 | Service | Port | Technologie | Rôle |
 |---------|------|-------------|------|
-| **Orchestrator** | 8765 | Python 3.13 | GUI WebSocket + bridge Home Assistant |
-| **STT** | 8766 | Whisper.cpp (Vulkan) | Reconnaissance vocale GPU, modèle medium |
-| **TTS** | 8767 | XTTS v2 (CUDA) | Synthèse vocale neurale, 24 kHz PCM16 |
+| **Orchestrator** | 8765 | Python 3.13 (.venv) | GUI WebSocket, bridge entre tous les services |
+| **STT** | 8766 | Whisper.cpp (Vulkan, small, beam=1, int8) | Reconnaissance vocale GPU temps réel |
+| **TTS** | 8767 | CosyVoice2‑0.5B (CUDA) | Synthèse vocale neurale, streaming PCM16 24 kHz |
 | **VAD** | 8768 | Silero VAD | Détection d'activité vocale neurale |
-| **WakeWord** | 8770 | OpenWakeWord | Détection du mot-clé "EXO" |
+| **WakeWord** | 8770 | OpenWakeWord | Détection du mot-clé « EXO » |
 | **Memory** | 8771 | FAISS + SentenceTransformers | Mémoire sémantique vectorielle |
-| **NLU** | 8772 | Transformers | Classification d'intention locale |
+| **NLU** | 8772 | Transformers / regex | Classification d'intention locale |
 
-### Moteur C++ / Qt
+### Intelligence (8 services)
 
-| Module | Fichier | Rôle |
+| Service | Port | Rôle |
+|---------|------|------|
+| **WebSearch** | 8773 | Recherche web |
+| **News** | 8774 | Actualités |
+| **Knowledge** | 8775 | Base de connaissances |
+| **Tools** | 8776 | Routeur d'outils |
+| **Context** | 8777 | Moteur de contexte conversationnel |
+| **Planner** | 8778 | Planification de tâches (HTN) |
+| **Executor** | 8779 | Exécution de tâches planifiées |
+| **Verifier** | 8780 | Vérification post-exécution |
+
+### Outils (3 services)
+
+| Service | Port | Rôle |
+|---------|------|------|
+| **FileService** | 8781 | Opérations fichiers |
+| **Calendar** | 8782 | Agenda / calendrier |
+| **System** | 8783 | Infos système |
+
+### Domotique (6 services)
+
+| Service | Port | Rôle |
+|---------|------|------|
+| **HomeGraph** | 8784 | Graphe des appareils connectés |
+| **Domotic** | 8785 | Actions domotiques (Home Assistant) |
+| **Camera** | 8786 | Flux caméras IP |
+| **Samsung** | 8787 | Samsung SmartThings |
+| **Voltalis** | 8788 | Gestion énergie Voltalis |
+| **Echo** | 8789 | Amazon Echo / Alexa |
+
+### Réseau (1 service)
+
+| Service | Port | Rôle |
+|---------|------|------|
+| **NetworkMap** | 8790 | Cartographie réseau (ARP, mDNS, SSDP, ping) |
+
+---
+
+## Moteur C++ / Qt
+
+| Module | Dossier | Rôle |
 |--------|---------|------|
 | AssistantManager | `app/core/` | Orchestrateur global, FSM |
 | VoicePipeline | `app/audio/` | Pipeline audio : capture → DSP → VAD → STT |
 | TTSManager | `app/audio/` | Lecture TTS, chaîne DSP (EQ, compressor, normalizer, fade) |
-| ClaudeAPI | `app/llm/` | LLM SSE streaming + 8 Function Calling |
+| ClaudeAPI | `app/llm/` | LLM SSE streaming + Function Calling |
 | AIMemoryManager | `app/llm/` | Mémoire 3 couches + FAISS |
-| WeatherManager | `app/utils/` | Météo OpenWeatherMap + géolocalisation |
 | ConfigManager | `app/core/` | Configuration 2 couches (env > global) |
+| HealthCheck | `app/core/` | Monitoring santé des services WebSocket |
+| ServiceManager | `app/core/` | Lancement / arrêt des microservices Python |
+| PipelineTracer | `app/core/` | Tracing du pipeline vocal (timestamps) |
+| LatencyMetrics | `app/core/` | 9 timestamps, 6 métriques dérivées |
+| SecurityManager | `app/core/` | Permissions, masquage API keys, audit |
+| TestController | `app/test/` | Contrôleur C++ pour le Stability Test Runner QML |
+| FloorPlanController | `app/floorplan/` | Modèle + contrôleur plan d'étage interactif |
+| WeatherManager | `app/utils/` | Météo OpenWeatherMap |
+| SimulationController | `app/simulation/` | Simulation spatiale avancée (propagation, entités, risques, causalité) |
 
-### Interface
+---
 
-- **QML** — 18 composants style VS Code + Fluent Design (Sidebar, Transcript, Response, Visualizer GPU ShaderEffect GLSL 60 FPS, Settings, History, etc.)
+## Modules QML
+
+### Pages principales (10) + Panels avancés
+
+| Page | Fichier | Rôle |
+|------|---------|------|
+| Accueil | `HomePage.qml` | Dashboard principal, orbe visualizer |
+| Maison | `MaisonPage.qml` | Vue domotique / appareils |
+| Plan | `FloorPlanPage.qml` | Plan d'étage interactif |
+| Réseau | `ReseauPage.qml` | Cartographie réseau |
+| Pipeline | `PipelinePage.qml` | Visualisation pipeline vocal temps réel |
+| Scénarios | `ScenariosPage.qml` | Scénarios domotiques |
+| Historique | `HistoryPage.qml` | Historique des conversations |
+| Logs | `LogsPage.qml` | Console de logs temps réel |
+| Paramètres | `SettingsPage.qml` | Configuration de l'assistant |
+| Simulation | `SimulationPage.qml` | Simulation spatiale avancée |
+
+### Panels avancés
+
+- Chat
+- Cognitif
+- Heatmap
+- Voice Flow
+- Mémoire
+- Gouvernance
+- Observabilité
+- Stabilité
+- Simulation spatiale
+
+### Composants clés (56)
+
+| Composant | Rôle |
+|-----------|------|
+| `ExoOrbVisualizer` | Visualizer GPU ShaderEffect GLSL 60 FPS |
+| `VoicePipelineView` | Vue Voice Flow — état FSM + latences temps réel |
+| `PipelineView` | Vue pipeline détaillée (étapes, timestamps) |
+| `ObservabilityDashboard` | Tableau de bord métriques / tracing / santé |
+| `GovernancePanel` | Panneau gouvernance (permissions, audit) |
+| `StabilityPanel` | Panneau Stability Test Runner (résultats, autoheal) |
+| `ExoServiceStatus` | Indicateur santé par service |
+| `ExoPipelineStatus` | Status pipeline vocal global |
+| `ExoTranscriptView` | Transcription STT temps réel |
+| `ExoResponseView` | Réponse LLM streaming |
+| `MemoryInspector` | Inspecteur mémoire sémantique |
+| `CognitiveTimeline` | Timeline du framework cognitif |
+| `EngineHeatmap` | Heatmap des moteurs cognitifs |
+| `SimulationScenarioPanel` | Contrôle scénarios simulation spatiale |
+| `SimulationOverlay` | Overlay multi-couches propagation |
+| `SimulationCausalityGraph` | Graphe de causalité interactif |
+| `SimulationRiskPanel` | Panneau risques simulation |
+| `SimulationTimeline` | Timeline 5 couches simulation |
+| `SimulationMinimap` | Minimap simulation spatiale |
+| `AudioWaveformView` | Forme d'onde audio en direct |
+| `ExoContextPanel` | Panneau de contexte conversationnel |
+
+---
+
+## Stability Test Runner
+
+Le **Stability Test Runner** (`python/test/exo_test_runner.py`) est un outil de diagnostic qui teste la santé de tous les microservices en boucle.
+
+### Fonctionnalités
+
+- Connexion WebSocket directe à chaque service
+- Ping/pong applicatif avec mesure de latence
+- Détection des timeouts, déconnexions et flapping
+- Boucle de tests configurable (nombre de passes, timeout)
+- Mode **autoheal** : redémarrage automatique des services DOWN
+
+### Utilisation
+
+```powershell
+# Test simple (10 boucles)
+python python/test/exo_test_runner.py --loops 10
+
+# Avec autoheal (détecte les services DOWN et les relance)
+python python/test/exo_test_runner.py --autoheal --loops 10 --timeout 5000
+```
+
+### Services testés
+
+Services testés automatiquement :
+STT, TTS, VAD, WakeWord, Memory, NLU, Context, Planner, NetworkMap, Domotic, HomeGraph (11 services).
+Les services Executor et Verifier ne sont pas testés automatiquement (choix volontaire : ils ne sont activés que lors d'une exécution de plan).
+
+### Intégration QML
+
+Le panneau **StabilityPanel** dans l'interface QML affiche les résultats en temps réel via le `TestController` C++.
 
 ---
 
 ## Framework Cognitif (`exo/`)
 
-Package Python standalone implémentant l'architecture cognitive complète v1→v25 : modulaire, testable, déterministe, explicable, gouverné.
-
-```
-                    ┌───────────────────────────────────────┐
-                    │           Agents Macro (5)            │
-                    │  Cognition · Simulation · Planning    │
-                    │     Observability · Governance        │
-                    └───────────────┬───────────────────────┘
-                                    │ orchestrent
-                    ┌───────────────▼───────────────────────┐
-                    │          Pipelines (3)                 │
-                    │  Cognitive (8 couches chaînées)        │
-                    │  Simulation (scénarios → arbitrage)    │
-                    │  Planning (HTN → contraintes → optim)  │
-                    └───────────────┬───────────────────────┘
-                                    │ composés de
-          ┌─────────────────────────▼──────────────────────────┐
-          │                   Layers (8)                        │
-          │  Perception → Extraction → Symbolic → Inference    │
-          │  → Planning → Simulation → Decision → Supervision  │
-          └─────────────────────────┬──────────────────────────┘
-                                    │ utilisent
-          ┌─────────────────────────▼──────────────────────────┐
-          │                  Engines (8)                        │
-          │  Rule · Causal · Inference · HTN · Simulation      │
-          │  Optimization · Observability · Governance         │
-          └─────────────────────────┬──────────────────────────┘
-                                    │ s'appuient sur
-          ┌─────────────────────────▼──────────────────────────┐
-          │                   Core (4)                          │
-          │  CognitiveKernel · CognitiveContext                │
-          │  CognitiveState · CognitiveFlow                    │
-          └────────────────────────────────────────────────────┘
-
-  Transversal :  Governance (permissions, validation, compliance, audit)
-                 Observability (telemetry, tracing, metrics, dashboard)
-                 Agents Micro (8 tâches spécialisées)
-```
+Package Python standalone implémentant l'architecture cognitive complète : modulaire, testable, déterministe, explicable, gouverné.
 
 | Composant | Fichiers | Rôle |
 |-----------|----------|------|
-| Core | 4 | Classes abstraites, data classes, graphe de connaissance |
-| Engines | 8 | Moteurs cognitifs concrets (règles, causal, inférence, HTN, simulation…) |
-| Layers | 8 | Couches de traitement chaînables (perception → supervision) |
-| Pipelines | 3 | Orchestration de couches et moteurs |
-| Agents macro | 5 | Orchestrateurs haut niveau (cognition, simulation, planning, obs, gov) |
-| Agents micro | 8 | Tâches spécialisées (extraction, vérification, analyse…) |
-| Governance | 4 | Permissions, validation 5 niveaux, compliance 4 domaines, audit |
+| Core | 4 | CognitiveKernel, Context, State, Flow |
+| Engines | 8 | Règles, causal, inférence, HTN, simulation, optimisation, observabilité, gouvernance |
+| Layers | 8 | Perception → Extraction → Symbolic → Inference → Planning → Simulation → Decision → Supervision |
+| Pipelines | 3 | Cognitive, Simulation, Planning |
+| Agents macro | 5 | Cognition, Simulation, Planning, Observability, Governance |
+| Agents micro | 8 | Extraction, vérification, analyse causale, HTN, simulation locale, risque, logique, métriques |
+| Governance | 4 | Permissions, validation, compliance, audit |
 | Observability | 4 | Télémétrie, tracing, métriques, dashboard |
 | Tests | 5 | 117 tests couvrant tous les modules |
-
----
-
-## Fonctionnalités
-
-| Fonctionnalité | Détail |
-|----------------|--------|
-| 🎙 Reconnaissance vocale | Whisper.cpp Vulkan GPU — RTF 0.08–0.23 |
-| 🗣 Synthèse vocale | XTTS v2 — 58 voix, multilingue, streaming PCM16 |
-| 🧠 LLM | Claude API SSE + 8 Function Calling |
-| ⚡ Ultra-Low Latency | ContextCache (TTL), LatencyMetrics (9 timestamps), warmup/keepalive |
-| 💾 Mémoire | 3 couches (court/long/sémantique) + FAISS vectoriel |
-| 🔊 VAD | Silero neural + mode hybride (builtin/silero/hybrid) |
-| 👂 Wake word | OpenWakeWord neural + détection transcript |
-| 🎛 DSP | Réduction de bruit spectrale + chaîne audio complète |
-| 🏠 Domotique | Home Assistant — 13 actions LLM (lumières, médias, clima) |
-| 🌤 Météo | OpenWeatherMap + géolocalisation |
-| 🧪 Tests | 2335 tests automatisés (pytest) |
-
----
-
-## Prérequis
-
-| Composant | Version | Usage |
-|-----------|---------|-------|
-| Windows 11 | — | Plateforme principale |
-| Qt | 6.9.3 MSVC 2022 x64 | Moteur C++ / QML |
-| CMake | 3.21+ | Build system |
-| Visual Studio Build Tools | 2022 | Compilateur MSVC |
-| Python | 3.11+ | Microservices IA (venv `.venv_stt_tts`) |
-| Python | 3.13+ | Orchestrator (venv `.venv`) |
-| GPU | Vulkan compatible | STT (Whisper.cpp) + TTS (CUDA) |
-
-> **Modèles & données** — Stockés sur `D:\EXO\` (modèles Whisper, XTTS, FAISS, wakeword, cache HuggingFace).
 
 ---
 
@@ -186,10 +295,7 @@ Package Python standalone implémentant l'architecture cognitive complète v1→
 ### 1. C++ — Compilation
 
 ```powershell
-# Configurer
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:\Qt\6.9.3\msvc2022_64"
-
-# Compiler (windeployqt s'exécute automatiquement en POST_BUILD)
 cmake --build build --config Release
 ```
 
@@ -200,7 +306,7 @@ python -m venv .venv_stt_tts
 .\.venv_stt_tts\Scripts\Activate.ps1
 pip install websockets numpy soundfile "transformers>=4.40,<4.50"
 pip install "torch==2.4.1" "torchaudio==2.4.1" --index-url https://download.pytorch.org/whl/cu121
-pip install TTS
+pip install cosyvoice
 pip install silero-vad onnxruntime noisereduce openwakeword faiss-cpu sentence-transformers
 ```
 
@@ -221,9 +327,21 @@ HA_URL=http://localhost:8123
 HA_TOKEN=votre-token-longue-duree
 ```
 
+### 5. Modèles & données
+
+Stockés sur `D:\EXO\` :
+
+| Dossier | Contenu |
+|---------|---------|
+| `D:\EXO\models\whisper` | Modèles Whisper.cpp (ggml-small.bin) |
+| `D:\EXO\models\cosyvoice` | Modèles CosyVoice2‑0.5B |
+| `D:\EXO\models\wakeword` | Modèles OpenWakeWord |
+| `D:\EXO\faiss\semantic_memory` | Index FAISS |
+| `D:\EXO\cache\huggingface` | Cache HuggingFace |
+
 ---
 
-## Lancement
+## Démarrage
 
 ### Tout-en-un (recommandé)
 
@@ -231,30 +349,30 @@ HA_TOKEN=votre-token-longue-duree
 .\launch_exo.ps1
 ```
 
-Ou via VS Code : `Ctrl+Shift+P` → `Tasks: Run Task` → `launch_all` (démarre les 7 services + GUI en parallèle).
+Ou via VS Code : `Ctrl+Shift+P` → `Tasks: Run Task` → `launch_all`.
 
-### Lancement manuel
+### Lancement manuel (services core)
 
 ```powershell
-# Terminal 1 — Orchestrator (port 8765)
+# Orchestrator (port 8765)
 .\.venv\Scripts\python.exe python/orchestrator/exo_server.py
 
-# Terminal 2 — STT Whisper.cpp (port 8766)
-.\.venv_stt_tts\Scripts\python.exe python/stt/stt_server.py --backend whispercpp --model medium --device gpu
+# STT Whisper.cpp small Vulkan (port 8766)
+.\.venv_stt_tts\Scripts\python.exe python/stt/stt_server.py --backend whispercpp --model small --beam-size 1 --device vulkan --compute-type int8
 
-# Terminal 3 — TTS XTTS v2 (port 8767)
-.\.venv_stt_tts\Scripts\python.exe python/tts/tts_server.py --voice "Claribel Dervla" --lang fr
+# TTS CosyVoice2-0.5B (port 8767)
+.\.venv_stt_tts\Scripts\python.exe python/tts/tts_server.py --lang fr --streaming --latency-optimized
 
-# Terminal 4 — VAD Silero (port 8768)
+# VAD Silero (port 8768)
 .\.venv_stt_tts\Scripts\python.exe python/vad/vad_server.py
 
-# Terminal 5 — WakeWord (port 8770)
+# WakeWord (port 8770)
 .\.venv_stt_tts\Scripts\python.exe python/wakeword/wakeword_server.py
 
-# Terminal 6 — Mémoire FAISS (port 8771)
+# Mémoire FAISS (port 8771)
 .\.venv_stt_tts\Scripts\python.exe python/memory/memory_server.py
 
-# Terminal 7 — NLU (port 8772)
+# NLU (port 8772)
 .\.venv_stt_tts\Scripts\python.exe python/nlu/nlu_server.py
 
 # GUI C++
@@ -263,24 +381,9 @@ build\Release\RaspberryAssistant.exe
 
 ---
 
-## Utilisation
-
-1. Dites **"EXO"** → l'assistant passe en mode écoute
-2. Posez votre question → transcription Whisper → traitement Claude API
-3. Réponse vocale XTTS v2 + affichage dans l'interface QML
-
-### Domotique (Home Assistant)
-
-EXO contrôle vos appareils via le langage naturel :
-- Allumer / éteindre / basculer des entités
-- Régler luminosité, couleur, température
-- Contrôler les médias (play, pause, stop, volume)
-
----
-
 ## Configuration
 
-Fichier `config/assistant.conf` — format INI, 3 niveaux de priorité : **Variables d'environnement > `assistant_local.conf` > `assistant.conf`**
+Fichier `config/assistant.conf` — format INI, priorité : **Variables d'environnement > `assistant_local.conf` > `assistant.conf`**
 
 ```ini
 [Claude]
@@ -290,25 +393,22 @@ model=claude-sonnet-4-20250514
 [STT]
 server_url=ws://localhost:8766
 backend=whispercpp
-model=medium
+model=small
+beam_size=1
 
 [TTS]
 server_url=ws://localhost:8767
-backend=xtts
 voice=Claribel Dervla
 language=fr
-
-[Voice]
-wake_word=EXO
-language=fr-FR
+sample_rate=24000
 
 [VAD]
-backend=silero
+backend=hybrid
 server_url=ws://localhost:8768
 threshold=0.45
 
 [WakeWord]
-neural_enabled=true
+neural_enabled=false
 server_url=ws://localhost:8770
 
 [Memory]
@@ -316,9 +416,25 @@ semantic_enabled=true
 semantic_server_url=ws://localhost:8771
 
 [NLU]
-local_enabled=true
+local_enabled=false
 server_url=ws://localhost:8772
 ```
+
+Les 25 services sont définis dans `config/services.json` avec ports, venvs et arguments.
+
+---
+
+## Troubleshooting
+
+| Problème | Solution |
+|----------|----------|
+| STT lent (> 5 s) | Vérifier `beam_size=1` dans `assistant.conf` et `--device vulkan --compute-type int8` |
+| TTS pas de son | Vérifier que le modèle CosyVoice2 est dans `D:\EXO\models\cosyvoice` et CUDA disponible |
+| Service DOWN | Lancer `python python/test/exo_test_runner.py --autoheal` |
+| HealthCheck flapping | `WS_PING_INTERVAL=None` dans `base_service.py` (déjà corrigé) |
+| Erreur Vulkan STT | Vérifier `vulkaninfo` et que whisper-server.exe est compilé avec Vulkan |
+| Mémoire FAISS vide | Vérifier `EXO_FAISS_DIR=D:\EXO\faiss\semantic_memory` |
+| WebSocket timeout | Augmenter `startup_timeout_ms` dans `services.json` |
 
 ---
 
@@ -326,104 +442,103 @@ server_url=ws://localhost:8772
 
 ```
 EXO/
-├── app/                          C++ — moteur principal
-│   ├── main.cpp                   Point d'entrée Qt
-│   ├── core/                      Orchestrateur, Config, Logs, Pipeline, HealthCheck
-│   ├── audio/                     VoicePipeline, TTSManager, DSP, AudioInput
-│   ├── llm/                       ClaudeAPI, AIMemoryManager
-│   └── utils/                     WeatherManager
+├── app/                           C++ — moteur principal
+│   ├── main.cpp                    Point d'entrée Qt
+│   ├── core/                       AssistantManager, ConfigManager, HealthCheck,
+│   │                               ServiceManager, PipelineTracer, LatencyMetrics,
+│   │                               LogManager, MetricsManager, TraceManager,
+│   │                               ErrorManager, SecurityManager, ContextCache
+│   ├── audio/                      VoicePipeline, TTSManager, AudioInput, DSP
+│   ├── llm/                        ClaudeAPI, AIMemoryManager
+│   ├── floorplan/                   FloorPlanController, Model, Item, Serializer, Enums
+│   ├── test/                       TestController (Stability Test Runner QML)
+│   ├── utils/                      WeatherManager
+│   └── simulation/                 SimulationController, Engine, Entity,
+│                                   Scenario, Propagation, Result, Enums
 │
-├── exo/                          Framework cognitif standalone (v25.1)
-│   ├── core/                      CognitiveKernel, Context, State, Flow
-│   ├── engines/                   8 moteurs (Rule, Causal, Inference, HTN,
-│   │                              Simulation, Optimization, Observability, Governance)
-│   ├── layers/                    8 couches (Perception → Supervision)
-│   ├── pipelines/                 3 pipelines (Cognitive, Simulation, Planning)
-│   ├── agents/
-│   │   ├── macro/                 5 agents (Cognition, Simulation, Planning,
-│   │   │                          Observability, Governance)
-│   │   └── micro/                 8 agents (EntityExtraction, RuleVerification,
-│   │                              CausalAnalysis, HTNExpansion, LocalSimulation,
-│   │                              RiskAnalysis, LogicValidation, MetricsCollection)
-│   ├── governance/                Permissions, Validation, Compliance, Audit
-│   ├── observability/             Telemetry, Tracing, Metrics, Dashboard
-│   ├── tests/                     117 tests (engines, pipelines, agents, gov, obs)
-│   └── main.py                    Démo entry point
+├── exo/                           Framework cognitif standalone
+│   ├── core/                       CognitiveKernel, Context, State, Flow
+│   ├── engines/                    8 moteurs cognitifs
+│   ├── layers/                     8 couches de traitement
+│   ├── pipelines/                  3 pipelines (Cognitive, Simulation, Planning)
+│   ├── agents/                     5 macro + 8 micro agents
+│   ├── governance/                 Permissions, Validation, Compliance, Audit
+│   ├── observability/              Telemetry, Tracing, Metrics, Dashboard
+│   └── tests/                      117 tests
 │
-├── python/                       Microservices Python
-│   ├── orchestrator/              exo_server.py + Home Assistant (8765)
-│   ├── stt/                       stt_server.py + whisper_cpp.py (8766)
-│   ├── tts/                       tts_server.py (8767)
-│   ├── vad/                       vad_server.py (8768)
-│   ├── wakeword/                  wakeword_server.py (8770)
-│   ├── memory/                    memory_server.py (8771)
-│   ├── nlu/                       nlu_server.py (8772)
-│   └── shared/                    Modules partagés
+├── python/                        25 Microservices Python
+│   ├── orchestrator/               exo_server.py (8765)
+│   ├── stt/                        stt_server.py + whisper_cpp.py (8766)
+│   ├── tts/                        tts_server.py + cosyvoice_engine.py (8767)
+│   ├── vad/                        vad_server.py (8768)
+│   ├── wakeword/                   wakeword_server.py (8770)
+│   ├── memory/                     memory_server.py (8771)
+│   ├── nlu/                        nlu_server.py (8772)
+│   ├── websearch/                  websearch_server.py (8773)
+│   ├── news/                       news_server.py (8774)
+│   ├── knowledge/                  knowledge_server.py (8775)
+│   ├── tools/                      tools_server, file_service, calendar, system
+│   ├── context/                    context_engine.py (8777)
+│   ├── planner/                    task_planner_server.py (8778)
+│   ├── executor/                   task_executor_server.py (8779)
+│   ├── verifier/                   task_verifier_server.py (8780)
+│   ├── domotique/                  homegraph, domotic, camera, samsung, voltalis, echo
+│   ├── network/                    network_map_service.py (8790)
+│   ├── test/                       exo_test_runner.py (Stability Test Runner)
+│   └── shared/                     Modules partagés (base_service, cache, etc.)
 │
-├── qml/                          Interface QML (19 composants VS Code)
-├── docs/                         Documentation
-├── config/                       Configuration (assistant.conf)
-├── rtaudio/                      RtAudio WASAPI (sous-module statique)
-├── resources/                    Polices, icônes
-├── scripts/                      Utilitaires PowerShell
-├── tests/                        Tests (2218 pytest Python)
-├── whisper.cpp/                  Whisper.cpp (sous-module)
-├── .env                          Clés API (non versionné)
-├── requirements.txt              Dépendances Python orchestrator
-└── CMakeLists.txt                Build CMake
+├── qml/                           Interface QML
+│   ├── MainWindow.qml              Fenêtre principale
+│   ├── pages/                      10 pages (Home, Maison, Pipeline, Réseau, Simulation, etc.)
+│   ├── panels/                     Sidebar, HeaderBar, BottomBar, StabilityPanel
+│   ├── components/                 34 composants (Visualizer, PipelineView, etc.)
+│   ├── cognitive/                  18 panneaux cognitifs (12 originaux + 6 simulation)
+│   └── theme/                      Thème VS Code / Fluent Design
+│
+├── config/                        Configuration
+│   ├── assistant.conf              Config INI principale
+│   └── services.json               Définition des 25 services (ports, args)
+│
+├── docs/                          Documentation technique
+├── rtaudio/                       RtAudio WASAPI (sous-module)
+├── whisper.cpp/                   Whisper.cpp (sous-module)
+├── resources/                     Polices, icônes
+├── scripts/                       Utilitaires PowerShell
+├── tests/                         Tests (2349 pytest + Qt Test)
+├── .env                           Clés API (non versionné)
+├── requirements.txt               Dépendances Python orchestrator
+└── CMakeLists.txt                 Build CMake
 ```
-
----
-
-## 📖 Documentation
-
-La documentation est dans [`docs/`](docs/) :
-
-| Fichier / Dossier | Contenu |
-|-------------------|--------|
-| `architecture/` | Schémas d'architecture |
-| `audits/` | Rapports d'audit |
-| `modules.md` | Index des modules |
-| `pipeline.md` | Pipeline vocal |
-| `services.md` | Microservices Python |
-| `CHANGELOG.md` | Historique des versions |
-| `PLAN_IMPLEMENTATION.md` | Plan d'implémentation |
 
 ---
 
 ## Roadmap
 
-### ✅ Réalisé (v26)
+### ✅ Réalisé (v28)
+- **CosyVoice2‑0.5B** — TTS neural streaming CUDA, remplacement XTTS v2
+- **STT beam=1** — Whisper.cpp small, Vulkan GPU, int8, greedy decoding (~60 % plus rapide)
+- **25 microservices Python** — architecture complète (core, intelligence, outils, domotique, réseau)
+- **Stability Test Runner** — diagnostic + autoheal automatique des services
+- **Domotique étendue** — HomeGraph, Samsung SmartThings, Voltalis, Echo, caméras IP
+- **NetworkMap** — cartographie réseau (ARP, mDNS, SSDP, ping, classification)
 - RtAudio WASAPI — capture audio faible latence
-- Interface QML 19 composants VS Code + Fluent Design
+- Interface QML 10 pages + 56 composants style VS Code / Fluent Design
+- **Simulation spatiale avancée** — module C++ complet (propagation 2D, entités, risques, graphe causal) + 7 panneaux QML + 50 tests unitaires
 - Pipeline vocal VoicePipeline v4 (FSM, VAD, StreamingSTT)
-- XTTS v2 — TTS neural multilingue, 58 voix, streaming PCM16
-- STT Whisper.cpp + Vulkan GPU (RTF 0.08–0.23)
-- Claude API SSE streaming + 8 Function Calling
+- Claude API SSE streaming + Function Calling
 - Mémoire 3 couches + FAISS vectoriel
 - Silero VAD + OpenWakeWord neural
 - DSP noisereduce spectral + chaîne audio complète
 - NLU local (classification d'intention)
 - Visualizer GPU ShaderEffect GLSL 60 FPS
-- Intégration Home Assistant (13 actions LLM)
-- **ContextCache** — cache in-process avec TTL par clé + refresh arrière-plan
-- **LatencyMetrics** — instrumentation pipeline 9 timestamps, 6 métriques dérivées
-- **ClaudeAPI warmup/keepalive** — connexion TCP/TLS pré-établie, latence 1er token réduite
+- ContextCache, LatencyMetrics, warmup/keepalive ClaudeAPI
 - Observabilité complète (logging structuré, métriques, tracing distribué)
 - Résilience (retry, timeout, fallback, circuit breaker)
 - Sécurité (permissions, audit log)
-- Config centralisée avec hot-reload
-- **Framework cognitif standalone** (`exo/`) — 8 moteurs, 8 couches, 3 pipelines, 13 agents, gouvernance, observabilité
-- **MetricsManager** — façade métriques unifiée (compteurs, gauges, histogrammes)
-- **TraceManager** — tracing distribué avec spans hiérarchiques
-- **ErrorManager** — gestion centralisée des erreurs (catégorisation, recovery)
-- **SecurityManager** — permissions, masquage API keys, audit, validation hosts
-- **STT beam=1** — greedy decoding pour latence temps-réel (~60% plus rapide)
-- **15 microservices Python** — architecture complète documentée
-- **2335+ tests automatisés** (2218 tests existants + 117 tests framework cognitif)
+- Framework cognitif standalone (`exo/`) — 8 moteurs, 8 couches, 3 pipelines, 13 agents
+- **2349 tests automatisés** (2224 Python + 117 cognitif + 8 C++)
 
 ### 🔄 À venir
-- Google Calendar — agenda intelligent
 - Streaming musical — Spotify / Tidal
 - Déploiement Raspberry Pi 5
 - Interface mobile companion
@@ -435,15 +550,14 @@ La documentation est dans [`docs/`](docs/) :
 
 1. Fork le repo
 2. Créer une branche (`git checkout -b feature/ma-fonctionnalite`)
-3. Lire `PROMPT_MAITRE.md` pour les conventions
-4. Lancer les tests : `ctest --test-dir build` + `pytest tests/python/`
-5. Commit (`git commit -m "feat: description"`)
-6. Push + Pull Request
+3. Lancer les tests : `ctest --test-dir build` + `pytest tests/python/`
+4. Commit (`git commit -m "feat: description"`)
+5. Push + Pull Request
 
 ### Conventions
 - **C++** : C++17, Qt 6.9.3, nommage Qt (`camelCase`, `m_` pour membres)
 - **Python** : PEP 8, asyncio, websockets
-- **QML** : Design system EXO (voir [`docs/ui/design_system.md`](docs/ui/design_system.md))
+- **QML** : Design system EXO (voir `docs/`)
 - **Commits** : format conventionnel (`feat:`, `fix:`, `docs:`, `refactor:`)
 
 ---
@@ -454,4 +568,4 @@ Ce projet est sous licence **MIT**. Voir [LICENSE](LICENSE) pour les détails.
 
 ---
 
-**EXO** — C++ / Qt 6.9.3 · Python 3.13 · XTTS v2 · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Framework Cognitif v25.1
+**EXO** — C++ / Qt 6.9.3 · Python 3.13 · CosyVoice2‑0.5B · Whisper.cpp (Vulkan GPU) · FAISS · Silero · OpenWakeWord · Framework Cognitif
