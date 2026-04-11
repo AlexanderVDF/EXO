@@ -27,7 +27,9 @@ ApplicationWindow {
     property string currentResponse: ""
     property bool isStreaming: false
     property bool servicesReady: typeof serviceSupervisor !== 'undefined'
-                                 ? serviceSupervisor.allReady : true
+                                 ? (serviceSupervisor.allReady
+                                    || (typeof safeBootManager !== 'undefined' && safeBootManager.criticalReady))
+                                 : true
 
     // ══════════════════════════════════════════════
     //  Connexions aux context properties C++
@@ -534,6 +536,14 @@ ApplicationWindow {
         totalServices: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.totalServices : 0
         currentAction: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.currentAction : "Initialisation…"
         serviceStatuses: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.serviceStatuses : []
+        safeBootActive: typeof safeBootManager !== 'undefined' ? safeBootManager.safeBootActive : false
+        criticalReady: typeof safeBootManager !== 'undefined' ? safeBootManager.criticalReady : false
+        criticalReadyCount: typeof safeBootManager !== 'undefined' ? safeBootManager.criticalReadyCount : 0
+        criticalTotal: typeof safeBootManager !== 'undefined' ? safeBootManager.criticalTotal : 0
+        lazyReadyCount: typeof safeBootManager !== 'undefined' ? safeBootManager.lazyReadyCount : 0
+        lazyTotal: typeof safeBootManager !== 'undefined' ? safeBootManager.lazyTotal : 0
+        failedCount: typeof safeBootManager !== 'undefined' ? safeBootManager.failedCount : 0
+        failedServices: typeof safeBootManager !== 'undefined' ? safeBootManager.failedServices : []
         onDismissed: splashScreen.visible = false
     }
 

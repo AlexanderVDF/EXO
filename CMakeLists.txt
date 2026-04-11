@@ -48,6 +48,7 @@ set(SOURCES
     app/core/ServiceManager.cpp
     app/core/ServiceSupervisor.cpp
     app/core/ServiceRegistry.cpp
+    app/core/SafeBootManager.cpp
     app/audio/VoicePipeline.cpp
     app/audio/TTSManager.cpp
     app/audio/TTSBackendQt.cpp
@@ -109,6 +110,7 @@ set(HEADERS
     app/core/HealthCheck.h
     app/core/ServiceManager.h
     app/core/ServiceSupervisor.h
+    app/core/SafeBootManager.h
     app/core/ServiceState.h
     app/core/ServiceDescriptor.h
     app/core/ServiceRegistry.h
@@ -231,6 +233,7 @@ qt_add_qml_module(RaspberryAssistant
         qml/components/ExoResponseView.qml
         qml/components/ExoOrbVisualizer.qml
         qml/components/ExoSplashScreen.qml
+        qml/components/SafeBootPanel.qml
         qml/components/AudioWaveformView.qml
         qml/components/FloorPlanTools.qml
         qml/components/FloorPlanProperties.qml

@@ -33,3 +33,4 @@ CameraCone 1.0 CameraCone.qml
 FurniturePalette 1.0 FurniturePalette.qml
 AudioWaveformView 1.0 AudioWaveformView.qml
 SpatialNetworkIntegration 1.0 SpatialNetworkIntegration.qml
+SafeBootPanel 1.0 SafeBootPanel.qml

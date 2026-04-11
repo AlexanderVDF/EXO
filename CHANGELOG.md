@@ -5,6 +5,30 @@
 
 ---
 
+## v30.1 — Safe Boot Orchestrator — Mai 2026
+
+### Ajouté
+- **SafeBootManager** (`app/core/SafeBootManager.h/.cpp`) — Permet à EXO de démarrer même si des services non critiques sont bloqués/lents/en erreur
+  - Classification services : 12 critiques (orchestrator, stt, tts, vad, wakeword, memory, nlu, context, planner, executor, verifier, system) + 13 non critiques (lazy load)
+  - Signal `safeBootReady` émis quand tous les critiques sont Ready → déclenche `initializeWithConfig()` sans attendre les lazy
+  - Signal `allServicesNormalized` quand les lazy rattrapent → sortie automatique du mode Safe Boot
+  - Diagnostic complet : `diagnosticReport()` exposé QML (timestamp, services critiques/lazy/failed, compteurs)
+  - Connecté au `ServiceRegistry::serviceStateChanged` — réaction temps réel
+- **SafeBootPanel** (`qml/components/SafeBootPanel.qml`) — Panneau d'alerte Safe Boot dans le splash screen
+  - Barres de progression séparées : critiques (vert) + lazy (bleu)
+  - Liste des services en échec avec couleur critique/non-critique
+  - Apparaît uniquement quand `safeBootActive = true`
+- **Intégration MainWindow** — `servicesReady` accepte désormais `safeBootManager.criticalReady` en alternative à `serviceSupervisor.allReady`
+- **Intégration main.cpp** — Double connexion : `allServicesReady` + `safeBootReady` → `initializeWithConfig()`
+
+### Modifié
+- `ExoSplashScreen.qml` — 8 nouvelles propriétés Safe Boot, SafeBootPanel intégré avant le spinner
+- `MainWindow.qml` — `servicesReady` élargi, propriétés safeBootManager passées au splash
+- `CMakeLists.txt` — SafeBootManager.h/.cpp + SafeBootPanel.qml ajoutés
+- `qmldir` (components) — SafeBootPanel enregistré
+
+---
+
 ## v30.0 — Module de vision IA embarquée — Mai 2026
 
 ### Ajouté

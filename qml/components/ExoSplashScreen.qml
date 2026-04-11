@@ -17,6 +17,16 @@ Rectangle {
     property string currentAction: "Initialisation…"
     property var serviceStatuses: []
 
+    // Safe Boot properties
+    property bool safeBootActive: false
+    property bool criticalReady: false
+    property int criticalReadyCount: 0
+    property int criticalTotal: 0
+    property int lazyReadyCount: 0
+    property int lazyTotal: 0
+    property int failedCount: 0
+    property var failedServices: []
+
     signal dismissed()
 
     onAllReadyChanged: {
@@ -58,7 +68,7 @@ Rectangle {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "v30.0"
+                text: "v30.1"
                 font.family: Theme.fontMono
                 font.pixelSize: Theme.fontBody
                 color: Theme.textSecondary
@@ -224,6 +234,19 @@ Rectangle {
                     }
                 }
             }
+        }
+
+        // ── Safe Boot Panel ──
+        SafeBootPanel {
+            Layout.fillWidth: true
+            safeBootActive: splash.safeBootActive
+            criticalReady: splash.criticalReady
+            criticalReadyCount: splash.criticalReadyCount
+            criticalTotal: splash.criticalTotal
+            lazyReadyCount: splash.lazyReadyCount
+            lazyTotal: splash.lazyTotal
+            failedCount: splash.failedCount
+            failedServices: splash.failedServices
         }
 
         // Spinner animé
