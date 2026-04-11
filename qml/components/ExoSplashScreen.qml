@@ -27,6 +27,10 @@ Rectangle {
     property int failedCount: 0
     property var failedServices: []
 
+    // AutoRepair properties
+    property bool autoRepairActive: false
+    property var autoRepairTimeline: []
+
     signal dismissed()
 
     onAllReadyChanged: {
@@ -68,7 +72,7 @@ Rectangle {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "v30.2"
+                text: "v30.3"
                 font.family: Theme.fontMono
                 font.pixelSize: Theme.fontBody
                 color: Theme.textSecondary
@@ -149,6 +153,7 @@ Rectangle {
                                 var s = modelData.status
                                 if (s === "ready")     return Theme.success
                                 if (s === "failed" || s === "crashed") return Theme.error
+                                if (s === "repairing") return Theme.info
                                 if (s === "starting" || s === "waiting_ready"
                                     || s === "restarting"
                                     || s === "launching" || s === "running" || s === "checking")
@@ -161,6 +166,7 @@ Rectangle {
                                          && modelData.status !== "failed"
                                          && modelData.status !== "crashed"
                                          && modelData.status !== "stopped"
+                                         && modelData.status !== "repairing"
                                 loops: Animation.Infinite
                                 NumberAnimation { to: 0.3; duration: 500 }
                                 NumberAnimation { to: 1.0; duration: 500 }
@@ -218,6 +224,7 @@ Rectangle {
                                 if (s === "starting")      return "…"
                                 if (s === "waiting_ready") return "◉"
                                 if (s === "restarting")    return "↻"
+                                if (s === "repairing")     return "🔧"
                                 if (s === "launching")     return "…"
                                 if (s === "checking")      return "?"
                                 if (s === "running")       return "↻"
@@ -228,6 +235,7 @@ Rectangle {
                                 var s = modelData.status
                                 if (s === "ready")  return Theme.success
                                 if (s === "failed" || s === "crashed") return Theme.error
+                                if (s === "repairing") return Theme.info
                                 return Theme.warning
                             }
                         }
@@ -272,6 +280,57 @@ Rectangle {
                         font.family: Theme.fontMono
                         font.pixelSize: Theme.fontCaption
                         color: splash.failedCount > 0 ? Theme.error : Theme.textSecondary
+                    }
+                }
+            }
+        }
+
+        // ── AutoRepair Status (inline) ──
+        Column {
+            Layout.fillWidth: true
+            spacing: Theme.spacing4
+            visible: splash.autoRepairActive
+
+            Rectangle {
+                width: parent.width
+                height: autoRepairCol.implicitHeight + Theme.spacing16
+                radius: Theme.radiusSmall
+                color: Qt.rgba(Theme.info.r, Theme.info.g, Theme.info.b, 0.1)
+                border.color: Theme.info
+                border.width: 1
+
+                Column {
+                    id: autoRepairCol
+                    anchors.centerIn: parent
+                    spacing: Theme.spacing4
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "🔧 Réparation automatique en cours…"
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontSmall
+                        font.weight: Font.Bold
+                        color: Theme.info
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: {
+                            var tl = splash.autoRepairTimeline
+                            if (!tl || tl.length === 0)
+                                return "Analyse des services KO…"
+                            var last = tl[tl.length - 1]
+                            if (last.event === "repair_success")
+                                return "✓ " + last.service + " réparé"
+                            if (last.event === "repair_failed")
+                                return "✗ " + last.service + " — échec"
+                            if (last.event === "repair_attempt")
+                                return "↻ Réparation de " + last.service + "…"
+                            return last.detail || ""
+                        }
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontCaption
+                        color: Theme.textSecondary
                     }
                 }
             }

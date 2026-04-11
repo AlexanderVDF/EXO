@@ -31,6 +31,7 @@
 #include "core/LogManager.h"
 #include "core/ServiceSupervisor.h"
 #include "safeboot/SafeBootController.h"
+#include "safeboot/SafeBootAutoRepair.h"
 #include "test/TestController.h"
 
 // ═══════════════════════════════════════════════════════
@@ -144,7 +145,7 @@ int main(int argc, char *argv[])
 
     // === Configuration de base de l'application ===
     app.setApplicationName("EXO Assistant");
-    app.setApplicationVersion("30.2");
+    app.setApplicationVersion("30.3");
     app.setOrganizationName("EXOAssistant");
     app.setOrganizationDomain("exo-assistant.local");
 
@@ -171,7 +172,7 @@ int main(int argc, char *argv[])
     LogManager::instance()->initialize(LogManager::Debug, true, true);
     hLog() << "Fichier de log:" << LogManager::instance()->getRecentLogs();
 
-    qInfo() << "=== Démarrage d'EXO Assistant v30.2 ===" ;
+    qInfo() << "=== Démarrage d'EXO Assistant v30.3 ===" ;
     qInfo() << "Plateforme:" 
 #ifdef RASPBERRY_PI
                  << "Raspberry Pi 5 (EGLFS)"
@@ -190,6 +191,12 @@ int main(int argc, char *argv[])
     // Créer le SafeBootController (boot dégradé si services non critiques bloqués)
     SafeBootController safeBootController;
     safeBootController.setRegistry(serviceSupervisor.registry());
+
+    // Créer l'AutoRepair (réparation automatique des services KO)
+    SafeBootAutoRepair autoRepair;
+    autoRepair.setRegistry(serviceSupervisor.registry());
+    autoRepair.setController(&safeBootController);
+    safeBootController.setAutoRepair(&autoRepair);
     
     // Créer l'AssistantManager réel
     AssistantManager assistantManager;
@@ -214,6 +221,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("assistantManager", &assistantManager);
     engine.rootContext()->setContextProperty("serviceSupervisor", &serviceSupervisor);
     engine.rootContext()->setContextProperty("safeBootController", &safeBootController);
+    engine.rootContext()->setContextProperty("autoRepair", &autoRepair);
     engine.rootContext()->setContextProperty("testController", &testController);
 
     // Créer et exposer ConfigManager AVANT le chargement QML
@@ -227,7 +235,34 @@ int main(int argc, char *argv[])
     projectDir.cdUp(); // Debug -> build
     projectDir.cdUp(); // build -> racine
 
-    // Lancer le ServiceSupervisor v5 (auto-launch + readiness + retry)
+    // Ajouter le dossier qml comme import path pour les sous-dossiers (vscode/)
+    engine.addImportPath(projectDir.absoluteFilePath("qml"));
+
+    const QUrl mainQml(QUrl::fromLocalFile(projectDir.absoluteFilePath("qml/MainWindow.qml")));
+    
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [mainQml](QObject *obj, const QUrl &objUrl) {
+        if (!obj && objUrl == mainQml) {
+            qCritical() << "Échec du chargement de l'interface QML:" << objUrl;
+            QCoreApplication::exit(-1);
+        } else {
+            qInfo() << "Interface QML chargée avec succès:" << objUrl;
+        }
+    });
+
+    // ═══ UI-FIRST : charger l'interface AVANT de lancer les services ═══
+    qInfo() << "Chargement de l'interface QML (UI-first):" << mainQml;
+    engine.load(mainQml);
+
+    if (engine.rootObjects().isEmpty()) {
+        qCritical() << "Interface QML non chargée";
+        return -1;
+    }
+
+    qInfo() << "Interface QML chargée avec succès — lancement des services en arrière-plan";
+
+    // ═══ Lancer les services APRÈS l'affichage du splash screen ═══
+    // Le ServiceSupervisor lance les services via la boucle d'événements Qt
     QString servicesJson = projectDir.absoluteFilePath("config/services.json");
     serviceSupervisor.start(servicesJson);
 
@@ -255,32 +290,15 @@ int main(int argc, char *argv[])
     QObject::connect(&safeBootController, &SafeBootController::serviceFailed,
                      &assistantManager, &AssistantManager::onServiceFailed);
 
-    // Ajouter le dossier qml comme import path pour les sous-dossiers (vscode/)
-    engine.addImportPath(projectDir.absoluteFilePath("qml"));
-
-    const QUrl mainQml(QUrl::fromLocalFile(projectDir.absoluteFilePath("qml/MainWindow.qml")));
-    
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [mainQml](QObject *obj, const QUrl &objUrl) {
-        if (!obj && objUrl == mainQml) {
-            qCritical() << "Échec du chargement de l'interface QML:" << objUrl;
-            QCoreApplication::exit(-1);
-        } else {
-            qInfo() << "Interface QML chargée avec succès:" << objUrl;
-        }
-    });
-
-    qInfo() << "Chargement de l'interface QML:" << mainQml;
-    engine.load(mainQml);
-
-    if (engine.rootObjects().isEmpty()) {
-        qCritical() << "Interface QML non chargée";
-        return -1;
-    }
-
-    qInfo() << "Interface QML chargée avec succès";
-
-    qInfo() << "EXO Assistant démarré - Interface VS Code";
+    // AutoRepair: forwarder les événements vers l'AssistantManager
+    QObject::connect(&autoRepair, &SafeBootAutoRepair::runningChanged,
+                     &assistantManager, &AssistantManager::autoRepairChanged);
+    QObject::connect(&autoRepair, &SafeBootAutoRepair::repairAttempted,
+                     &assistantManager, &AssistantManager::onRepairAttempt);
+    QObject::connect(&autoRepair, &SafeBootAutoRepair::repairCompleted,
+                     &assistantManager, &AssistantManager::onRepairCompleted);
+    QObject::connect(&autoRepair, &SafeBootAutoRepair::repairTimelineChanged,
+                     &assistantManager, &AssistantManager::repairTimelineChanged);
 
     // Handler de fermeture propre — log + arrêt des services lancés
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {

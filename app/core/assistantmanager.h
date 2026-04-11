@@ -38,6 +38,8 @@ class AssistantManager : public QObject
     Q_PROPERTY(QVariantList failedServices READ failedServices NOTIFY safeBootChanged)
     Q_PROPERTY(QVariantList degradedServices READ degradedServices NOTIFY safeBootChanged)
     Q_PROPERTY(QVariantList startupTimeline READ startupTimeline NOTIFY safeBootChanged)
+    Q_PROPERTY(bool autoRepairRunning READ autoRepairRunning NOTIFY autoRepairChanged)
+    Q_PROPERTY(QVariantList repairTimeline READ repairTimeline NOTIFY repairTimelineChanged)
 
 public:
     explicit AssistantManager(QObject *parent = nullptr);
@@ -81,9 +83,15 @@ public:
     QVariantList degradedServices() const;
     QVariantList startupTimeline() const;
 
+    // AutoRepair
+    bool autoRepairRunning() const;
+    QVariantList repairTimeline() const;
+
     // Safe Boot — réception des événements service
     Q_INVOKABLE void onServiceReady(const QString &serviceName);
     Q_INVOKABLE void onServiceFailed(const QString &serviceName);
+    Q_INVOKABLE void onRepairAttempt(const QString &service, bool success);
+    Q_INVOKABLE void onRepairCompleted();
 
 signals:
     void messageReceived(const QString &sender, const QString &message);
@@ -97,6 +105,8 @@ signals:
     void deviceCommandResult(const QJsonObject &result);
     void scenarioResult(const QJsonObject &result);
     void safeBootChanged();
+    void autoRepairChanged();
+    void repairTimelineChanged();
     void serviceReady(const QString &service);
     void serviceFailed(const QString &service);
 

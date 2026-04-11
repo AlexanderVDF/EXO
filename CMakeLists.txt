@@ -49,6 +49,7 @@ set(SOURCES
     app/core/ServiceSupervisor.cpp
     app/core/ServiceRegistry.cpp
     app/safeboot/SafeBootController.cpp
+    app/safeboot/SafeBootAutoRepair.cpp
     app/audio/VoicePipeline.cpp
     app/audio/TTSManager.cpp
     app/audio/TTSBackendQt.cpp
@@ -114,6 +115,7 @@ set(HEADERS
     app/safeboot/SafeBootState.h
     app/safeboot/SafeBootTimeline.h
     app/safeboot/SafeBootController.h
+    app/safeboot/SafeBootAutoRepair.h
     app/core/ServiceState.h
     app/core/ServiceDescriptor.h
     app/core/ServiceRegistry.h

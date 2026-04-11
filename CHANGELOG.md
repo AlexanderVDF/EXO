@@ -5,6 +5,31 @@
 
 ---
 
+## v30.3 — SafeBootAutoRepair + UI-first Boot — Mai 2026
+
+### Ajouté
+- **SafeBootAutoRepair** (`SafeBootAutoRepair.h/.cpp`) — Module de réparation automatique des services KO
+  - `autoRepairAll()` — collecte les services Failed/Crashed, lance la file de réparation séquentielle
+  - `attemptRepair(name)` — pipeline : clearCache → checkPort → killZombie → restartService → waitForReady
+  - Kill zombie via `netstat + TerminateProcess` (Windows)
+  - Readiness probe via QWebSocket (polling 200ms, timeout 1500ms)
+  - 3 tentatives max par service, 500ms entre réparations
+  - Q_PROPERTY `running` + `repairTimeline` exposées au QML
+- **UI-first Boot Sequence** — `engine.load()` avant `serviceSupervisor.start()` dans main.cpp, l'écran splash est visible immédiatement
+- **AutoRepair visual mode** dans ExoSplashScreen — panneau bleu "Réparation automatique en cours…" avec timeline temps réel
+- **Status `repairing`** dans la liste des services du splash (icône 🔧, couleur `Theme.info`)
+- **AssistantManager.autoRepairRunning / repairTimeline** — Q_PROPERTYs + slots `onRepairAttempt`, `onRepairCompleted`
+- **SafeBootController.repairTimeline()** — accesseur délégué vers AutoRepair
+
+### Modifié
+- `SafeBootController.h/.cpp` — intégration AutoRepair (setAutoRepair, startAutoRepair, onAutoRepairCompleted, auto-launch dans enableSafeBoot)
+- `main.cpp` — UI-first restructuration, création AutoRepair, 4 connexions signal→AssistantManager, version → v30.3
+- `AssistantManager.h/.cpp` — autoRepairRunning, repairTimeline, onRepairAttempt, onRepairCompleted, version → v30.3
+- `ExoSplashScreen.qml` — autoRepair properties, panneau bleu, status repairing, version → v30.3
+- `CMakeLists.txt` — SafeBootAutoRepair.cpp/.h ajoutés
+
+---
+
 ## v30.2b — Activation complète Safe Boot — Mai 2026
 
 ### Ajouté

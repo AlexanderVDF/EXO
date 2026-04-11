@@ -1,10 +1,11 @@
 #include "SafeBootController.h"
+#include "SafeBootAutoRepair.h"
 #include "../core/ServiceRegistry.h"
 #include "../core/LogManager.h"
 #include <QDateTime>
 
 // ═══════════════════════════════════════════════════════
-//  SafeBootController — implémentation EXO v30.2
+//  SafeBootController — implémentation EXO v30.3
 // ═══════════════════════════════════════════════════════
 
 const QSet<QString> SafeBootController::s_criticalServices = {
@@ -27,6 +28,34 @@ SafeBootController::SafeBootController(QObject *parent)
     m_lazyLoadTimer->setInterval(kLazyRetryIntervalMs);
     connect(m_lazyLoadTimer, &QTimer::timeout,
             this, &SafeBootController::tryLazyLoadNext);
+}
+
+void SafeBootController::setAutoRepair(SafeBootAutoRepair *repair)
+{
+    if (m_autoRepair) {
+        disconnect(m_autoRepair, nullptr, this, nullptr);
+    }
+    m_autoRepair = repair;
+    if (m_autoRepair) {
+        connect(m_autoRepair, &SafeBootAutoRepair::repairCompleted,
+                this, &SafeBootController::onAutoRepairCompleted);
+        connect(m_autoRepair, &SafeBootAutoRepair::runningChanged,
+                this, &SafeBootController::autoRepairChanged);
+    }
+}
+
+bool SafeBootController::autoRepairRunning() const
+{
+    return m_autoRepair ? m_autoRepair->isRunning() : false;
+}
+
+void SafeBootController::startAutoRepair()
+{
+    if (!m_autoRepair) return;
+    addTimelineEvent(QStringLiteral("autorepair_start"), {},
+                     QStringLiteral("Réparation automatique lancée"));
+    hLog() << "[SafeBoot] Lancement de l'AutoRepair";
+    m_autoRepair->autoRepairAll();
 }
 
 void SafeBootController::setRegistry(ServiceRegistry *registry)
@@ -257,6 +286,11 @@ void SafeBootController::enableSafeBoot()
 
     // Lancer le lazy-load après un délai
     QTimer::singleShot(kLazyLoadDelayMs, this, &SafeBootController::startLazyLoadTimer);
+
+    // Lancer la réparation automatique si disponible
+    if (m_autoRepair) {
+        QTimer::singleShot(kLazyLoadDelayMs, this, &SafeBootController::startAutoRepair);
+    }
 }
 
 void SafeBootController::disableSafeBoot()
@@ -454,6 +488,40 @@ void SafeBootController::restartNormalMode()
     emit timelineUpdated();
 }
 
+// ── AutoRepair callback ─────────────────────────────────
+
+void SafeBootController::onAutoRepairCompleted()
+{
+    addTimelineEvent(QStringLiteral("autorepair_done"), {},
+                     QStringLiteral("Réparation automatique terminée"));
+
+    // Vérifier si tous les services critiques sont maintenant Ready
+    bool allCriticalOk = true;
+    for (auto it = m_services.constBegin(); it != m_services.constEnd(); ++it) {
+        if (it->criticality == SafeBoot::ServiceCriticality::Critical
+            && it->status != SafeBoot::ServiceStatus::Ready) {
+            allCriticalOk = false;
+            break;
+        }
+    }
+
+    if (allCriticalOk && m_safeBootEnabled) {
+        addTimelineEvent(QStringLiteral("autorepair_success"), {},
+                         QStringLiteral("Tous les critiques réparés — retour en mode normal"));
+        hLog() << "[SafeBoot] ═══ AUTO-REPAIR SUCCESS — retour mode normal ═══";
+
+        disableSafeBoot();
+
+        // Relancer les non-critiques
+        retryNonCriticalServices();
+    } else if (m_safeBootEnabled) {
+        hWarning(exoMain) << "[SafeBoot] AutoRepair terminé — des critiques restent KO";
+    }
+
+    emit autoRepairChanged();
+    emit timelineUpdated();
+}
+
 // ── Accesseurs ──────────────────────────────────────────
 
 int SafeBootController::failedCount() const
@@ -526,6 +594,11 @@ QVariantList SafeBootController::getStartupTimeline() const
         list.append(m);
     }
     return list;
+}
+
+QVariantList SafeBootController::repairTimeline() const
+{
+    return m_autoRepair ? m_autoRepair->repairTimeline() : QVariantList{};
 }
 
 // ── Timeline ────────────────────────────────────────────

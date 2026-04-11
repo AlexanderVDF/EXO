@@ -11,6 +11,7 @@
 #include "SafeBootTimeline.h"
 
 class ServiceRegistry;
+class SafeBootAutoRepair;
 
 // ═══════════════════════════════════════════════════════
 //  SafeBootController — Contrôleur Safe Boot EXO v30.2
@@ -37,6 +38,7 @@ class SafeBootController : public QObject
     Q_PROPERTY(QVariantList failedServices   READ getFailedServices   NOTIFY timelineUpdated)
     Q_PROPERTY(QVariantList degradedServices READ getDegradedServices NOTIFY timelineUpdated)
     Q_PROPERTY(QVariantList startupTimeline  READ getStartupTimeline  NOTIFY timelineUpdated)
+    Q_PROPERTY(bool autoRepairRunning READ autoRepairRunning NOTIFY autoRepairChanged)
 
 public:
     explicit SafeBootController(QObject *parent = nullptr);
@@ -50,6 +52,11 @@ public:
     Q_INVOKABLE void disableSafeBoot();
     Q_INVOKABLE void retryNonCriticalServices();
     Q_INVOKABLE void restartNormalMode();
+    Q_INVOKABLE void startAutoRepair();
+
+    // ── AutoRepair ──
+    void setAutoRepair(SafeBootAutoRepair *repair);
+    bool autoRepairRunning() const;
 
     // ── Observation ──
     void checkServiceStatus(const QString &serviceName, bool ready);
@@ -65,6 +72,7 @@ public:
     QVariantList getFailedServices() const;
     QVariantList getDegradedServices() const;
     QVariantList getStartupTimeline() const;
+    QVariantList repairTimeline() const;
 
 signals:
     void safeBootActivated();
@@ -74,11 +82,13 @@ signals:
     void serviceRecovered(const QString &service);
     void timelineUpdated();
     void criticalServicesReady();
+    void autoRepairChanged();
 
 private slots:
     void onServiceStateChanged(const QString &name,
                                const QString &oldState,
                                const QString &newState);
+    void onAutoRepairCompleted();
 
 private:
     // ── Classification ──
@@ -111,6 +121,9 @@ private:
     QMap<QString, QTimer*>                  m_timeoutTimers;
     QMap<QString, QElapsedTimer>            m_startTimestamps;
     QList<SafeBoot::SafeBootTimeline>       m_timeline;
+
+    // AutoRepair
+    SafeBootAutoRepair *m_autoRepair = nullptr;
 
     // Lazy-load
     QTimer *m_lazyLoadTimer = nullptr;

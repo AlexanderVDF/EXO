@@ -34,7 +34,7 @@ AssistantManager::AssistantManager(QObject *parent)
     , m_healthCheck(nullptr)
     , m_qmlEngine(nullptr)
 {
-    hAssistant() << "AssistantManager v30.2 créé";
+    hAssistant() << "AssistantManager v30.3 créé";
 }
 
 AssistantManager::~AssistantManager()
@@ -87,6 +87,31 @@ void AssistantManager::onServiceFailed(const QString &serviceName)
 {
     hWarning(exoAssistant) << "[SafeBoot] Service failed:" << serviceName;
     emit serviceFailed(serviceName);
+    emit safeBootChanged();
+}
+
+bool AssistantManager::autoRepairRunning() const
+{
+    return m_safeBootController ? m_safeBootController->autoRepairRunning() : false;
+}
+
+QVariantList AssistantManager::repairTimeline() const
+{
+    return m_safeBootController ? m_safeBootController->repairTimeline() : QVariantList{};
+}
+
+void AssistantManager::onRepairAttempt(const QString &service, bool success)
+{
+    if (success)
+        hAssistant() << "[AutoRepair] Service réparé:" << service;
+    else
+        hWarning(exoAssistant) << "[AutoRepair] Échec réparation:" << service;
+    emit safeBootChanged();
+}
+
+void AssistantManager::onRepairCompleted()
+{
+    hAssistant() << "[AutoRepair] Réparation automatique terminée";
     emit safeBootChanged();
 }
 
