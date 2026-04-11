@@ -30,3 +30,14 @@ NetworkRiskPanel 1.0 NetworkRiskPanel.qml
 DomoticAnomalyPanel 1.0 DomoticAnomalyPanel.qml
 SecurityExplanationPanel 1.0 SecurityExplanationPanel.qml
 SecurityDecisionPanel 1.0 SecurityDecisionPanel.qml
+VisionPanel 1.0 VisionPanel.qml
+VisionCameraPanel 1.0 VisionCameraPanel.qml
+VisionEventsPanel 1.0 VisionEventsPanel.qml
+VisionOverlay 1.0 VisionOverlay.qml
+VisionDetectionsLayer 1.0 VisionDetectionsLayer.qml
+VisionHeatmap 1.0 VisionHeatmap.qml
+VisionAnomalyPanel 1.0 VisionAnomalyPanel.qml
+VisionBehaviorPanel 1.0 VisionBehaviorPanel.qml
+VisionFirePanel 1.0 VisionFirePanel.qml
+VisionIntrusionPanel 1.0 VisionIntrusionPanel.qml
+VisionExplanationPanel 1.0 VisionExplanationPanel.qml

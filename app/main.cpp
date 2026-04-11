@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
 
     // === Configuration de base de l'application ===
     app.setApplicationName("EXO Assistant");
-    app.setApplicationVersion("29.5");
+    app.setApplicationVersion("30.0");
     app.setOrganizationName("EXOAssistant");
     app.setOrganizationDomain("exo-assistant.local");
 

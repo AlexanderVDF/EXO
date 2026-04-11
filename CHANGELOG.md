@@ -5,6 +5,38 @@
 
 ---
 
+## v30.0 — Module de vision IA embarquée — Mai 2026
+
+### Ajouté
+- **Module vision** (`app/vision/`) — 15 fichiers C++ (8 headers + 7 implémentations)
+  - `VisionEnums.h` — 7 enums (DetectionType, VisionPhase, CameraState, VisionModel, Posture, Behavior, VisionSeverity) + 12 constantes (kDefaultConfidenceThreshold=0.5, kDefaultFps=15, kFrameBufferSize=30, kMaxDetectionsPerFrame=100, kMaxVisionEvents=5000)
+  - `VisionDetections` — 4 structs (BoundingBox, VisionDetection, FrameDetections, VisionEvent) + gestionnaire QObject avec requêtes par caméra/type/pièce/sévérité, éviction LRU
+  - `CameraStreamManager` — Gestion flux caméras (register/open/close/read), buffer circulaire, capture simulée QPainter (1920×1080), QTimer au targetFps
+  - `VisionModelRunner` — 6 modèles IA simulés : ObjectDetection (personnes+animaux), Segmentation (contours elliptiques), FireSmoke (2% feu + 3% fumée), PoseEstimation, BehaviorAnalysis, IntrusionDetection (point-in-polygon + line intersection). Struct IntrusionZone
+  - `VisionContext` — État par caméra (CameraSubsystemState), heatmap activité par pièce (EMA α=0.3), niveau activité global, requêtes spatiales (roomsWithPersons, roomsWithAnomalies, busiestRoom), snapshot/diff
+  - `VisionMemory` — Mémoire d'incidents vision persistante (JSON, similarité Jaccard sur tags 0.4 + bonus type/room/camera, éviction LRU pondérée résolu)
+  - `VisionEventRouter` — Routage événements vers Security (intrusion/fire/smoke/obstruction/fall/anomaly), Cognition (detections→Reasoner, behavior→Planner, anomaly→Supervisor), Simulation (validation), QML (overlay+display)
+  - `CameraVisionEngine` — Orchestrateur pipeline 6 phases (Capture→Preprocessing→Inference→PostProcessing→EventRouting→CognitionSync), QML_ELEMENT, auto-cycle, gestion caméras et zones intrusion
+- **11 panneaux QML** (`qml/cognitive/`)
+  - `VisionPanel` — Dashboard vision (indicateur phase, barre activité, métriques caméras/détections/personnes, contrôle start/stop)
+  - `VisionCameraPanel` — Liste caméras avec indicateurs état, compteurs personnes/détections par caméra
+  - `VisionEventsPanel` — Flux événements avec couleurs sévérité et pourcentages confiance
+  - `VisionOverlay` — Overlay FloorPlan avec positions caméras, alertes feu/fumée
+  - `VisionDetectionsLayer` — Rendu bounding boxes avec couleurs par type, labels posture/comportement
+  - `VisionHeatmap` — Heatmap activité pièces avec barres progression et code couleur
+  - `VisionAnomalyPanel` — Compteurs feu/fumée/obstruction/chute + liste événements
+  - `VisionBehaviorPanel` — Analyse comportementale — badges rôdage/agitation/mouvement anormal + liste
+  - `VisionFirePanel` — Panneau dédié feu & fumée avec alertes animées et historique
+  - `VisionIntrusionPanel` — Alertes intrusion avec compteur zones et bannière avertissement animée
+  - `VisionExplanationPanel` — Vue détail/explication événement avec incidents similaires
+
+### Modifié
+- `CMakeLists.txt` — 7 sources, 9 headers, 11 QML, include dir `app/vision`
+- `qml/cognitive/qmldir` — 11 nouvelles entrées vision
+- Version bump 29.5.0 → 30.0.0 (CMakeLists.txt, __init__.py, assistant.conf.example, main.cpp, README.md)
+
+---
+
 ## v29.5 — Module de sécurité spatiale avancée — Mai 2026
 
 ### Ajouté

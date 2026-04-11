@@ -81,7 +81,7 @@ planner_url=ws://localhost:8778
 
 [General]
 app_name=EXO Assistant
-version=29.5.0
+version=30.0.0
 
 # Base de données
 DATABASE_PATH=/home/pi/.raspberry-assistant/memory.db

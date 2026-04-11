@@ -1,7 +1,7 @@
 # Version simplifiée pour compilation initiale
 cmake_minimum_required(VERSION 3.21)
 
-project(RaspberryAssistant VERSION 29.5.0 LANGUAGES CXX)
+project(RaspberryAssistant VERSION 30.0.0 LANGUAGES CXX)
 
 # ── Options ──
 option(ENABLE_RTAUDIO "Enable RtAudio backend (WASAPI on Windows)" ON)
@@ -82,6 +82,13 @@ set(SOURCES
     app/spatialsecurity/NetworkRiskDetector.cpp
     app/spatialsecurity/DomoticAnomalyDetector.cpp
     app/spatialsecurity/SpatialSecurityEngine.cpp
+    app/vision/VisionDetections.cpp
+    app/vision/CameraStreamManager.cpp
+    app/vision/VisionModelRunner.cpp
+    app/vision/VisionContext.cpp
+    app/vision/VisionMemory.cpp
+    app/vision/VisionEventRouter.cpp
+    app/vision/CameraVisionEngine.cpp
     app/test/TestController.cpp
 )
 
@@ -145,6 +152,14 @@ set(HEADERS
     app/spatialsecurity/NetworkRiskDetector.h
     app/spatialsecurity/DomoticAnomalyDetector.h
     app/spatialsecurity/SpatialSecurityEngine.h
+    app/vision/VisionEnums.h
+    app/vision/VisionDetections.h
+    app/vision/CameraStreamManager.h
+    app/vision/VisionModelRunner.h
+    app/vision/VisionContext.h
+    app/vision/VisionMemory.h
+    app/vision/VisionEventRouter.h
+    app/vision/CameraVisionEngine.h
     app/test/TestController.h
 )
 
@@ -267,6 +282,18 @@ qt_add_qml_module(RaspberryAssistant
         qml/cognitive/DomoticAnomalyPanel.qml
         qml/cognitive/SecurityExplanationPanel.qml
         qml/cognitive/SecurityDecisionPanel.qml
+        # ── Vision IA ──
+        qml/cognitive/VisionPanel.qml
+        qml/cognitive/VisionCameraPanel.qml
+        qml/cognitive/VisionEventsPanel.qml
+        qml/cognitive/VisionOverlay.qml
+        qml/cognitive/VisionDetectionsLayer.qml
+        qml/cognitive/VisionHeatmap.qml
+        qml/cognitive/VisionAnomalyPanel.qml
+        qml/cognitive/VisionBehaviorPanel.qml
+        qml/cognitive/VisionFirePanel.qml
+        qml/cognitive/VisionIntrusionPanel.qml
+        qml/cognitive/VisionExplanationPanel.qml
     RESOURCES
         qml/theme/qmldir
         qml/components/qmldir
@@ -298,6 +325,7 @@ target_include_directories(RaspberryAssistant PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app/simulation
     ${CMAKE_CURRENT_SOURCE_DIR}/app/spatialcognition
     ${CMAKE_CURRENT_SOURCE_DIR}/app/spatialsecurity
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/vision
     ${CMAKE_CURRENT_SOURCE_DIR}/app/test
 )
 
