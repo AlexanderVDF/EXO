@@ -520,3 +520,69 @@ QVariantMap FloorPlanController::defaultDataForTool(const QString &tool) const
 
     return data;
 }
+
+// ══════════════════════════════════════════════════════
+//  DEVICE LINKING
+// ══════════════════════════════════════════════════════
+
+void FloorPlanController::linkDevice(const QString &itemId,
+                                     const QString &deviceId)
+{
+    if (itemId.isEmpty() || deviceId.isEmpty()) return;
+    m_deviceLinks[itemId] = deviceId;
+
+    // Propagate to model if available
+    if (m_model) {
+        QVariantMap data = m_model->getItemData(itemId);
+        if (!data.isEmpty()) {
+            data[QStringLiteral("linkedDeviceId")] = deviceId;
+            m_model->setItemData(itemId, data);
+        }
+    }
+
+    emit deviceLinked(itemId, deviceId);
+}
+
+void FloorPlanController::unlinkDevice(const QString &itemId)
+{
+    if (itemId.isEmpty()) return;
+    m_deviceLinks.remove(itemId);
+
+    if (m_model) {
+        QVariantMap data = m_model->getItemData(itemId);
+        if (!data.isEmpty()) {
+            data.remove(QStringLiteral("linkedDeviceId"));
+            m_model->setItemData(itemId, data);
+        }
+    }
+
+    emit deviceUnlinked(itemId);
+}
+
+QString FloorPlanController::linkedDeviceForItem(const QString &itemId) const
+{
+    return m_deviceLinks.value(itemId);
+}
+
+QVariantMap FloorPlanController::deviceInfoForItem(const QString &itemId) const
+{
+    QVariantMap info;
+    const QString deviceId = m_deviceLinks.value(itemId);
+    if (deviceId.isEmpty()) return info;
+
+    info[QStringLiteral("deviceId")] = deviceId;
+    info[QStringLiteral("linked")]   = true;
+
+    // Enrich from model if available
+    if (m_model) {
+        QVariantMap itemData = m_model->getItemData(itemId);
+        if (!itemData.isEmpty()) {
+            info[QStringLiteral("itemType")] = itemData.value(QStringLiteral("type"));
+            QVariantMap props = itemData.value(QStringLiteral("properties")).toMap();
+            if (props.contains(QStringLiteral("name")))
+                info[QStringLiteral("itemName")] = props.value(QStringLiteral("name"));
+        }
+    }
+
+    return info;
+}

@@ -51,8 +51,40 @@ Rectangle {
         { label: "Scénarios",  icon: "🎬" },
         { label: "Anomalies",  icon: "⚠" },
         { label: "Risques",    icon: "🛡" },
-        { label: "Causalités", icon: "🔗" }
+        { label: "Causalités", icon: "🔗" },
+        { label: "Réseau",     icon: "🌐" }
     ]
+
+    // ── Network integration bridge ──
+    SpatialNetworkIntegration {
+        id: netIntegration
+
+        onNetworkUpdated: {
+            // Push network data to the overlay
+            spatialOverlay.networkDevices = netIntegration.networkDevices
+            spatialOverlay.networkLinks   = netIntegration.networkLinks
+            spatialOverlay.wifiZones      = netIntegration.wifiZones
+            spatialOverlay.deadZones      = netIntegration.deadZones
+        }
+
+        onDeviceUpdated: function(deviceId, data) {
+            spatialOverlay.networkDevices = netIntegration.networkDevices
+        }
+
+        onCameraUpdated: function(cameraId, data) {
+            spatialOverlay.cameras = netIntegration.cameras
+        }
+
+        onEntityStateChanged: function(entityId, newState) {
+            spatialOverlay.domoticEntities = netIntegration.domoticEntities
+        }
+
+        Component.onCompleted: {
+            // Initial push
+            spatialOverlay.cameras = netIntegration.cameras
+            spatialOverlay.domoticEntities = netIntegration.domoticEntities
+        }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -196,6 +228,18 @@ Rectangle {
                     onSensorClicked: function(sensorId) {
                         root.objectClicked(sensorId)
                         root.selectedObjectId = sensorId
+                    }
+                    onNetworkDeviceClicked: function(deviceId) {
+                        root.objectClicked(deviceId)
+                        root.selectedObjectId = deviceId
+                        root.rightTabIndex = 7  // Switch to Réseau tab
+                    }
+                    onCameraClicked: function(cameraId) {
+                        root.cameraClicked(cameraId)
+                    }
+                    onDomoticEntityClicked: function(entityId) {
+                        root.objectClicked(entityId)
+                        root.selectedObjectId = entityId
                     }
                 }
 
@@ -351,6 +395,98 @@ Rectangle {
                     RiskPanel { id: riskPanel }
 
                     CausalityGraph { id: causalityGraph }
+
+                    // ── Onglet Réseau ──
+                    Rectangle {
+                        id: networkPanel
+                        color: "transparent"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: Theme.spacing8
+                            spacing: Theme.spacing8
+
+                            // Connection status
+                            RowLayout {
+                                spacing: Theme.spacing8
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    color: netIntegration.allConnected ? Theme.success : Theme.error
+                                }
+                                Text {
+                                    text: netIntegration.allConnected ? "Connecté" : "Déconnecté"
+                                    font.pixelSize: Theme.fontSmall
+                                    color: Theme.textSecondary
+                                }
+                                Item { Layout.fillWidth: true }
+                                Rectangle {
+                                    width: refreshMa.containsMouse ? 26 : 24
+                                    height: width; radius: width/2
+                                    color: refreshMa.containsMouse ? Theme.bgHover : "transparent"
+                                    Text { anchors.centerIn: parent; text: "🔄"; font.pixelSize: 12 }
+                                    MouseArea {
+                                        id: refreshMa; anchors.fill: parent
+                                        hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                        onClicked: { netIntegration.refreshNetwork(); netIntegration.refreshHomeGraph() }
+                                    }
+                                }
+                            }
+
+                            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+
+                            // Stats
+                            GridLayout {
+                                columns: 2
+                                columnSpacing: Theme.spacing12
+                                rowSpacing: Theme.spacing4
+                                Layout.fillWidth: true
+
+                                Text { text: "Appareils réseau"; font.pixelSize: Theme.fontSmall; color: Theme.textMuted }
+                                Text { text: netIntegration.onlineDeviceCount + "/" + netIntegration.deviceCount; font.pixelSize: Theme.fontSmall; font.family: Theme.fontMono; color: Theme.textPrimary }
+
+                                Text { text: "Entités domotiques"; font.pixelSize: Theme.fontSmall; color: Theme.textMuted }
+                                Text { text: String(netIntegration.entityCount); font.pixelSize: Theme.fontSmall; font.family: Theme.fontMono; color: Theme.textPrimary }
+
+                                Text { text: "Caméras"; font.pixelSize: Theme.fontSmall; color: Theme.textMuted }
+                                Text { text: String(netIntegration.cameraCount); font.pixelSize: Theme.fontSmall; font.family: Theme.fontMono; color: Theme.textPrimary }
+                            }
+
+                            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+
+                            // Overlay toggles
+                            Text { text: "COUCHES"; font.pixelSize: Theme.fontLabel; font.weight: Font.Bold; color: Theme.textSecondary; font.letterSpacing: 1 }
+
+                            Repeater {
+                                model: [
+                                    { label: "Appareils réseau",    prop: "showNetworkDevices" },
+                                    { label: "Liens réseau",        prop: "showNetworkLinks" },
+                                    { label: "Caméras",             prop: "showCameras" },
+                                    { label: "Entités domotiques",  prop: "showDomoticEntities" },
+                                    { label: "Heatmap WiFi",        prop: "showWifiHeatmap" },
+                                    { label: "Zones mortes",        prop: "showDeadZones" }
+                                ]
+
+                                RowLayout {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Theme.spacing8
+
+                                    Switch {
+                                        checked: spatialOverlay[modelData.prop]
+                                        onToggled: spatialOverlay[modelData.prop] = checked
+                                    }
+                                    Text {
+                                        text: modelData.label
+                                        font.pixelSize: Theme.fontSmall
+                                        color: Theme.textPrimary
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                            }
+
+                            Item { Layout.fillHeight: true }
+                        }
+                    }
                 }
             }
         }

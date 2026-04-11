@@ -127,6 +127,12 @@ public:
     // ── rotation convenience ──
     Q_INVOKABLE void applyRotation(const QString &id, qreal angle);
 
+    // ── device linking ──
+    Q_INVOKABLE void linkDevice(const QString &itemId, const QString &deviceId);
+    Q_INVOKABLE void unlinkDevice(const QString &itemId);
+    Q_INVOKABLE QString linkedDeviceForItem(const QString &itemId) const;
+    Q_INVOKABLE QVariantMap deviceInfoForItem(const QString &itemId) const;
+
 signals:
     void modelChanged();
     void toolChanged();
@@ -141,6 +147,10 @@ signals:
     void actionUpdated(qreal x, qreal y);
     void actionFinished(const QString &itemId);
     void actionCancelled();
+
+    // ── device linking signals ──
+    void deviceLinked(const QString &itemId, const QString &deviceId);
+    void deviceUnlinked(const QString &itemId);
 
 private:
     void pushUndo(UndoAction::Type type, const QString &itemId,
@@ -163,6 +173,9 @@ private:
     // ── multi-dwelling ──
     QStringList m_planFiles;
     QString     m_currentPlanPath;
+
+    // ── device links (itemId → deviceId) ──
+    QHash<QString, QString> m_deviceLinks;
 
     static constexpr int MAX_UNDO_DEPTH = 200;
 };

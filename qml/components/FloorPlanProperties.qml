@@ -22,6 +22,7 @@ Rectangle {
     // ── Injections ──
     property var controller: null     // FloorPlanController
     property var floorModel: null     // FloorPlanModel
+    property var networkIntegration: null  // SpatialNetworkIntegration
 
     // ── Selected data (refreshed on selectionChanged) ──
     property var selectedData: null
@@ -293,6 +294,78 @@ Rectangle {
                     }
                 }
 
+                // ── Device info (from SpatialNetworkIntegration) ──
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+                    visible: fieldDevice.text.length > 0 && propPanel.networkIntegration !== null
+
+                    property var devInfo: {
+                        if (!propPanel.networkIntegration || fieldDevice.text.length === 0) return null
+                        return propPanel.networkIntegration.getDeviceById(fieldDevice.text)
+                    }
+
+                    Repeater {
+                        model: {
+                            var info = parent.devInfo
+                            if (!info) return []
+                            var rows = []
+                            if (info.vendor)   rows.push({ k: "Vendor",   v: info.vendor })
+                            if (info.protocol) rows.push({ k: "Protocol", v: info.protocol })
+                            if (info.ip)       rows.push({ k: "IP",       v: info.ip })
+                            if (info.rssi !== undefined) rows.push({ k: "RSSI", v: info.rssi + " dBm" })
+                            if (info.latency !== undefined) rows.push({ k: "Latence", v: info.latency + " ms" })
+                            if (info.online !== undefined)  rows.push({ k: "État", v: info.online ? "en ligne" : "hors ligne" })
+                            return rows
+                        }
+                        RowLayout {
+                            required property var modelData
+                            spacing: Theme.spacing4
+                            Text {
+                                text: modelData.k + ":"
+                                font.pixelSize: Theme.fontTiny
+                                font.family: Theme.fontMono
+                                color: Theme.textMuted
+                                Layout.preferredWidth: 60
+                            }
+                            Text {
+                                text: modelData.v
+                                font.pixelSize: Theme.fontTiny
+                                font.family: Theme.fontMono
+                                color: Theme.textSecondary
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+
+                // ── Device picker button ──
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 28
+                    radius: Theme.radiusSmall
+                    visible: propPanel.networkIntegration !== null
+                    color: devPickMa.containsMouse ? Theme.bgHover : "transparent"
+                    border.color: Theme.accent
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "📡 Choisir un appareil…"
+                        font.pixelSize: Theme.fontMicro
+                        color: Theme.accent
+                    }
+
+                    MouseArea {
+                        id: devPickMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: devicePickerPopup.open()
+                    }
+                }
+
                 // Unlink button
                 Rectangle {
                     Layout.fillWidth: true
@@ -383,6 +456,117 @@ Rectangle {
     // ═══════════════════════════════════════════════════
     //  Composants internes
     // ═══════════════════════════════════════════════════
+
+    // ── Device Picker Popup ──
+    Popup {
+        id: devicePickerPopup
+        anchors.centerIn: Overlay.overlay
+        width: 320
+        height: 360
+        modal: true
+        clip: true
+
+        background: Rectangle {
+            color: Theme.bgSecondary
+            border.color: Theme.border
+            radius: Theme.radiusMedium
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: Theme.spacing8
+            spacing: Theme.spacing8
+
+            Text {
+                text: "Sélectionner un appareil"
+                font.pixelSize: Theme.fontH3
+                font.weight: Font.SemiBold
+                color: Theme.textPrimary
+            }
+
+            TextField {
+                id: deviceSearchField
+                Layout.fillWidth: true
+                placeholderText: "Rechercher…"
+                font.pixelSize: Theme.fontSmall
+                color: Theme.textPrimary
+                background: Rectangle {
+                    color: Theme.bgInput; radius: Theme.radiusSmall
+                    border.color: deviceSearchField.activeFocus ? Theme.borderFocus : Theme.border
+                }
+            }
+
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                model: {
+                    if (!propPanel.networkIntegration) return []
+                    var devs = propPanel.networkIntegration.networkDevices
+                    var q = deviceSearchField.text.toLowerCase()
+                    if (q.length === 0) return devs
+                    var filtered = []
+                    for (var i = 0; i < devs.length; i++) {
+                        var d = devs[i]
+                        var str = ((d.name || "") + " " + (d.ip || "") + " " + (d.vendor || "")).toLowerCase()
+                        if (str.indexOf(q) >= 0) filtered.push(d)
+                    }
+                    return filtered
+                }
+
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+                    width: ListView.view.width
+                    height: 42
+                    color: devItemMa.containsMouse ? Theme.bgHover : "transparent"
+                    radius: Theme.radiusSmall
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: Theme.spacing4
+                        spacing: Theme.spacing8
+
+                        Rectangle {
+                            width: 8; height: 8; radius: 4
+                            color: modelData.online ? Theme.success : Theme.textMuted
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+                            Text {
+                                text: modelData.name || modelData.ip || modelData.id
+                                font.pixelSize: Theme.fontSmall
+                                color: Theme.textPrimary
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                            Text {
+                                text: (modelData.vendor || "") + " • " + (modelData.protocol || "")
+                                font.pixelSize: Theme.fontTiny
+                                color: Theme.textMuted
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        id: devItemMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            fieldDevice.text = modelData.id
+                            commitDevice()
+                            devicePickerPopup.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     component PropLabel: Text {
         font.pixelSize: Theme.fontLabel
