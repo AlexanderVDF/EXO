@@ -1,4 +1,4 @@
-# PLAN D'IMPLÉMENTATION — EXO v28.0
+# PLAN D'IMPLÉMENTATION — EXO v30.0
 
 > Dernière mise à jour : 11 avril 2026
 > Source de vérité : `PROMPT_MAITRE.md`
@@ -7,7 +7,7 @@
 
 ## État actuel
 
-EXO v28.0 est **opérationnel**. Tous les modules compilent (0 erreur), les 25 services sont configurés, le pipeline vocal fonctionne, 2349 tests passent.
+EXO v30.0 est **opérationnel**. Tous les modules compilent (0 erreur), les 25 services sont configurés, le pipeline vocal fonctionne, 2349 tests passent.
 
 ---
 

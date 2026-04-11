@@ -33,7 +33,7 @@ AssistantManager::AssistantManager(QObject *parent)
     , m_healthCheck(nullptr)
     , m_qmlEngine(nullptr)
 {
-    hAssistant() << "AssistantManager v28.0 créé";
+    hAssistant() << "AssistantManager v30.0 créé";
 }
 
 AssistantManager::~AssistantManager()

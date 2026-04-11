@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     LogManager::instance()->initialize(LogManager::Debug, true, true);
     hLog() << "Fichier de log:" << LogManager::instance()->getRecentLogs();
 
-    qInfo() << "=== Démarrage d'EXO Assistant v28.0 ===";
+    qInfo() << "=== Démarrage d'EXO Assistant v30.0 ===";
     qInfo() << "Plateforme:" 
 #ifdef RASPBERRY_PI
                  << "Raspberry Pi 5 (EGLFS)"
