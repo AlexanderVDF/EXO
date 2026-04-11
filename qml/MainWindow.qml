@@ -548,6 +548,38 @@ ApplicationWindow {
     }
 
     // ══════════════════════════════════════════════
+    //  Safe Boot Panel — overlay automatique
+    // ══════════════════════════════════════════════
+
+    SafeBootPanel {
+        id: safeBootPanel
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: Math.min(parent.width * 0.35, 480)
+        z: 90
+        visible: typeof safeBootController !== 'undefined' && safeBootController.safeBootEnabled
+
+        safeBootEnabled: typeof safeBootController !== 'undefined' ? safeBootController.safeBootEnabled : false
+        failedCount: typeof safeBootController !== 'undefined' ? safeBootController.failedCount : 0
+        degradedCount: typeof safeBootController !== 'undefined' ? safeBootController.degradedCount : 0
+        readyCount: typeof safeBootController !== 'undefined' ? safeBootController.readyCount : 0
+        totalCount: typeof safeBootController !== 'undefined' ? safeBootController.totalCount : 0
+        failedServices: typeof safeBootController !== 'undefined' ? safeBootController.failedServices : []
+        degradedServices: typeof safeBootController !== 'undefined' ? safeBootController.degradedServices : []
+        startupTimeline: typeof safeBootController !== 'undefined' ? safeBootController.startupTimeline : []
+
+        onRetryRequested: {
+            if (typeof safeBootController !== 'undefined')
+                safeBootController.retryNonCriticalServices()
+        }
+        onRestartRequested: {
+            if (typeof safeBootController !== 'undefined')
+                safeBootController.restartNormalMode()
+        }
+    }
+
+    // ══════════════════════════════════════════════
     //  Raccourcis clavier
     // ══════════════════════════════════════════════
 

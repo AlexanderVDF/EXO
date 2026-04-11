@@ -34,7 +34,7 @@ AssistantManager::AssistantManager(QObject *parent)
     , m_healthCheck(nullptr)
     , m_qmlEngine(nullptr)
 {
-    hAssistant() << "AssistantManager v30.0 créé";
+    hAssistant() << "AssistantManager v30.2 créé";
 }
 
 AssistantManager::~AssistantManager()
@@ -74,6 +74,20 @@ QVariantList AssistantManager::degradedServices() const
 QVariantList AssistantManager::startupTimeline() const
 {
     return m_safeBootController ? m_safeBootController->startupTimeline() : QVariantList{};
+}
+
+void AssistantManager::onServiceReady(const QString &serviceName)
+{
+    hAssistant() << "[SafeBoot] Service ready:" << serviceName;
+    emit serviceReady(serviceName);
+    emit safeBootChanged();
+}
+
+void AssistantManager::onServiceFailed(const QString &serviceName)
+{
+    hWarning(exoAssistant) << "[SafeBoot] Service failed:" << serviceName;
+    emit serviceFailed(serviceName);
+    emit safeBootChanged();
 }
 
 void AssistantManager::setQmlEngine(QQmlApplicationEngine *engine)

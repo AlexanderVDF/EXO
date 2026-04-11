@@ -29,7 +29,7 @@ class SafeBootController : public QObject
     Q_OBJECT
     QML_ELEMENT
 
-    Q_PROPERTY(bool   safeBootEnabled  READ isSafeBootEnabled  NOTIFY safeBootActivated)
+    Q_PROPERTY(bool   safeBootEnabled  READ isSafeBootEnabled  NOTIFY safeBootEnabledChanged)
     Q_PROPERTY(int    failedCount      READ failedCount       NOTIFY timelineUpdated)
     Q_PROPERTY(int    degradedCount    READ degradedCount     NOTIFY timelineUpdated)
     Q_PROPERTY(int    readyCount       READ readyCount        NOTIFY timelineUpdated)
@@ -69,6 +69,7 @@ public:
 signals:
     void safeBootActivated();
     void safeBootDeactivated();
+    void safeBootEnabledChanged();
     void serviceFailed(const QString &service);
     void serviceRecovered(const QString &service);
     void timelineUpdated();

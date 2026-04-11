@@ -118,8 +118,8 @@ void SafeBootController::onServiceTimeout(const QString &name)
         hWarning(exoMain) << "[SafeBoot] ⚠ Service critique" << name
                           << "timeout (" << elapsed << "ms) → activation Safe Boot";
 
-        enableSafeBoot();
         emit serviceFailed(name);
+        enableSafeBoot();
     } else {
         it->status = SafeBoot::ServiceStatus::Degraded;
         it->lastError = QStringLiteral("Timeout %1 ms — lazy-load prévu").arg(elapsed);
@@ -128,6 +128,7 @@ void SafeBootController::onServiceTimeout(const QString &name)
                          QStringLiteral("Service non critique dégradé (%1 ms)").arg(elapsed));
 
         hLog() << "[SafeBoot]" << name << "non critique timeout — marqué Degraded";
+        emit serviceFailed(name);
     }
 
     emit timelineUpdated();
@@ -241,7 +242,18 @@ void SafeBootController::enableSafeBoot()
     qWarning() << "[SAFEBOOT] Mode dégradé activé — services non critiques ignorés";
 
     emit safeBootActivated();
+    emit safeBootEnabledChanged();
     emit timelineUpdated();
+
+    // Forcer le démarrage de l'UI : émettre criticalServicesReady
+    // même si tous les critiques ne sont pas Ready (c'est le principe du Safe Boot)
+    if (!m_criticalEmitted) {
+        m_criticalEmitted = true;
+        addTimelineEvent(QStringLiteral("force_start"), {},
+                         QStringLiteral("Démarrage forcé de l'UI en mode Safe Boot"));
+        hLog() << "[SafeBoot] ═══ FORCE START — UI démarre en mode dégradé ═══";
+        emit criticalServicesReady();
+    }
 
     // Lancer le lazy-load après un délai
     QTimer::singleShot(kLazyLoadDelayMs, this, &SafeBootController::startLazyLoadTimer);
@@ -260,6 +272,7 @@ void SafeBootController::disableSafeBoot()
     m_lazyLoadTimer->stop();
 
     emit safeBootDeactivated();
+    emit safeBootEnabledChanged();
     emit timelineUpdated();
 }
 
@@ -437,6 +450,7 @@ void SafeBootController::restartNormalMode()
                      QStringLiteral("Surveillance relancée — tous les services réinitialisés"));
 
     emit safeBootDeactivated();
+    emit safeBootEnabledChanged();
     emit timelineUpdated();
 }
 

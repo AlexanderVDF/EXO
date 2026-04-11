@@ -249,6 +249,12 @@ int main(int argc, char *argv[])
         testController.configure(assistantManager.configManager());
     });
 
+    // Safe Boot: forwarder les événements service vers l'AssistantManager
+    QObject::connect(&safeBootController, &SafeBootController::serviceRecovered,
+                     &assistantManager, &AssistantManager::onServiceReady);
+    QObject::connect(&safeBootController, &SafeBootController::serviceFailed,
+                     &assistantManager, &AssistantManager::onServiceFailed);
+
     // Ajouter le dossier qml comme import path pour les sous-dossiers (vscode/)
     engine.addImportPath(projectDir.absoluteFilePath("qml"));
 

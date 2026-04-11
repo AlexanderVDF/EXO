@@ -5,6 +5,27 @@
 
 ---
 
+## v30.2b — Activation complète Safe Boot — Mai 2026
+
+### Ajouté
+- **Force-start UI** — `enableSafeBoot()` émet `criticalServicesReady` pour forcer le démarrage en mode dégradé quand un service critique est KO
+- **Signal `safeBootEnabledChanged`** — Q_PROPERTY NOTIFY correcte (émis sur enable, disable et restartNormalMode)
+- **Émission `serviceFailed` pour non-critiques** — `onServiceTimeout` émet maintenant le signal pour les non-critiques aussi
+- **SafeBootPanel overlay dans MainWindow.qml** — Panneau automatique côté droit (35% largeur, z:90), visible dès `safeBootEnabled`
+- **Forwarding service events** (`main.cpp`) — `serviceRecovered`→`onServiceReady`, `serviceFailed`→`onServiceFailed` vers AssistantManager
+- **AssistantManager.onServiceReady/onServiceFailed** — Méthodes Q_INVOKABLE + signaux pour relayer état services vers QML
+- **test_safeboot.cpp** — 9 tests unitaires : timeout critique, non-critique degraded, service lent, crash, all-ready, markFailed, timeline, restartNormalMode
+
+### Modifié
+- `SafeBootController.h` — Q_PROPERTY NOTIFY `safeBootActivated` → `safeBootEnabledChanged`
+- `SafeBootController.cpp` — force-start dans enableSafeBoot, safeBootEnabledChanged dans disable/restart, serviceFailed non-critique
+- `main.cpp` — 2 nouvelles connexions (serviceRecovered, serviceFailed)
+- `AssistantManager.h/.cpp` — onServiceReady/onServiceFailed + signals, version → v30.2
+- `MainWindow.qml` — SafeBootPanel overlay avec bindings safeBootController
+- `tests/cpp/CMakeLists.txt` — Sources/headers SafeBoot dans exo_testlib, exo_add_test(test_safeboot)
+
+---
+
 ## v30.2 — SafeBootController (module complet Safe Boot) — Mai 2026
 
 ### Ajouté

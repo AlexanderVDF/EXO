@@ -18,6 +18,8 @@ set(EXO_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/app/core/WebSocketClient.cpp
     ${CMAKE_SOURCE_DIR}/app/core/HealthCheck.cpp
     ${CMAKE_SOURCE_DIR}/app/core/LatencyMetrics.cpp
+    ${CMAKE_SOURCE_DIR}/app/core/ServiceRegistry.cpp
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootController.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSManager.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/VoicePipeline.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackendQt.cpp
@@ -47,6 +49,13 @@ set(EXO_TEST_HEADERS
     ${CMAKE_SOURCE_DIR}/app/core/WebSocketClient.h
     ${CMAKE_SOURCE_DIR}/app/core/HealthCheck.h
     ${CMAKE_SOURCE_DIR}/app/core/LatencyMetrics.h
+    ${CMAKE_SOURCE_DIR}/app/core/ServiceRegistry.h
+    ${CMAKE_SOURCE_DIR}/app/core/ServiceState.h
+    ${CMAKE_SOURCE_DIR}/app/core/ServiceDescriptor.h
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootController.h
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootEnums.h
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootState.h
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootTimeline.h
     ${CMAKE_SOURCE_DIR}/app/audio/VoicePipeline.h
     ${CMAKE_SOURCE_DIR}/app/audio/TTSManager.h
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackend.h
@@ -80,6 +89,7 @@ target_include_directories(exo_testlib PUBLIC
     ${CMAKE_SOURCE_DIR}/app/utils
     ${CMAKE_SOURCE_DIR}/app/floorplan
     ${CMAKE_SOURCE_DIR}/app/simulation
+    ${CMAKE_SOURCE_DIR}/app/safeboot
 )
 target_link_libraries(exo_testlib PUBLIC
     Qt6::Core Qt6::Network Qt6::WebSockets
@@ -116,3 +126,4 @@ exo_add_test(test_tts_dsp)
 exo_add_test(test_pipelinetracer)
 exo_add_test(test_healthcheck)
 exo_add_test(test_simulation)
+exo_add_test(test_safeboot)

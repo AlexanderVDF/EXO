@@ -81,6 +81,10 @@ public:
     QVariantList degradedServices() const;
     QVariantList startupTimeline() const;
 
+    // Safe Boot — réception des événements service
+    Q_INVOKABLE void onServiceReady(const QString &serviceName);
+    Q_INVOKABLE void onServiceFailed(const QString &serviceName);
+
 signals:
     void messageReceived(const QString &sender, const QString &message);
     void claudeResponseReceived(const QString &response);
@@ -93,6 +97,8 @@ signals:
     void deviceCommandResult(const QJsonObject &result);
     void scenarioResult(const QJsonObject &result);
     void safeBootChanged();
+    void serviceReady(const QString &service);
+    void serviceFailed(const QString &service);
 
 private slots:
     void onClaudeResponse(const QString &response);
