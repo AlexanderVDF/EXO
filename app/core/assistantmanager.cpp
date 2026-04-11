@@ -11,6 +11,7 @@
 #include "PipelineTracer.h"
 #include "ContextCache.h"
 #include "LatencyMetrics.h"
+#include "safeboot/SafeBootController.h"
 #include <QQmlContext>
 #include <QTimer>
 #include <QTime>
@@ -39,6 +40,40 @@ AssistantManager::AssistantManager(QObject *parent)
 AssistantManager::~AssistantManager()
 {
     hAssistant() << "AssistantManager détruit";
+}
+
+void AssistantManager::setSafeBootController(SafeBootController *controller)
+{
+    if (m_safeBootController == controller) return;
+    m_safeBootController = controller;
+    if (m_safeBootController) {
+        connect(m_safeBootController, &SafeBootController::safeBootActivated, this, &AssistantManager::safeBootChanged);
+        connect(m_safeBootController, &SafeBootController::safeBootDeactivated, this, &AssistantManager::safeBootChanged);
+        connect(m_safeBootController, &SafeBootController::serviceFailed, this, &AssistantManager::safeBootChanged);
+        connect(m_safeBootController, &SafeBootController::serviceRecovered, this, &AssistantManager::safeBootChanged);
+        connect(m_safeBootController, &SafeBootController::timelineUpdated, this, &AssistantManager::safeBootChanged);
+    }
+    emit safeBootChanged();
+}
+
+bool AssistantManager::safeBootEnabled() const
+{
+    return m_safeBootController ? m_safeBootController->safeBootEnabled() : false;
+}
+
+QVariantList AssistantManager::failedServices() const
+{
+    return m_safeBootController ? m_safeBootController->failedServices() : QVariantList{};
+}
+
+QVariantList AssistantManager::degradedServices() const
+{
+    return m_safeBootController ? m_safeBootController->degradedServices() : QVariantList{};
+}
+
+QVariantList AssistantManager::startupTimeline() const
+{
+    return m_safeBootController ? m_safeBootController->startupTimeline() : QVariantList{};
 }
 
 void AssistantManager::setQmlEngine(QQmlApplicationEngine *engine)

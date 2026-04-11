@@ -17,6 +17,7 @@ class VoicePipeline;
 class AIMemoryManager;
 class AudioDeviceManager;
 class ContextCache;
+class SafeBootController;
 
 Q_DECLARE_METATYPE(ConfigManager*)
 
@@ -33,6 +34,10 @@ class AssistantManager : public QObject
     Q_PROPERTY(ConfigManager* configManager READ configManager CONSTANT)
     Q_PROPERTY(HealthCheck* healthCheck READ healthCheck CONSTANT)
     Q_PROPERTY(AudioDeviceManager* audioDeviceManager READ audioDeviceManager CONSTANT)
+    Q_PROPERTY(bool safeBootEnabled READ safeBootEnabled NOTIFY safeBootChanged)
+    Q_PROPERTY(QVariantList failedServices READ failedServices NOTIFY safeBootChanged)
+    Q_PROPERTY(QVariantList degradedServices READ degradedServices NOTIFY safeBootChanged)
+    Q_PROPERTY(QVariantList startupTimeline READ startupTimeline NOTIFY safeBootChanged)
 
 public:
     explicit AssistantManager(QObject *parent = nullptr);
@@ -69,6 +74,13 @@ public:
     HealthCheck* healthCheck() const { return m_healthCheck; }
     AudioDeviceManager* audioDeviceManager() const;
 
+    // Safe Boot
+    void setSafeBootController(SafeBootController *controller);
+    bool safeBootEnabled() const;
+    QVariantList failedServices() const;
+    QVariantList degradedServices() const;
+    QVariantList startupTimeline() const;
+
 signals:
     void messageReceived(const QString &sender, const QString &message);
     void claudeResponseReceived(const QString &response);
@@ -80,6 +92,7 @@ signals:
     void homeGraphReceived(const QJsonObject &result);
     void deviceCommandResult(const QJsonObject &result);
     void scenarioResult(const QJsonObject &result);
+    void safeBootChanged();
 
 private slots:
     void onClaudeResponse(const QString &response);
@@ -130,4 +143,7 @@ private:
 
     // v8.1 ULL: Context cache
     ContextCache *m_contextCache = nullptr;
+
+    // Safe Boot
+    SafeBootController *m_safeBootController = nullptr;
 };

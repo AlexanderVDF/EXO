@@ -28,7 +28,7 @@ ApplicationWindow {
     property bool isStreaming: false
     property bool servicesReady: typeof serviceSupervisor !== 'undefined'
                                  ? (serviceSupervisor.allReady
-                                    || (typeof safeBootManager !== 'undefined' && safeBootManager.criticalReady))
+                                    || (typeof safeBootController !== 'undefined' && safeBootController.safeBootEnabled))
                                  : true
 
     // ══════════════════════════════════════════════
@@ -536,14 +536,14 @@ ApplicationWindow {
         totalServices: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.totalServices : 0
         currentAction: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.currentAction : "Initialisation…"
         serviceStatuses: typeof serviceSupervisor !== 'undefined' ? serviceSupervisor.serviceStatuses : []
-        safeBootActive: typeof safeBootManager !== 'undefined' ? safeBootManager.safeBootActive : false
-        criticalReady: typeof safeBootManager !== 'undefined' ? safeBootManager.criticalReady : false
-        criticalReadyCount: typeof safeBootManager !== 'undefined' ? safeBootManager.criticalReadyCount : 0
-        criticalTotal: typeof safeBootManager !== 'undefined' ? safeBootManager.criticalTotal : 0
-        lazyReadyCount: typeof safeBootManager !== 'undefined' ? safeBootManager.lazyReadyCount : 0
-        lazyTotal: typeof safeBootManager !== 'undefined' ? safeBootManager.lazyTotal : 0
-        failedCount: typeof safeBootManager !== 'undefined' ? safeBootManager.failedCount : 0
-        failedServices: typeof safeBootManager !== 'undefined' ? safeBootManager.failedServices : []
+        safeBootActive: typeof safeBootController !== 'undefined' ? safeBootController.safeBootEnabled : false
+        criticalReady: typeof safeBootController !== 'undefined' ? (safeBootController.readyCount >= safeBootController.totalCount - safeBootController.degradedCount) : false
+        criticalReadyCount: typeof safeBootController !== 'undefined' ? safeBootController.readyCount : 0
+        criticalTotal: typeof safeBootController !== 'undefined' ? safeBootController.totalCount : 0
+        lazyReadyCount: 0
+        lazyTotal: typeof safeBootController !== 'undefined' ? safeBootController.degradedCount : 0
+        failedCount: typeof safeBootController !== 'undefined' ? safeBootController.failedCount : 0
+        failedServices: typeof safeBootController !== 'undefined' ? safeBootController.failedServices : []
         onDismissed: splashScreen.visible = false
     }
 

@@ -30,7 +30,7 @@
 #include "core/AssistantManager.h"
 #include "core/LogManager.h"
 #include "core/ServiceSupervisor.h"
-#include "core/SafeBootManager.h"
+#include "safeboot/SafeBootController.h"
 #include "test/TestController.h"
 
 // ═══════════════════════════════════════════════════════
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 
     // === Configuration de base de l'application ===
     app.setApplicationName("EXO Assistant");
-    app.setApplicationVersion("30.1");
+    app.setApplicationVersion("30.2");
     app.setOrganizationName("EXOAssistant");
     app.setOrganizationDomain("exo-assistant.local");
 
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
     LogManager::instance()->initialize(LogManager::Debug, true, true);
     hLog() << "Fichier de log:" << LogManager::instance()->getRecentLogs();
 
-    qInfo() << "=== Démarrage d'EXO Assistant v30.1 ===" ;
+    qInfo() << "=== Démarrage d'EXO Assistant v30.2 ===" ;
     qInfo() << "Plateforme:" 
 #ifdef RASPBERRY_PI
                  << "Raspberry Pi 5 (EGLFS)"
@@ -187,12 +187,13 @@ int main(int argc, char *argv[])
     // Créer le ServiceSupervisor v5 (auto-launch + readiness + retry)
     ServiceSupervisor serviceSupervisor;
 
-    // Créer le SafeBootManager (boot dégradé si services non critiques bloqués)
-    SafeBootManager safeBootManager;
-    safeBootManager.setRegistry(serviceSupervisor.registry());
+    // Créer le SafeBootController (boot dégradé si services non critiques bloqués)
+    SafeBootController safeBootController;
+    safeBootController.setRegistry(serviceSupervisor.registry());
     
     // Créer l'AssistantManager réel
     AssistantManager assistantManager;
+    assistantManager.setSafeBootController(&safeBootController);
 
     // Créer le TestController (stability tests)
     TestController testController;
@@ -212,7 +213,7 @@ int main(int argc, char *argv[])
     // Exposer l'AssistantManager et le ServiceSupervisor à QML
     engine.rootContext()->setContextProperty("assistantManager", &assistantManager);
     engine.rootContext()->setContextProperty("serviceSupervisor", &serviceSupervisor);
-    engine.rootContext()->setContextProperty("safeBootManager", &safeBootManager);
+    engine.rootContext()->setContextProperty("safeBootController", &safeBootController);
     engine.rootContext()->setContextProperty("testController", &testController);
 
     // Créer et exposer ConfigManager AVANT le chargement QML
@@ -229,6 +230,9 @@ int main(int argc, char *argv[])
     // Lancer le ServiceSupervisor v5 (auto-launch + readiness + retry)
     QString servicesJson = projectDir.absoluteFilePath("config/services.json");
     serviceSupervisor.start(servicesJson);
+
+    // Démarrer le monitoring Safe Boot (timeout 2s par service)
+    safeBootController.startMonitoring();
     
     // Initialiser l'assistant quand tous les services sont prêts
     QObject::connect(&serviceSupervisor, &ServiceSupervisor::allServicesReady, [&]() {
@@ -239,8 +243,8 @@ int main(int argc, char *argv[])
     });
 
     // Safe Boot: initialiser aussi quand seuls les services critiques sont prêts
-    QObject::connect(&safeBootManager, &SafeBootManager::safeBootReady, [&]() {
-        qInfo() << "[GUI] Safe Boot: critical services ready → initializing assistant";
+    QObject::connect(&safeBootController, &SafeBootController::criticalServicesReady, [&]() {
+        qInfo() << "[SAFEBOOT] Critical services ready → initializing assistant";
         assistantManager.initializeWithConfig();
         testController.configure(assistantManager.configManager());
     });

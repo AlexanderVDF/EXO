@@ -67,6 +67,9 @@
   PipelineTracer.cpp -> PipelineTracer.h
   PipelineTracer.cpp -> LogManager.h
   PipelineTracer.h -> PipelineEvent.h
+  SafeBootManager.cpp -> SafeBootManager.h
+  SafeBootManager.cpp -> LogManager.h
+  SafeBootManager.h -> ServiceRegistry.h
   SecurityManager.cpp -> SecurityManager.h
   ServiceManager.cpp -> ServiceManager.h
   ServiceManager.h -> WebSocketClient.h
@@ -102,6 +105,7 @@
   main.cpp -> AssistantManager.h
   main.cpp -> LogManager.h
   main.cpp -> ServiceSupervisor.h
+  main.cpp -> SafeBootManager.h
   main.cpp -> TestController.h
   SimulationController.cpp -> SimulationController.h
   SimulationController.h -> SimulationEngine.h
@@ -185,6 +189,30 @@
   TestController.cpp -> ConfigManager.h
   TestController.h -> WebSocketClient.h
   WeatherManager.cpp -> WeatherManager.h
+  CameraStreamManager.cpp -> CameraStreamManager.h
+  CameraStreamManager.h -> VisionEnums.h
+  CameraVisionEngine.cpp -> CameraVisionEngine.h
+  CameraVisionEngine.h -> VisionEnums.h
+  CameraVisionEngine.h -> VisionDetections.h
+  CameraVisionEngine.h -> CameraStreamManager.h
+  CameraVisionEngine.h -> VisionModelRunner.h
+  CameraVisionEngine.h -> VisionContext.h
+  CameraVisionEngine.h -> VisionMemory.h
+  CameraVisionEngine.h -> VisionEventRouter.h
+  VisionContext.cpp -> VisionContext.h
+  VisionContext.h -> VisionEnums.h
+  VisionContext.h -> VisionDetections.h
+  VisionDetections.cpp -> VisionDetections.h
+  VisionDetections.h -> VisionEnums.h
+  VisionEventRouter.cpp -> VisionEventRouter.h
+  VisionEventRouter.h -> VisionEnums.h
+  VisionEventRouter.h -> VisionDetections.h
+  VisionMemory.cpp -> VisionMemory.h
+  VisionMemory.h -> VisionEnums.h
+  VisionMemory.h -> VisionDetections.h
+  VisionModelRunner.cpp -> VisionModelRunner.h
+  VisionModelRunner.h -> VisionEnums.h
+  VisionModelRunner.h -> VisionDetections.h
 ```
 
 ## Fichiers par module
@@ -231,6 +259,8 @@
 - `app/core/PipelineTracer.cpp` (2 include(s))
 - `app/core/PipelineTracer.h` (1 include(s))
 - `app/core/PipelineTypes.h` (0 include(s))
+- `app/core/SafeBootManager.cpp` (2 include(s))
+- `app/core/SafeBootManager.h` (1 include(s))
 - `app/core/SecurityManager.cpp` (1 include(s))
 - `app/core/SecurityManager.h` (0 include(s))
 - `app/core/ServiceDescriptor.h` (0 include(s))
@@ -267,7 +297,7 @@
 
 ### root/
 
-- `app/main.cpp` (4 include(s))
+- `app/main.cpp` (5 include(s))
 
 ### simulation/
 
@@ -332,3 +362,21 @@
 
 - `app/utils/WeatherManager.cpp` (1 include(s))
 - `app/utils/WeatherManager.h` (0 include(s))
+
+### vision/
+
+- `app/vision/CameraStreamManager.cpp` (1 include(s))
+- `app/vision/CameraStreamManager.h` (1 include(s))
+- `app/vision/CameraVisionEngine.cpp` (1 include(s))
+- `app/vision/CameraVisionEngine.h` (7 include(s))
+- `app/vision/VisionContext.cpp` (1 include(s))
+- `app/vision/VisionContext.h` (2 include(s))
+- `app/vision/VisionDetections.cpp` (1 include(s))
+- `app/vision/VisionDetections.h` (1 include(s))
+- `app/vision/VisionEnums.h` (0 include(s))
+- `app/vision/VisionEventRouter.cpp` (1 include(s))
+- `app/vision/VisionEventRouter.h` (2 include(s))
+- `app/vision/VisionMemory.cpp` (1 include(s))
+- `app/vision/VisionMemory.h` (2 include(s))
+- `app/vision/VisionModelRunner.cpp` (1 include(s))
+- `app/vision/VisionModelRunner.h` (2 include(s))

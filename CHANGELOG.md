@@ -5,6 +5,34 @@
 
 ---
 
+## v30.2 — SafeBootController (module complet Safe Boot) — Mai 2026
+
+### Ajouté
+- **SafeBootController** (`app/safeboot/SafeBootController.h/.cpp`) — Module complet remplaçant SafeBootManager
+  - Timeout 2s par service (indépendant des 30s de ServiceSupervisor)
+  - 7 services critiques (orchestrator, system, memory, context, planner, executor, verifier)
+  - 13 services non critiques (lazy-load après UI avec 3 tentatives de reconnexion)
+  - Timeline complète de tous les événements de boot
+  - Boutons Réessayer / Redémarrer en mode normal
+  - Signaux : `criticalServicesReady`, `safeBootActivated/Deactivated`, `serviceFailed/Recovered`
+- **SafeBootEnums** (`app/safeboot/SafeBootEnums.h`) — ServiceCriticality {Critical, NonCritical}, ServiceStatus {Pending, Ready, Failed, Degraded}
+- **SafeBootState** (`app/safeboot/SafeBootState.h`) — Struct état par service (nom, criticité, status, temps de réponse, erreur)
+- **SafeBootTimeline** (`app/safeboot/SafeBootTimeline.h`) — Struct événement timeline (event, timestamp, serviceName, detail)
+- **SafeBootPanel** (`qml/panels/SafeBootPanel.qml`) — Panneau complet avec services échoués/dégradés, timeline scrollable, boutons retry/restart
+
+### Modifié
+- `AssistantManager.h/.cpp` — Q_PROPERTY safeBootEnabled, failedServices, degradedServices, startupTimeline + `setSafeBootController()`
+- `main.cpp` — SafeBootManager → SafeBootController, ajout `startMonitoring()`, connexion `criticalServicesReady`
+- `MainWindow.qml` — Bindings `safeBootManager` → `safeBootController`
+- `ExoSplashScreen.qml` — SafeBootPanel composant remplacé par section inline Safe Boot, version → v30.2
+- `CMakeLists.txt` — SafeBootManager → SafeBootController (4 headers + 1 source), SafeBootPanel déplacé vers panels/
+
+### Obsolète
+- `app/core/SafeBootManager.h/.cpp` — Remplacé par SafeBootController (fichiers conservés mais non compilés)
+- `qml/components/SafeBootPanel.qml` — Remplacé par `qml/panels/SafeBootPanel.qml` (fichier conservé mais non compilé)
+
+---
+
 ## v30.1 — Safe Boot Orchestrator — Mai 2026
 
 ### Ajouté

@@ -68,7 +68,7 @@ Rectangle {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "v30.1"
+                text: "v30.2"
                 font.family: Theme.fontMono
                 font.pixelSize: Theme.fontBody
                 color: Theme.textSecondary
@@ -236,17 +236,45 @@ Rectangle {
             }
         }
 
-        // ── Safe Boot Panel ──
-        SafeBootPanel {
+        // ── Safe Boot Status (inline) ──
+        Column {
             Layout.fillWidth: true
-            safeBootActive: splash.safeBootActive
-            criticalReady: splash.criticalReady
-            criticalReadyCount: splash.criticalReadyCount
-            criticalTotal: splash.criticalTotal
-            lazyReadyCount: splash.lazyReadyCount
-            lazyTotal: splash.lazyTotal
-            failedCount: splash.failedCount
-            failedServices: splash.failedServices
+            spacing: Theme.spacing4
+            visible: splash.safeBootActive
+
+            Rectangle {
+                width: parent.width
+                height: safeBootCol.implicitHeight + Theme.spacing16
+                radius: Theme.radiusSmall
+                color: Qt.rgba(Theme.warning.r, Theme.warning.g, Theme.warning.b, 0.1)
+                border.color: Theme.warning
+                border.width: 1
+
+                Column {
+                    id: safeBootCol
+                    anchors.centerIn: parent
+                    spacing: Theme.spacing4
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "⚠ Mode Safe Boot actif"
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontSmall
+                        font.weight: Font.Bold
+                        color: Theme.warning
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: splash.failedCount > 0
+                              ? splash.failedCount + " service(s) en échec"
+                              : "Services critiques prêts — démarrage dégradé"
+                        font.family: Theme.fontMono
+                        font.pixelSize: Theme.fontCaption
+                        color: splash.failedCount > 0 ? Theme.error : Theme.textSecondary
+                    }
+                }
+            }
         }
 
         // Spinner animé
