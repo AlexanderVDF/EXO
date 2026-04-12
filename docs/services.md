@@ -16,7 +16,7 @@
 
 ## Tests disponibles
 
-### cpp/ (8 fichier(s))
+### cpp/ (9 fichier(s))
 
 - `tests/cpp/test_audiopreprocessor.cpp`
 - `tests/cpp/test_circularaudiobuffer.cpp`
@@ -24,6 +24,7 @@
 - `tests/cpp/test_healthcheck.cpp`
 - `tests/cpp/test_pipelineevent.cpp`
 - `tests/cpp/test_pipelinetracer.cpp`
+- `tests/cpp/test_safeboot.cpp`
 - `tests/cpp/test_simulation.cpp`
 - `tests/cpp/test_tts_dsp.cpp`
 
@@ -89,4 +90,4 @@
 - `tests/python/test_vad_server.py`
 - `tests/python/test_websearch_server.py`
 
-**Total : 61 fichier(s) de test**
+**Total : 62 fichier(s) de test**

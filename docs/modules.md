@@ -66,10 +66,7 @@
 | `AnomalyType` | `app/core/PipelineTracer.h` | core |
 | `PipelineTracer` | `app/core/PipelineTracer.h` | core |
 | `EventType` | `app/core/PipelineTypes.h` | core |
-| `SafeBootController` | `app/safeboot/SafeBootController.h` | safeboot |
-| `SafeBootEnums` | `app/safeboot/SafeBootEnums.h` | safeboot |
-| `SafeBootState` | `app/safeboot/SafeBootState.h` | safeboot |
-| `SafeBootTimeline` | `app/safeboot/SafeBootTimeline.h` | safeboot |
+| `SafeBootManager` | `app/core/SafeBootManager.h` | core |
 | `SecurityManager` | `app/core/SecurityManager.h` | core |
 | `ServiceManager` | `app/core/ServiceManager.h` | core |
 | `ServiceRegistry` | `app/core/ServiceRegistry.h` | core |
@@ -86,6 +83,10 @@
 | `FloorPlanSerializer` | `app/floorplan/FloorPlanSerializer.h` | floorplan |
 | `AIMemoryManager` | `app/llm/AIMemoryManager.h` | llm |
 | `ClaudeAPI` | `app/llm/ClaudeAPI.h` | llm |
+| `SafeBootAutoRepair` | `app/safeboot/SafeBootAutoRepair.h` | safeboot |
+| `SafeBootController` | `app/safeboot/SafeBootController.h` | safeboot |
+| `ServiceCriticality` | `app/safeboot/SafeBootEnums.h` | safeboot |
+| `ServiceStatus` | `app/safeboot/SafeBootEnums.h` | safeboot |
 | `SimulationController` | `app/simulation/SimulationController.h` | simulation |
 | `SimulationEngine` | `app/simulation/SimulationEngine.h` | simulation |
 | `SimulationEntity` | `app/simulation/SimulationEntity.h` | simulation |

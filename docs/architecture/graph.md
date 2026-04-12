@@ -46,6 +46,7 @@
   AssistantManager.cpp -> PipelineTracer.h
   AssistantManager.cpp -> ContextCache.h
   AssistantManager.cpp -> LatencyMetrics.h
+  AssistantManager.cpp -> SafeBootController.h
   AssistantManager.h -> ConfigManager.h
   AssistantManager.h -> HealthCheck.h
   ConfigManager.cpp -> ConfigManager.h
@@ -105,8 +106,21 @@
   main.cpp -> AssistantManager.h
   main.cpp -> LogManager.h
   main.cpp -> ServiceSupervisor.h
-  main.cpp -> SafeBootManager.h
+  main.cpp -> SafeBootController.h
+  main.cpp -> SafeBootAutoRepair.h
   main.cpp -> TestController.h
+  SafeBootAutoRepair.cpp -> SafeBootAutoRepair.h
+  SafeBootAutoRepair.cpp -> ServiceRegistry.h
+  SafeBootAutoRepair.cpp -> LogManager.h
+  SafeBootAutoRepair.cpp -> SafeBootController.h
+  SafeBootController.cpp -> SafeBootController.h
+  SafeBootController.cpp -> SafeBootAutoRepair.h
+  SafeBootController.cpp -> ServiceRegistry.h
+  SafeBootController.cpp -> LogManager.h
+  SafeBootController.h -> SafeBootEnums.h
+  SafeBootController.h -> SafeBootState.h
+  SafeBootController.h -> SafeBootTimeline.h
+  SafeBootState.h -> SafeBootEnums.h
   SimulationController.cpp -> SimulationController.h
   SimulationController.h -> SimulationEngine.h
   SimulationController.h -> SimulationEnums.h
@@ -238,7 +252,7 @@
 
 ### core/
 
-- `app/core/AssistantManager.cpp` (13 include(s))
+- `app/core/AssistantManager.cpp` (14 include(s))
 - `app/core/AssistantManager.h` (2 include(s))
 - `app/core/ConfigManager.cpp` (2 include(s))
 - `app/core/ConfigManager.h` (0 include(s))
@@ -297,7 +311,17 @@
 
 ### root/
 
-- `app/main.cpp` (5 include(s))
+- `app/main.cpp` (6 include(s))
+
+### safeboot/
+
+- `app/safeboot/SafeBootAutoRepair.cpp` (4 include(s))
+- `app/safeboot/SafeBootAutoRepair.h` (0 include(s))
+- `app/safeboot/SafeBootController.cpp` (4 include(s))
+- `app/safeboot/SafeBootController.h` (3 include(s))
+- `app/safeboot/SafeBootEnums.h` (0 include(s))
+- `app/safeboot/SafeBootState.h` (1 include(s))
+- `app/safeboot/SafeBootTimeline.h` (0 include(s))
 
 ### simulation/
 

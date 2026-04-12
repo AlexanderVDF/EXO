@@ -4,21 +4,26 @@
 
 | Champ | Valeur |
 |-------|--------|
-| **Commit** | `24cd3c8` |
-| **Date** | 2026-04-11 19:44:24 +0200 |
+| **Commit** | `005cb77` |
+| **Date** | 2026-04-12 06:35:20 +0200 |
 | **Auteur** | EXO Developer |
-| **Message** | feat(v30.1): Safe Boot Orchestrator — boot dégradé si services non critiques bloqués |
+| **Message** | fix(v30.3): build fixes — resolve pre-existing compilation errors |
 
 ## Fichiers modifiés
 
 ```
-M	CHANGELOG.md
 M	CMakeLists.txt
-A	app/core/SafeBootManager.cpp
-A	app/core/SafeBootManager.h
-M	app/main.cpp
-M	qml/MainWindow.qml
-M	qml/components/ExoSplashScreen.qml
-A	qml/components/SafeBootPanel.qml
-M	qml/components/qmldir
+M	app/core/assistantmanager.cpp
+M	app/safeboot/SafeBootAutoRepair.cpp
+M	app/safeboot/SafeBootController.h
+M	app/spatialcognition/SpatialCognitiveEngine.cpp
+M	app/spatialcognition/SpatialEnums.h
+M	app/spatialcognition/SpatialMemory.cpp
+M	app/spatialcognition/SpatialMemory.h
+M	app/spatialcognition/SpatialSupervisor.cpp
+M	app/spatialsecurity/SpatialSecurityEngine.cpp
+M	app/spatialsecurity/SpatialSecurityEngine.h
+M	app/vision/VisionDetections.cpp
+M	app/vision/VisionMemory.cpp
+M	tests/cpp/CMakeLists.txt
 ```
