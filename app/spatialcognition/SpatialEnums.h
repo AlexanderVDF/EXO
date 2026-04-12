@@ -89,6 +89,7 @@ enum class ActionType {
     SendNotification,
     LaunchScenario,
     AdjustSetting,
+    RequestHuman,
     Custom
 };
 Q_ENUM_NS(ActionType)
@@ -110,6 +111,7 @@ Q_ENUM_NS(CognitivePhase)
 // ── Décision du superviseur ──
 enum class SupervisorDecision {
     Approved,
+    Modified,
     Rejected,
     NeedsReview,
     Deferred

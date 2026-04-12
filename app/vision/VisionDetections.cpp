@@ -240,7 +240,7 @@ QVariantList VisionDetections::currentDetections() const
 QVariantList VisionDetections::recentEvents() const
 {
     QVariantList list;
-    int start = std::max(0, m_events.size() - 100);
+    int start = std::max(0, static_cast<int>(m_events.size()) - 100);
     for (int i = m_events.size() - 1; i >= start; --i)
         list.append(m_events[i].toVariant());
     return list;

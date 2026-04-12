@@ -256,7 +256,7 @@ bool SpatialSupervisor::checkHistoricalPrecedent(const SpatialPlan &plan) const
 
     const auto pastDecisions = m_memory->retrievePastDecisions(5);
     for (const auto &d : pastDecisions) {
-        const auto data = d.toMap();
+        const auto data = d.toVariantMap();
         if (data.value("goalType").toInt() == static_cast<int>(plan.goalType))
             return true;   // un précédent trouvé
     }

@@ -138,8 +138,11 @@ void SpatialCognitiveEngine::phaseInference()
 
     // Stocker les risques en mémoire
     for (const auto &r : riskInfs) {
-        m_memory->storeRisk(r.roomId, r.description,
-                            static_cast<int>(r.severity) / 4.0);
+        QVariantMap riskData;
+        riskData["roomId"]      = r.roomId;
+        riskData["description"] = r.description;
+        riskData["score"]       = static_cast<int>(r.severity) / 4.0;
+        m_memory->storeRisk(riskData);
     }
 
     emit inferencesChanged();
@@ -303,7 +306,7 @@ QVariantMap SpatialCognitiveEngine::cognitiveState() const
 QVariantMap SpatialCognitiveEngine::getSpatialExplanation(const QString &eventId) const
 {
     auto explanation = m_reasoner->explain(eventId);
-    return explanation;
+    return {{"eventId", eventId}, {"explanation", explanation}};
 }
 
 QVariantList SpatialCognitiveEngine::getPredictions() const

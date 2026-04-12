@@ -174,7 +174,7 @@ QVector<VisionIncident> VisionMemory::querySimilar(const VisionIncident &referen
     });
 
     QVector<VisionIncident> result;
-    for (int i = 0; i < std::min(maxCount, scored.size()); ++i)
+    for (int i = 0; i < std::min(static_cast<int>(scored.size()), maxCount); ++i)
         result.append(m_incidents[scored[i].index]);
     return result;
 }
@@ -290,7 +290,7 @@ void VisionMemory::clear()
 QVariantList VisionMemory::incidentsToVariantList(int maxCount) const
 {
     QVariantList list;
-    int start = std::max(0, m_incidents.size() - maxCount);
+    int start = std::max(0, static_cast<int>(m_incidents.size()) - maxCount);
     for (int i = m_incidents.size() - 1; i >= start; --i)
         list.append(m_incidents[i].toVariant());
     return list;

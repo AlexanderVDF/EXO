@@ -133,17 +133,18 @@ void SpatialSecurityEngine::phaseAnalysis()
     setPhase(SpatialSecurity::SecurityPhase::Analysis);
 
     // Mettre à jour le contexte avec l'état courant de chaque sous-système
-    m_context->updateIntrusionState(
-        m_intrusion->alertsToVariantList().isEmpty() ? 0.0
-            : m_sensorData.value("intrusionRisk", 0.0).toDouble(),
-        m_intrusion->alertsToVariantList().size());
+    m_context->updateIntrusionState({
+        {"risk", m_intrusion->alertsToVariantList().isEmpty() ? 0.0
+            : m_sensorData.value("intrusionRisk", 0.0).toDouble()},
+        {"alertCount", m_intrusion->alertsToVariantList().size()}});
 
-    m_context->updateNetworkState(
-        m_networkData.value("overallRisk", 0.0).toDouble(),
-        m_network->alertsToVariantList().size());
+    m_context->updateNetworkState({
+        {"risk", m_networkData.value("overallRisk", 0.0).toDouble()},
+        {"alertCount", m_network->alertsToVariantList().size()}});
 
-    m_context->updateSimulationState(
-        m_heatmapData.value("overallRisk", 0.0).toDouble(), 0);
+    m_context->updateSimulationState({
+        {"risk", m_heatmapData.value("overallRisk", 0.0).toDouble()},
+        {"alertCount", 0}});
 
     m_context->update();
 }
@@ -169,25 +170,25 @@ void SpatialSecurityEngine::phaseRiskAssessment()
     setPhase(SpatialSecurity::SecurityPhase::RiskAssessment);
 
     // Mettre à jour le contexte avec les résultats de détection
-    m_context->updateIntrusionState(
-        m_intrusion->alertsToVariantList().isEmpty() ? 0.0 : 0.7,
-        m_intrusion->alertsToVariantList().size());
+    m_context->updateIntrusionState({
+        {"risk", m_intrusion->alertsToVariantList().isEmpty() ? 0.0 : 0.7},
+        {"alertCount", m_intrusion->alertsToVariantList().size()}});
 
-    m_context->updateFireState(
-        m_fire->alertsToVariantList().isEmpty() ? 0.0 : 0.8,
-        m_fire->alertsToVariantList().size());
+    m_context->updateFireState({
+        {"risk", m_fire->alertsToVariantList().isEmpty() ? 0.0 : 0.8},
+        {"alertCount", m_fire->alertsToVariantList().size()}});
 
-    m_context->updateElectricalState(
-        m_electrical->alertsToVariantList().isEmpty() ? 0.0 : 0.5,
-        m_electrical->alertsToVariantList().size());
+    m_context->updateElectricalState({
+        {"risk", m_electrical->alertsToVariantList().isEmpty() ? 0.0 : 0.5},
+        {"alertCount", m_electrical->alertsToVariantList().size()}});
 
-    m_context->updateNetworkState(
-        m_network->alertsToVariantList().isEmpty() ? 0.0 : 0.4,
-        m_network->alertsToVariantList().size());
+    m_context->updateNetworkState({
+        {"risk", m_network->alertsToVariantList().isEmpty() ? 0.0 : 0.4},
+        {"alertCount", m_network->alertsToVariantList().size()}});
 
-    m_context->updateDomoticState(
-        m_domotic->alertsToVariantList().isEmpty() ? 0.0 : 0.3,
-        m_domotic->alertsToVariantList().size());
+    m_context->updateDomoticState({
+        {"risk", m_domotic->alertsToVariantList().isEmpty() ? 0.0 : 0.3},
+        {"alertCount", m_domotic->alertsToVariantList().size()}});
 
     m_context->update();
     emit securityLevelChanged(m_context->globalSecurityLevel());

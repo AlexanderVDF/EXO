@@ -332,6 +332,7 @@ target_include_directories(RaspberryAssistant PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app/floorplan
     ${CMAKE_CURRENT_SOURCE_DIR}/app/simulation
     ${CMAKE_CURRENT_SOURCE_DIR}/app/spatialcognition
+    ${CMAKE_CURRENT_SOURCE_DIR}/app/safeboot
     ${CMAKE_CURRENT_SOURCE_DIR}/app/spatialsecurity
     ${CMAKE_CURRENT_SOURCE_DIR}/app/vision
     ${CMAKE_CURRENT_SOURCE_DIR}/app/test

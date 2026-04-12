@@ -20,6 +20,7 @@ set(EXO_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/app/core/LatencyMetrics.cpp
     ${CMAKE_SOURCE_DIR}/app/core/ServiceRegistry.cpp
     ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootController.cpp
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootAutoRepair.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSManager.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/VoicePipeline.cpp
     ${CMAKE_SOURCE_DIR}/app/audio/TTSBackendQt.cpp
@@ -53,6 +54,7 @@ set(EXO_TEST_HEADERS
     ${CMAKE_SOURCE_DIR}/app/core/ServiceState.h
     ${CMAKE_SOURCE_DIR}/app/core/ServiceDescriptor.h
     ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootController.h
+    ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootAutoRepair.h
     ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootEnums.h
     ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootState.h
     ${CMAKE_SOURCE_DIR}/app/safeboot/SafeBootTimeline.h

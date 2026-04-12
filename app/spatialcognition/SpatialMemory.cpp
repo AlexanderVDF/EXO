@@ -8,10 +8,10 @@
 #include <algorithm>
 
 // ─────────────────────────────────────────────────────
-//  MemoryEntry
+//  SpatialMemoryEntry
 // ─────────────────────────────────────────────────────
 
-QVariantMap MemoryEntry::toVariantMap() const
+QVariantMap SpatialMemoryEntry::toVariantMap() const
 {
     return {
         {"id",        id},
@@ -38,7 +38,7 @@ SpatialMemory::~SpatialMemory() = default;
 
 void SpatialMemory::storeState(const QVariantMap &snapshot)
 {
-    MemoryEntry entry;
+    SpatialMemoryEntry entry;
     entry.category  = QStringLiteral("state");
     entry.data      = snapshot;
     entry.tags      = {"state", "snapshot"};
@@ -47,7 +47,7 @@ void SpatialMemory::storeState(const QVariantMap &snapshot)
 
 void SpatialMemory::storeRisk(const QVariantMap &risk)
 {
-    MemoryEntry entry;
+    SpatialMemoryEntry entry;
     entry.category  = QStringLiteral("risk");
     entry.data      = risk;
     entry.relevance = risk.value("score", 0.5).toDouble();
@@ -65,7 +65,7 @@ void SpatialMemory::storeRisk(const QVariantMap &risk)
 
 void SpatialMemory::storeAnomaly(const QVariantMap &anomaly)
 {
-    MemoryEntry entry;
+    SpatialMemoryEntry entry;
     entry.category  = QStringLiteral("anomaly");
     entry.data      = anomaly;
     entry.relevance = anomaly.value("confidence", 0.5).toDouble();
@@ -80,7 +80,7 @@ void SpatialMemory::storeAnomaly(const QVariantMap &anomaly)
 
 void SpatialMemory::storeDecision(const QVariantMap &decision)
 {
-    MemoryEntry entry;
+    SpatialMemoryEntry entry;
     entry.category  = QStringLiteral("decision");
     entry.data      = decision;
     entry.tags      = {"decision"};
@@ -90,7 +90,7 @@ void SpatialMemory::storeDecision(const QVariantMap &decision)
 void SpatialMemory::storeEvent(const QString &category, const QVariantMap &data,
                                 const QStringList &tags)
 {
-    MemoryEntry entry;
+    SpatialMemoryEntry entry;
     entry.category = category;
     entry.data     = data;
     entry.tags     = tags;
@@ -99,7 +99,7 @@ void SpatialMemory::storeEvent(const QString &category, const QVariantMap &data,
 
 // ── Requêtes ──
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::querySimilarSituations(const QVariantMap &currentState, int maxResults) const
 {
     // Classement par similarité Jaccard-like sur les clés/valeurs
@@ -117,17 +117,17 @@ SpatialMemory::querySimilarSituations(const QVariantMap &currentState, int maxRe
         return a.first > b.first;
     });
 
-    QVector<MemoryEntry> result;
+    QVector<SpatialMemoryEntry> result;
     const int limit = qMin(maxResults, scored.size());
     for (int i = 0; i < limit; ++i)
         result.append(m_entries[scored[i].second]);
     return result;
 }
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::retrievePastRisks(const QString &roomId, int maxResults) const
 {
-    QVector<MemoryEntry> result;
+    QVector<SpatialMemoryEntry> result;
     for (int i = m_entries.size() - 1; i >= 0 && result.size() < maxResults; --i) {
         const auto &e = m_entries[i];
         if (e.category != "risk")
@@ -139,10 +139,10 @@ SpatialMemory::retrievePastRisks(const QString &roomId, int maxResults) const
     return result;
 }
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::retrievePastAnomalies(const QString &roomId, int maxResults) const
 {
-    QVector<MemoryEntry> result;
+    QVector<SpatialMemoryEntry> result;
     for (int i = m_entries.size() - 1; i >= 0 && result.size() < maxResults; --i) {
         const auto &e = m_entries[i];
         if (e.category != "anomaly")
@@ -154,16 +154,16 @@ SpatialMemory::retrievePastAnomalies(const QString &roomId, int maxResults) cons
     return result;
 }
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::retrievePastDecisions(int maxResults) const
 {
     return queryByCategory("decision", maxResults);
 }
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::queryByCategory(const QString &category, int maxResults) const
 {
-    QVector<MemoryEntry> result;
+    QVector<SpatialMemoryEntry> result;
     for (int i = m_entries.size() - 1; i >= 0 && result.size() < maxResults; --i) {
         if (m_entries[i].category == category)
             result.append(m_entries[i]);
@@ -171,10 +171,10 @@ SpatialMemory::queryByCategory(const QString &category, int maxResults) const
     return result;
 }
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::queryByTags(const QStringList &tags, int maxResults) const
 {
-    QVector<MemoryEntry> result;
+    QVector<SpatialMemoryEntry> result;
     for (int i = m_entries.size() - 1; i >= 0 && result.size() < maxResults; --i) {
         bool match = true;
         for (const auto &tag : tags) {
@@ -189,10 +189,10 @@ SpatialMemory::queryByTags(const QStringList &tags, int maxResults) const
     return result;
 }
 
-QVector<MemoryEntry>
+QVector<SpatialMemoryEntry>
 SpatialMemory::queryByTimeRange(const QDateTime &from, const QDateTime &to) const
 {
-    QVector<MemoryEntry> result;
+    QVector<SpatialMemoryEntry> result;
     for (const auto &e : m_entries) {
         if (e.timestamp >= from && e.timestamp <= to)
             result.append(e);
@@ -277,7 +277,7 @@ void SpatialMemory::loadFromFile(const QString &path)
     const auto arr = doc.array();
     for (const auto &val : arr) {
         const QJsonObject obj = val.toObject();
-        MemoryEntry entry;
+        SpatialMemoryEntry entry;
         entry.id        = obj.value("id").toString();
         entry.category  = obj.value("category").toString();
         entry.data      = obj.value("data").toObject().toVariantMap();
@@ -300,9 +300,9 @@ void SpatialMemory::clear()
 
 // ── Private ──
 
-void SpatialMemory::addEntry(const MemoryEntry &entry)
+void SpatialMemory::addEntry(const SpatialMemoryEntry &entry)
 {
-    MemoryEntry e = entry;
+    SpatialMemoryEntry e = entry;
     if (e.id.isEmpty())
         e.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     if (!e.timestamp.isValid())

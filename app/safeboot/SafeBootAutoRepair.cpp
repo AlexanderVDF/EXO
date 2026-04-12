@@ -10,6 +10,7 @@
 #include <QWebSocket>
 #include <QEventLoop>
 #include <QTimer>
+#include <QThread>
 
 #ifdef _WIN32
 #include <windows.h>

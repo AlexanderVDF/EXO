@@ -150,5 +150,3 @@ private:
     QVector<SecurityAlert> m_lastAlerts;
     QVariantList m_recommendedActions;
 };
-
-#endif // SPATIALSECURITYENGINE_H

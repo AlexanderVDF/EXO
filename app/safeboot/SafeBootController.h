@@ -6,6 +6,7 @@
 #include <QElapsedTimer>
 #include <QVariantList>
 #include <QSet>
+#include <QtQml/qqmlregistration.h>
 #include "SafeBootEnums.h"
 #include "SafeBootState.h"
 #include "SafeBootTimeline.h"

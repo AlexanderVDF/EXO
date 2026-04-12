@@ -12,9 +12,9 @@
 #include <QDateTime>
 
 // ─────────────────────────────────────────────────────
-//  MemoryEntry — Entrée en mémoire spatiale
+//  SpatialMemoryEntry — Entrée en mémoire spatiale
 // ─────────────────────────────────────────────────────
-struct MemoryEntry
+struct SpatialMemoryEntry
 {
     QString     id;
     QString     category;  // "state", "risk", "anomaly", "decision", "event"
@@ -55,18 +55,18 @@ public:
                     const QStringList &tags = {});
 
     // ── Requêtes ──
-    QVector<MemoryEntry> querySimilarSituations(const QVariantMap &currentState,
+    QVector<SpatialMemoryEntry> querySimilarSituations(const QVariantMap &currentState,
                                                  int maxResults = 5) const;
-    QVector<MemoryEntry> retrievePastRisks(const QString &roomId = {},
+    QVector<SpatialMemoryEntry> retrievePastRisks(const QString &roomId = {},
                                             int maxResults = 10) const;
-    QVector<MemoryEntry> retrievePastAnomalies(const QString &roomId = {},
+    QVector<SpatialMemoryEntry> retrievePastAnomalies(const QString &roomId = {},
                                                 int maxResults = 10) const;
-    QVector<MemoryEntry> retrievePastDecisions(int maxResults = 10) const;
-    QVector<MemoryEntry> queryByCategory(const QString &category,
+    QVector<SpatialMemoryEntry> retrievePastDecisions(int maxResults = 10) const;
+    QVector<SpatialMemoryEntry> queryByCategory(const QString &category,
                                           int maxResults = 20) const;
-    QVector<MemoryEntry> queryByTags(const QStringList &tags,
+    QVector<SpatialMemoryEntry> queryByTags(const QStringList &tags,
                                       int maxResults = 10) const;
-    QVector<MemoryEntry> queryByTimeRange(const QDateTime &from,
+    QVector<SpatialMemoryEntry> queryByTimeRange(const QDateTime &from,
                                            const QDateTime &to) const;
 
     // ── Stats ──
@@ -90,11 +90,11 @@ signals:
     void memoryCleared();
 
 private:
-    void addEntry(const MemoryEntry &entry);
+    void addEntry(const SpatialMemoryEntry &entry);
     void evictIfNeeded();
     double computeSimilarity(const QVariantMap &a, const QVariantMap &b) const;
 
-    QVector<MemoryEntry> m_entries;
+    QVector<SpatialMemoryEntry> m_entries;
     int m_maxCapacity = 5000;
 };
 

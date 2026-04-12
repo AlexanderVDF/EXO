@@ -58,22 +58,22 @@ void AssistantManager::setSafeBootController(SafeBootController *controller)
 
 bool AssistantManager::safeBootEnabled() const
 {
-    return m_safeBootController ? m_safeBootController->safeBootEnabled() : false;
+    return m_safeBootController ? m_safeBootController->isSafeBootEnabled() : false;
 }
 
 QVariantList AssistantManager::failedServices() const
 {
-    return m_safeBootController ? m_safeBootController->failedServices() : QVariantList{};
+    return m_safeBootController ? m_safeBootController->getFailedServices() : QVariantList{};
 }
 
 QVariantList AssistantManager::degradedServices() const
 {
-    return m_safeBootController ? m_safeBootController->degradedServices() : QVariantList{};
+    return m_safeBootController ? m_safeBootController->getDegradedServices() : QVariantList{};
 }
 
 QVariantList AssistantManager::startupTimeline() const
 {
-    return m_safeBootController ? m_safeBootController->startupTimeline() : QVariantList{};
+    return m_safeBootController ? m_safeBootController->getStartupTimeline() : QVariantList{};
 }
 
 void AssistantManager::onServiceReady(const QString &serviceName)
